@@ -1,0 +1,4 @@
+pack,prompt_tokens,expected,answer,exact,prefill_s,prefill_tps,decode_steps,decode_tps
+SQ-10,131040,73,73 degrees,False,38.37,3414.79,32,57.35
+SQ-15,131040,73,73,True,72.4,1809.99,32,36.65
+SQ-20,131040,73,73,True,119.55,1096.15,32,29.93
