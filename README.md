@@ -61,6 +61,14 @@ output tokens per slot. Each point is one run. At 54 slots the engine reached
 
 ![Native throughput, per-slot speed and GPU memory by concurrent slot count](docs/benchmarks/inkling/native-concurrency.png)
 
+### Training on the latest mistakes
+
+A rank-4 AdamW output-head adapter trained for eight steps on three missed lookups, then took one step per round on the previous round’s misses. Each checkpoint answered all 54 questions against the same 128K document. Step 8 fixed two original misses and lost 39 previously correct answers. Step 11 recovered all 51 original successes and fixed two misses, reaching 53/54. On a fresh 24-question register the base scored 22 and the step-11 adapter scored 21. The base remains the serving default.
+
+![Full-answer accuracy and per-round gains and losses](docs/benchmarks/inkling/training-retention.png)
+
+[Download the aggregate training and retention counts](docs/benchmarks/inkling/training-retention.csv)
+
 ## Native inference baseline
 
 Use the Linux x86-64 CUDA 13 `strata-inkling` 0.1.69 package from
