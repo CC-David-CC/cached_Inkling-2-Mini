@@ -32,6 +32,18 @@ curl --fail-with-body http://127.0.0.1:18060/v1/chat/completions \
 ```
 
 The HTTP endpoint binds to loopback and serves one request at a time.
+For image input, install Pillow and put `Inkling-2-Mini-Vision.strata` from
+the same pinned checkpoint revision next to SQ-20. Then run:
+
+```bash
+python tools/inkling_serve.py /mnt/fast_cache/inkling --vision
+# From a second shell on the GPU host, once the service reports ready:
+python tools/test_inkling_http.py
+```
+
+The test sends the same question with two different PNGs, verifies the
+answers, checks text inference after an invalid model request, and verifies
+that disconnecting a stream cancels generation and releases the slot.
 
 ## PCC integration
 
