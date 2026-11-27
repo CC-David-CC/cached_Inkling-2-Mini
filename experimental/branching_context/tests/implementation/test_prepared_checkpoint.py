@@ -43,6 +43,19 @@ class PreparedCheckpointTests(unittest.TestCase):
         self.assertEqual(result, reference)
         self.assertIs(result.checkpoint, self.model.cache[self.sid])
 
+    def test_portable_prepare_rejects_corrupt_or_incompatible_cached_state(self):
+        from dataclasses import replace
+        saved = self.prepared().checkpoint
+        self.backend.exports_portable_bytes = True
+        for change in (dict(blob=b'corrupt'), dict(frontier=(2., 1.)),
+                       dict(consumed=saved.consumed + 1),
+                       dict(execution_profile_id='other')):
+            with self.subTest(change=change):
+                self.model.cache[self.sid] = replace(saved, **change)
+                with self.assertRaises(IntegrityError):
+                    self.model.prepare_checkpoint(self.sid)
+        self.assertEqual(list(self.model.checkpoint_directory.iterdir()), [])
+
     def test_publish_in_foreign_thread_never_enters_native_lease(self):
         ready = self.prepared()
         self.model.store.fork('main',self.sid)
