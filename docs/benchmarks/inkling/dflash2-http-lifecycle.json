@@ -1,0 +1,62 @@
+{
+  "writer_pid": 2743864,
+  "reader_pid": 2744435,
+  "resume": {
+    "full": [
+      39905,
+      200010,
+      200006
+    ],
+    "before_restart": [
+      39905
+    ],
+    "after_restart": [
+      200010,
+      200006
+    ],
+    "counters": {
+      "consumed_tokens": 2,
+      "forward_tokens": 2,
+      "draft_nodes": 7,
+      "drafts_accepted": 1
+    }
+  },
+  "cancellation_trials": [
+    {
+      "trial": 0,
+      "state": "cancelled",
+      "durable": false,
+      "preserved_tip": "a137c3837d79453a45c73c1580d264152547c1e98f169031e45b293844632ffc",
+      "surviving_tokens": [
+        68107,
+        200010,
+        200006
+      ],
+      "surviving_payload": "3999844e7f2316cfd6689e1a4f8bde32370d87b29bf07238fd08e6eebe231b3b"
+    },
+    {
+      "trial": 1,
+      "state": "cancelled",
+      "durable": false,
+      "preserved_tip": "a137c3837d79453a45c73c1580d264152547c1e98f169031e45b293844632ffc",
+      "surviving_tokens": [
+        68107,
+        200010,
+        200006
+      ],
+      "surviving_payload": "3999844e7f2316cfd6689e1a4f8bde32370d87b29bf07238fd08e6eebe231b3b"
+    },
+    {
+      "trial": 2,
+      "state": "cancelled",
+      "durable": false,
+      "preserved_tip": "a137c3837d79453a45c73c1580d264152547c1e98f169031e45b293844632ffc",
+      "surviving_tokens": [
+        68107,
+        200010,
+        200006
+      ],
+      "surviving_payload": "3999844e7f2316cfd6689e1a4f8bde32370d87b29bf07238fd08e6eebe231b3b"
+    }
+  ]
+}
