@@ -72,6 +72,11 @@ Stock Strata reported prompt processing speed and the number of DSpark draft tok
 
 [Download the cross-engine proposal counts](docs/benchmarks/inkling/dspark-acceptance.csv)
 
+The DFlash2 prototype ran live with hybrid SQ-10 and serial target verification on llm-60. Keeping the output head on the GPU reduced median proposal time across all three prompts. [Per-block timings](docs/benchmarks/inkling/dflash2-head-placement.csv)
+
+![Decode throughput and proposal time with the DFlash2 output head resident or copied per block](docs/benchmarks/inkling/dflash2-head-placement.png)
+
+
 ### DFlash2 verifier timing
 
 On llm-60, direct retention of the batched prefix missed full-logit exactness on both tested prompts. Rewinding and replaying the accepted prefix sequentially recovered the control frontier. In six warm trials per prompt, the extra verification work cost about 13.5 ms per block before draft generation.
