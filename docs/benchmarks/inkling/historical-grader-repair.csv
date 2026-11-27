@@ -1,0 +1,8 @@
+profile,existing query,optional terminator,recursive query,one column empty,three columns empty,multiple statements,write,fenced query,progress limit
+historical,True,True,False,False,False,True,True,True,True
+fixed,True,True,True,True,True,True,True,True,True
+SQ-10,False,False,False,True,True,True,True,False,True
+SQ-15,True,False,True,False,False,True,True,True,True
+SQ-20,True,False,True,False,False,True,True,True,True
+UD-Q4_K_M,True,True,True,False,False,True,True,True,True
+official-NVFP4-MXFP8,False,False,False,False,False,False,False,False,False
