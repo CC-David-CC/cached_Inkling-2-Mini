@@ -1,0 +1,11 @@
+effort,correct,completion_tokens,visible_chars,reasoning_chars,generation_s,visible_answer_prefix
+0,False,512,854,0,15.987628945847973,"6754
+6754
+6754
+6754
+6754
+6754
+67"
+0.01,False,483,4,1246,18.609679399989545,2754
+0.5,False,512,0,1277,18.962052351096645,
+0.99,False,512,0,1361,19.338913155021146,
