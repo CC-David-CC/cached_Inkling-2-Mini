@@ -52,15 +52,15 @@ int ctt_supports_expert_vram_budget() { return 1; }
 const char* ctt_error() { return error.c_str(); }
 
 void* ctt_load_devices(const char* path, int capacity, bool dspark, int gpus) try {
-    if (gpus < 1 || gpus > 2) { error = "Invalid Inkling GPU count"; return nullptr; }
+    if (gpus < 1 || gpus > 3) { error = "Invalid Inkling GPU count"; return nullptr; }
     if (capacity < default_capacity || capacity > 133120) { error = "Invalid Inkling context capacity"; return nullptr; }
     auto model = std::make_unique<Model>();
     model->capacity = capacity;
     if (!model->file.open(path, error, false, "")) return nullptr;
     ink2::BackendOpts opts;
     opts.gpus = gpus;
-    // Portable state is currently implemented for unsharded KV on the primary GPU.
     if (gpus == 2) opts.layer_split = "ep2";
+    if (gpus == 3) opts.layer_split = "auto";
     for (int i = 0; i < gpus; ++i) opts.gpu_ids.push_back(i);
     if (const char* value = std::getenv("INKLING_EXPERT_VRAM_MIB")) {
         unsigned int mib = 0;
@@ -83,6 +83,10 @@ void* ctt_load_devices(const char* path, int capacity, bool dspark, int gpus) tr
     if (!model->backend->init(model->file, opts, error)) return nullptr;
     if (gpus == 2 && std::string_view(model->backend->backend_name()) != "cuda-ep2") {
         error = "Inkling could not activate two-GPU expert placement";
+        return nullptr;
+    }
+    if (gpus == 3 && std::string_view(model->backend->backend_name()) != "cuda-ls") {
+        error = "Inkling could not activate three-GPU layer placement";
         return nullptr;
     }
     if (model->backend->effective_max_ctx() != capacity ||

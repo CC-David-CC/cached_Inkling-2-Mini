@@ -34,6 +34,8 @@ At 1 GiB of GPU experts per card, all three P4 workers again answered the final-
 
 ![Real-register prefill, decode, and final free VRAM at two expert budgets](docs/benchmarks/inkling/p4-register-placement.png)
 
+For a single Cached worker split across three P4s, apply the [layer-split checkpoint patch](experimental/branching_context/native/inkling/layer-split-checkpoint.patch) after the portable-state and DSpark patches, then rebuild the bridge. Launch with `CUDA_VISIBLE_DEVICES=0,1,2 python tools/inkling_pcc_serve.py RUNTIME --gpus 3 --pack SQ-10`. This places each layer and its KV on its owning GPU. The three-card HTTP restart test covers a short greedy text request. The native restore test covers a 2,049-token prefix.
+
 ### RTX 4090 and RTX PRO 6000 Blackwell
 
 ![Cached single-request prefill, generation, full HTTP throughput and first-text latency on the RTX 4090 and RTX PRO 6000](docs/benchmarks/inkling/gpu-comparison.png)

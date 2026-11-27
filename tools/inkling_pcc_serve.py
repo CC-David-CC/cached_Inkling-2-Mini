@@ -57,7 +57,7 @@ def main():
     parser.add_argument('--grammar-store', type=Path, help='enable BranchWrite inline grammar registration')
     parser.add_argument('--capacity', type=int, default=8192, help='total prompt and generation token budget')
     parser.add_argument('--pack', choices=('SQ-10', 'SQ-15', 'SQ-20'), default='SQ-20')
-    parser.add_argument('--gpus', type=int, choices=(1, 2), default=1)
+    parser.add_argument('--gpus', type=int, choices=(1, 2, 3), default=1)
     parser.add_argument('--dspark', action='store_true', help='experimental fused DSpark for greedy text requests')
     parser.add_argument('--vision', action='store_true')
     parser.add_argument('--port', type=int, default=18061)

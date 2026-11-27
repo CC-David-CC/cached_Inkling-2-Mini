@@ -58,11 +58,13 @@ def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None, 
     execution = dict(EXECUTION, capacity=capacity,
                      cuda_cublas_compute_type=os.getenv('GGML_CUDA_CUBLAS_COMPUTE_TYPE', 'auto'),
                      nvidia_tf32_override=os.getenv('NVIDIA_TF32_OVERRIDE', 'unset'))
-    if type(gpus) is not int or gpus not in (1, 2):
-        raise ValueError('Inkling requires one or two GPUs')
+    if type(gpus) is not int or gpus not in (1, 2, 3):
+        raise ValueError('Inkling requires one, two or three GPUs')
     # EP2 uses both devices inside one coordinator worker on logical GPU 0.
     if gpus == 2:
         execution['expert_parallel_devices'] = [0, 1]
+    elif gpus == 3:
+        execution['layer_split_devices'] = [0, 1, 2]
     if 'INKLING_EXPERT_VRAM_MIB' in os.environ:
         value = os.environ['INKLING_EXPERT_VRAM_MIB']
         if not value.isascii() or not value.isdecimal() or int(value) > 0xffffffff:
@@ -181,7 +183,8 @@ class InklingBackend(NativeBackend):
         self.lib.ctt_logit_softcap.restype = C.c_float
         self.lib.ctt_attach_head_lora.argtypes = [C.c_void_p, C.c_int, C.c_void_p, C.c_void_p]
         self.lib.ctt_attach_head_lora.restype = C.c_int
-        gpu_count = len(self.profile['execution'].get('expert_parallel_devices', [0]))
+        execution = self.profile['execution']
+        gpu_count = len(execution.get('layer_split_devices', execution.get('expert_parallel_devices', [0])))
         if gpu_count > 1 and self.draft:
             raise ValueError('Multi-GPU DSpark requires separate qualification')
         if self.context_capacity == 8192 and not self.draft and gpu_count == 1:
@@ -275,6 +278,11 @@ class InklingBackend(NativeBackend):
             raise IntegrityError('Inkling vision profile requires the pinned vision weights')
         if bool(profile.get('adapter_path')) != bool(self.adapter_sha256):
             raise IntegrityError('Inkling adapter path and identity must be provided together')
+        if 'layer_split_devices' in execution:
+            split = execution['layer_split_devices']
+            if (split != [0, 1, 2] or any(type(i) is not int for i in split)
+                    or 'expert_parallel_devices' in execution):
+                raise IntegrityError('Invalid Inkling layer split')
         devices = execution.get('expert_parallel_devices', [0])
         if devices not in ([0], [0, 1]) or any(type(i) is not int for i in devices):
             raise IntegrityError('Invalid Inkling GPU placement')

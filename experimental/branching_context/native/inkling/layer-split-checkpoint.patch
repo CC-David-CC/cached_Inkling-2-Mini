@@ -1,0 +1,55 @@
+--- a/engine/src/inkling2/cuda/ink_cuda_backend.cu
++++ b/engine/src/inkling2/cuda/ink_cuda_backend.cu
+@@ -405,8 +405,8 @@
+     size_t portable_state_size(int slot, int length) const override {
+         using namespace strata::ink;
+         if (!initialized_ || slot < 0 || slot >= max_slots_ || !slot_alloc_[slot]
+-            || length <= 0 || length > eff_max_ctx_ || model_.ls_active || (dspark_ && (!dspark_->ready || slot != 0 || length > dspark_->max_ctx))
+-            || !d_sconv_snap_ || kv_dtype_ != KvDtype::FP16) return 0;
++            || length <= 0 || length > eff_max_ctx_ || (model_.ls_active && dspark_) || (dspark_ && (!dspark_->ready || slot != 0 || length > dspark_->max_ctx))
++            || (!model_.ls_active && !d_sconv_snap_) || kv_dtype_ != KvDtype::FP16) return 0;
+         size_t bytes = portable_sconv_bytes();
+         for (const auto& kv : runner_->kv_desc) {
+             if (kv.host_cap != 0 || kv.kv_fmt != 0) return 0;
+@@ -1227,7 +1227,7 @@
+         }
+ 
+         if constexpr (!Export) reset_slot(slot);
+-        const auto stream = runner_->st;
++        auto stream = runner_->st;
+         auto copy = [&](void* device, size_t bytes) {
+             cudaError_t error;
+             if constexpr (Export)
+@@ -1244,12 +1244,19 @@
+         };
+ 
+         bool ok;
+-        if constexpr (Export) ok = copy_conv() && copy(d_sconv_snap_, portable_sconv_bytes());
++        if (model_.ls_active) {
++            // Each visit's convolution history resides on its layer owner's device.
++            ls_sconv_io(slot, reinterpret_cast<float*>(const_cast<uint8_t*>(data)), Export);
++            data += portable_sconv_bytes();
++            ok = true;
++        } else if constexpr (Export) ok = copy_conv() && copy(d_sconv_snap_, portable_sconv_bytes());
+         else ok = copy(d_sconv_snap_, portable_sconv_bytes()) && copy_conv();
+ 
+         constexpr size_t row_bytes = kInkKVDim * sizeof(__half);
+-        for (const auto& kv : runner_->kv_desc) {
++        for (int visit = 0; visit < kInkVisits; ++visit) {
+             if (!ok) break;
++            const auto& kv = runner_->kv_desc[visit];
++            if (model_.ls_active) stream = visit_stream(visit);
+             const int rows = kv.is_swa ? std::min(length, kInkSwaWin) : length;
+             const int start = kv.is_swa ? (length - rows) % kv.dev_cap : 0;
+             const int first = std::min(rows, kv.dev_cap - start);
+@@ -1276,6 +1283,10 @@
+             }
+             if (!copy(dspark_->d_f_rnn + size_t((length-1)%dspark_->frnn_cap)*kInkHidden, size_t(kInkHidden)*sizeof(float))) return false;
+             if constexpr (!Export) dspark_slot_ = 0;
++        }
++        if (model_.ls_active) {
++            ckpt_sync();
++            return ok;
+         }
+         return cudaStreamSynchronize(stream) == cudaSuccess && ok;
+     }
