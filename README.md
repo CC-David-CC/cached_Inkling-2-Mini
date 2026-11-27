@@ -76,8 +76,9 @@ Four fresh engine processes restored the same 4,097-token checkpoint with the OS
 ### Concurrent requests
 
 The native concurrency sweep used independent 4,097-token prompts and 256
-output tokens per slot. Each point is one run. At 54 slots the engine reached
-1,006.9 aggregate tokens/s and 18.6 tokens/s per slot.
+output tokens per slot. A repeat at 38, 54, 56 and 64 slots found 1,093.2 aggregate tokens/s at 64 slots, compared with 643.5 on its first run. Both runs fit in GPU memory. The first sweep’s drop above 54 slots did not reproduce. The original 38-slot memory sample was below the model footprint and is omitted. Its repeat measured 35.44 GiB.
+
+[Download both concurrency runs](docs/benchmarks/inkling/native-concurrency.csv)
 
 ![Native throughput, per-slot speed and GPU memory by concurrent slot count](docs/benchmarks/inkling/native-concurrency.png)
 
