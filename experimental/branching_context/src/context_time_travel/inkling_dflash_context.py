@@ -91,7 +91,7 @@ def verify_greedy_block(backend, lease, context, proposal, *, remaining, stop_to
         taps = backend.consume_dflash_taps(lease, [token])
         context[0, position + index].copy_(torch.frombuffer(taps, dtype=torch.float32))
         committed.append(token)
-        if token in stop_tokens:
+        if token in stop_tokens or backend.is_eog(token):
             break
     return committed
 

@@ -68,9 +68,26 @@ class HiddenContextTest(unittest.TestCase):
 
 
 class GreedyVerifierTest(unittest.TestCase):
+    def test_stop_at_anchor_or_accepted_successor(self):
+        for stop, expected in [(10, [10]), (20, [10, 20])]:
+            for native in (False, True):
+                with self.subTest(stop=stop, native=native):
+                    backend = Mock(vocab_size=64, context_capacity=8)
+                    backend.position.return_value = 0
+                    backend.is_eog.side_effect = lambda token: native and token == stop
+                    backend.select_greedy.side_effect = [10, 20, 30]
+                    backend.consume_dflash_taps.return_value = array("f", [1.0]) * 9216
+                    ctx = torch.zeros((1, 8, 9216), dtype=torch.bfloat16)
+                    block = verify_greedy_block(backend, object(), ctx, [20, 30],
+                                                remaining=7, stop_tokens=() if native else (stop,))
+                    self.assertEqual(block, expected)
+                    self.assertEqual(backend.consume_dflash_taps.call_count, len(expected))
+                    self.assertEqual(ctx[:, 1 + len(expected):].count_nonzero().item(), 0)
+
     def test_rejection_preserves_next_position_for_target_continuation(self):
         lease = object()
         backend = Mock(vocab_size=64, context_capacity=8)
+        backend.is_eog.return_value = False
         backend.position.side_effect = [0, 2]
         backend.select_greedy.side_effect = [10, 20, 30, 30]
         taps = array("f", [1.0]) * 9216
