@@ -1,0 +1,4 @@
+pack,fixtures_passed,fixtures_total,completion_tokens,native_stop
+SQ-10,0,7,269,True
+SQ-15,0,7,74,True
+SQ-20,6,7,199,True
