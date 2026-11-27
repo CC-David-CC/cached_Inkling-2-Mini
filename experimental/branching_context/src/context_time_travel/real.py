@@ -1565,12 +1565,14 @@ class BranchingModel:
 
     def checkpoint_manifest(self, snapshot, history=None):
         """Validate canonical binding before allocating a disk-read buffer."""
-        self.store.authorize(snapshot,'materialize')
+        return self.validate_checkpoint_envelope(snapshot, self._checkpoint_envelope(snapshot), history)
+
+    def _checkpoint_envelope(self, snapshot):
+        self.store.authorize(snapshot, 'materialize')
         try:
-            envelope = _decode((self.checkpoint_directory/(snapshot+'.json')).read_bytes())
-        except (OSError,KeyError,TypeError,ValueError) as error:
+            return _decode((self.checkpoint_directory / (snapshot + '.json')).read_bytes())
+        except (OSError, KeyError, TypeError, ValueError) as error:
             raise IntegrityError('Invalid or incomplete checkpoint manifest') from error
-        return self.validate_checkpoint_envelope(snapshot,envelope,history)
 
     def validate_checkpoint_envelope(self, snapshot, envelope, history=None):
         """Validate received metadata against locally owned canonical history.
@@ -1601,7 +1603,20 @@ class BranchingModel:
 
     def validate_checkpoint(self, snapshot):
         """Stream validation for retry receipts; no native load or full blob copy."""
-        manifest = self.checkpoint_manifest(snapshot)
+        from .checkpoint_cache import validate_manifest
+        envelope = self._checkpoint_envelope(snapshot)
+        manifest = envelope.get('manifest') if isinstance(envelope, dict) else None
+        if isinstance(manifest, dict) and manifest.get('schema') == 5:
+            with self._suffix_binding(snapshot) as (parent, required):
+                child = validate_manifest(envelope, required)
+                parent_manifest = self.checkpoint_manifest(parent)
+                if parent_manifest['payload_sha256'] != required['parent_payload_sha256']:
+                    raise IntegrityError('Parent checkpoint changed during validation')
+                self._validate_checkpoint_payload(parent_manifest)
+                return self._validate_checkpoint_payload(child)
+        return self._validate_checkpoint_payload(self.validate_checkpoint_envelope(snapshot, envelope))
+
+    def _validate_checkpoint_payload(self, manifest):
         path = self.checkpoint_directory/(manifest['payload_sha256']+'.state')
         size,width = manifest['state_bytes'],4*self.backend.vocab_size
         try:

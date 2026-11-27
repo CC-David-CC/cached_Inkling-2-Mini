@@ -59,6 +59,8 @@ def main():
         envelope = json.loads((model.checkpoint_directory / (child + '.json')).read_bytes())
         altered = dict(envelope['manifest'], parent_payload_sha256='0' * 64)
         before = backend.work_counters()
+        assert model.validate_checkpoint(head.tip) == envelope['manifest']
+        assert backend.work_counters() == before
         try:
             with model.materialize_suffix(child, dict(manifest=altered, checksum=hashlib.sha256(_json_bytes(altered)).hexdigest())):
                 raise AssertionError('Invalid suffix reached a live lease')

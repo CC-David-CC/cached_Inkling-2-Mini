@@ -119,6 +119,15 @@ class PreparedCheckpointTests(unittest.TestCase):
         receipt = self.model.save_prepared_branch('main', 0, prepared, 'save-child')
         self.assertEqual(receipt, self.model.save_prepared_branch('main', 0, prepared, 'save-child'))
         self.assertEqual(receipt['branch']['revision'], 1)
+        self.model.cache.clear()
+        self.assertEqual(self.model.validate_checkpoint(child)['payload_sha256'], receipt['payload_sha256'])
+        for path in (files['payload_path'], self.model.checkpoint_directory / (cold.checksum + '.state')):
+            with self.subTest(path=path):
+                original = path.read_bytes()
+                path.write_bytes(original[:-1] + bytes([original[-1] ^ 1]))
+                with self.assertRaises(IntegrityError):
+                    self.model.validate_checkpoint(child)
+                path.write_bytes(original)
 
     def test_new_payload_corrupted_during_publication_cannot_move_branch(self):
         self.prepared();self.model.checkpoint(self.sid)
