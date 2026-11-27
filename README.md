@@ -481,6 +481,16 @@ rows for each consumed token. The DFlash2 profile uses a separate checkpoint
 identity. On llm-60 a streamed Linux command answer and a request resumed
 after its first token produced identical output IDs, including the native stop.
 
+On a 300-record inventory prompt with 256 output tokens, Cached produced
+identical token IDs in six SQ-10 HTTP requests on llm-60. Timings include
+branch creation for end-to-end throughput and first visible token. Output
+generation uses the server timer. DSpark returned HTTP 409 during root
+checkpoint creation on this bridge, so its matched rate is unavailable.
+
+![Cached HTTP drafting results](docs/benchmarks/inkling/draft-http-matched.png)
+
+[Per-request timings and token hashes](docs/benchmarks/inkling/draft-http-matched.jsonl)
+
 The chart measures seven-token DFlash2 proposals using the resident output head
 and hidden states captured during SQ-10 prefill on llm-60. Each bar is the
 median of three synchronized warm trials. Target verification and HTTP serving
