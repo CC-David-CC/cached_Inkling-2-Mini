@@ -90,6 +90,12 @@ Eight native slots each processed 131,072 prompt tokens and generated 256 output
 
 [Download the 128K concurrency measurements](docs/benchmarks/inkling/native-128k-concurrency.csv)
 
+A separate startup probe requested 131,328 tokens per independent slot from 8 through 54 slots. The chart shows the engine’s effective capacity after automatic sizing. Shorter capacities are startup observations. Generation was verified at the full requested length through eight slots. The CSV records GPU memory available before each load.
+
+![Effective context per independent slot as concurrency increases](docs/benchmarks/inkling/native-context-capacity.png)
+
+[Download the context capacity sweep](docs/benchmarks/inkling/native-context-capacity.csv)
+
 ### Training on the latest mistakes
 
 A rank-4 AdamW output-head adapter trained for eight steps on three missed lookups, then took one step per round on the previous round’s misses. Each checkpoint answered all 54 questions against the same 128K document. Step 8 fixed two original misses and lost 39 previously correct answers. Step 11 recovered all 51 original successes and fixed two misses, reaching 53/54. On a fresh 24-question register the base scored 22 and the step-11 adapter scored 21. The base remains the serving default.
