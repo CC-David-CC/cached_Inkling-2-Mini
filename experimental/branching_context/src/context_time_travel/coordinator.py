@@ -1639,8 +1639,12 @@ class ContextCoordinator:
         path = Path('/proc/meminfo')
         if not path.is_file(): raise InvalidOperation('Host available-memory witness is missing')
         rows = dict(line.split(':',1) for line in path.read_text().splitlines())
-        if int(rows['MemAvailable'].split()[0])*1024 < self.config.min_available_bytes:
-            raise PoolFull('Host memory headroom is below the configured minimum')
+        available_bytes = int(rows['MemAvailable'].split()[0]) * 1024
+        if available_bytes < self.config.min_available_bytes:
+            raise PoolFull(
+                f'Host memory headroom is below the configured minimum '
+                f'(available_bytes={available_bytes}, required_bytes={self.config.min_available_bytes})'
+            )
 
     @staticmethod
     def _release_source(job):
