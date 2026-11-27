@@ -40,6 +40,10 @@ BranchWrite also restored the 65,000-token register on the three-card worker. Lo
 
 ![BranchWrite shared-register load and lookup latency on one and three P4s](docs/benchmarks/inkling/p4-shared-document-topology.png)
 
+On one P4, each warm branch returned all 40 station labels from a 65,035-token resident prompt. Portable checkpoint capture took 0.08 seconds per branch. The two complete requests took 54.17 and 56.30 seconds, including about 13 seconds each to save state. [Per-request timings](docs/benchmarks/inkling/p4-65k-portable-save-http.csv)
+
+![Generation, state save, checkpoint capture and wall time across six single-P4 requests](docs/benchmarks/inkling/p4-65k-state-save.png)
+
 ### RTX 4090 and RTX PRO 6000 Blackwell
 
 ![Cached single-request prefill, generation, full HTTP throughput and first-text latency on the RTX 4090 and RTX PRO 6000](docs/benchmarks/inkling/gpu-comparison.png)
