@@ -43,7 +43,10 @@ def main():
                 backend.consume(lease, (501,))
                 expected = hashlib.sha256(struct.pack(row_format, *backend.logits(lease))).hexdigest()
             frontier_hash = hashlib.sha256(struct.pack(row_format, *prepared.checkpoint.frontier)).hexdigest()
-            fixture.write_text(json.dumps(dict(child=child, expected=expected, frontier_hash=frontier_hash)))
+            answer = model.run_greedy_request(child, (), 1, stream='suffix-restart')
+            result_hash = model.cache[answer['snapshot']].checksum
+            fixture.write_text(json.dumps(dict(child=child, expected=expected, frontier_hash=frontier_hash,
+                                               greedy_tokens=answer['tokens'], result_hash=result_hash)))
             return
 
         envelope = json.loads((model.checkpoint_directory / (child + '.json')).read_bytes())
@@ -66,9 +69,16 @@ def main():
             backend.consume(lease, (501,))
             assert hashlib.sha256(struct.pack(row_format, *backend.logits(lease))).hexdigest() == saved['expected']
         assert backend.work_counters()['consumed_tokens'] == 1
+        del model.cache[child]
+        before_generate = backend.work_counters()
+        answer = model.run_greedy_request(child, (), 1, stream='suffix-restart')
+        assert child not in model.cache
+        assert answer['tokens'] == saved['greedy_tokens']
+        assert model.cache[answer['snapshot']].checksum == saved['result_hash']
+        assert backend.work_counters()['consumed_tokens'] - before_generate['consumed_tokens'] == 1
         print(json.dumps(dict(parent_tokens=len(parent_history), suffix_bytes=suffix_bytes,
                               exact_continuation_logits=backend.vocab_size, saved_tokens_replayed=0,
-                              wrong_parent_rejected=True, frontier_lookup_import_bytes=0)))
+                              wrong_parent_rejected=True, frontier_lookup_import_bytes=0, greedy_source_cached=False)))
     finally:
         backend.close()
 

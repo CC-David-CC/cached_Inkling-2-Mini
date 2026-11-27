@@ -336,7 +336,7 @@ class BranchingModel:
                 yield state
 
     @contextmanager
-    def _materialize(self, snapshot, *, frontier_only=False):
+    def _materialize(self, snapshot, *, frontier_only=False, retain_suffix_image=True):
         record = self.store.get_snapshot(snapshot)
         if record['model_contract_id'] != self.profile['model_contract_id']:
             raise IntegrityError('Snapshot model contract mismatch')
@@ -349,7 +349,7 @@ class BranchingModel:
                     envelope = _decode((self.checkpoint_directory / (snapshot + '.json')).read_bytes())
                     if isinstance(envelope, dict) and isinstance(envelope.get('manifest'), dict) and envelope['manifest'].get('schema') == 5:
                         with self.materialize_suffix(snapshot, envelope, frontier_only=frontier_only) as (lease, row):
-                            if not frontier_only:
+                            if retain_suffix_image and not frontier_only:
                                 self.cache[snapshot] = self._save(lease, history)
                             yield lease, row
                         return
@@ -562,6 +562,13 @@ class BranchingModel:
                     saved=self._save(lease,history,self._completed_schedule(self.cache[snapshot].execution_schedule,history))
                 return self._publish_feed(snapshot,delta,decoder,saved)
 
+    @contextmanager
+    def _generation_source(self, snapshot):
+        needs_schedule = self._schedule_contract() is not None
+        with self._materialize(snapshot, retain_suffix_image=needs_schedule) as (lease, frontier):
+            schedule = self.cache[snapshot].execution_schedule if needs_schedule else ()
+            yield lease, frontier, schedule
+
     def run_greedy_request(self, snapshot, ids, max_steps, *, stream, on_token=None, cancelled=None,
                            artifacts=None,reencode=None):
         """One owned native request; progress is provisional until boundary publication.
@@ -627,9 +634,8 @@ class BranchingModel:
                         or policy['eos_tokens'] != execution['eos_tokens']):
                     raise InvalidOperation('Native request cannot resume this controller policy')
             payloads=held.enter_context(self._input_artifacts(ids,artifacts,reencode)) if mixed_delta else None
-            with self._materialize(snapshot) as (lease,_):
+            with self._generation_source(snapshot) as (lease, _, schedule):
                 check_cancelled()
-                schedule = self.cache[snapshot].execution_schedule
                 if ids:
                     if mixed_delta:self.backend.consume_inputs(lease,ids.spans,embeddings=payloads)
                     else:self.backend.consume(lease,ids)
@@ -845,8 +851,7 @@ class BranchingModel:
             check_cancelled()
             payloads=held.enter_context(self._input_artifacts(ids,artifacts,reencode)) if mixed_delta else None
             check_cancelled()
-            with self._materialize(snapshot) as (lease, frontier):
-                schedule = self.cache[snapshot].execution_schedule
+            with self._generation_source(snapshot) as (lease, frontier, schedule):
                 if ids:
                     if mixed_delta:self.backend.consume_inputs(lease,ids.spans,embeddings=payloads)
                     else:self.backend.consume(lease, ids)
