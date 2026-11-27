@@ -14,6 +14,10 @@ context. GPU count is a runtime setting for later trials.
 
 With a 4 GiB GPU expert pool, DSpark generated 512 tokens at 147.3 tokens/s. Drafting off produced the same IDs at 81.6 tokens/s. Each worker spent 29.8 seconds reading the register. Timings exclude model startup, HTTP and checkpoint publication. [Native timings and counters](docs/benchmarks/inkling/dspark-64k-generation.jsonl)
 
+![Decode speed and mean time per token for four independent workers](docs/benchmarks/inkling/dspark-64k-repeat.png)
+
+Two additional workers per mode reproduced all 512 output IDs. Before generation, all four agreed bit for bit on all 200,058 next-token scores. After generation the two undrafted workers still agreed exactly. The two DSpark workers chose the same next token but differed on every score, with a maximum absolute difference of 0.651. These timings and scores cover one prompt on llm-60. [Per-worker measurements](docs/benchmarks/inkling/dspark-64k-frontier-runs.jsonl) · [All pairwise score comparisons](docs/benchmarks/inkling/dspark-64k-frontiers.csv)
+
 ### Reading a 250,000-token document on llm-60
 
 ![Prefill speed across a 250,000-token document](docs/benchmarks/inkling/llm60-250k-prefill.png)
