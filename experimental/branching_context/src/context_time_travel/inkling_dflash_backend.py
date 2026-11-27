@@ -36,7 +36,10 @@ class DFlashBackend(InklingBackend):
             remaining = max_steps
             while remaining:
                 anchor = self.select_greedy(lease)
-                path = self.propose(self.rows[:, :self.position(lease) + 1], anchor)
+                # A successor can only be committed after the anchor.
+                path = []
+                if remaining > 1 and not self.is_eog(anchor):
+                    path = self.propose(self.rows[:, :self.position(lease) + 1], anchor)
                 self.stats['draft_nodes'] = self.stats.get('draft_nodes', 0) + len(path)
                 for index, token in enumerate([anchor, *path]):
                     if index and token != self.select_greedy(lease):
