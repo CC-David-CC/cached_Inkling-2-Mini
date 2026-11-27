@@ -1,0 +1,23 @@
+SQ-10
+[InkCUDA] Loaded /mnt/data10tb/cached-inkling-p4/Inkling-2-Mini-SQ-10.strata (SQ-10, fmt=strata-v1.1) [cuda-ls 3 stages]: trunk=1.87 GB (6.53s), experts=768+2304 GPU / 0 host (36.79s, hyb=0): GPU0(L0..5,768exp) GPU1(L6..14,1152exp) GPU2(L15..23,1152exp)
+[InkCUDA] memory: 3829 MiB free after load, runner+KV took 740 MiB (max_batch=512), DSpark took 0 MiB, 3089 MiB free now
+[InkCUDA] Elastic global KV grown: 8192 -> 131072 tokens (max_ctx=131072)
+effective_ctx=131072
+reserved=1 remaining_mib=2602 slot_payload_bytes=4465524736
+decode_tps=7.57078 seconds=4.22678
+final_position=131071 finite_logits=200058 remaining_mib=2600
+result 0
+SQ-15
+[InkCUDA] Loaded /mnt/data10tb/cached-inkling-p4/Inkling-2-Mini-SQ-15.strata (SQ-15, fmt=strata-v1.1) [cuda-ls 3 stages]: trunk=2.07 GB (2.32s), experts=768+2304 GPU / 0 host (12.97s, hyb=0): GPU0(L0..5,768exp) GPU1(L6..14,1152exp) GPU2(L15..23,1152exp)
+[InkCUDA] memory: 2391 MiB free after load, runner+KV took 740 MiB (max_batch=512), DSpark took 0 MiB, 1651 MiB free now
+effective_ctx=131072
+reserved=0 remaining_mib=1644 slot_payload_bytes=4465524736
+result 9
+SQ-20
+[InkHybrid] host expert arena 2.56 GB pinned (under 45% of the available RAM; available RAM 198.4 GB): the card reads the cold experts itself
+[InkCUDA] Loaded /mnt/data10tb/cached-inkling-p4/Inkling-2-Mini-SQ-20.strata (SQ-20, fmt=strata-v1.1) [cuda-ls 3 stages]: trunk=3.67 GB (14.24s), experts=581+1920 GPU / 571 host (19.01s, hyb=1): GPU0(L0..8,581exp) GPU1(L9..17,1152exp) GPU2(L18..23,768exp)
+[InkCUDA] Auto-sizing max_ctx 131072 -> 18112 for parallel=1 (1.19 GiB free VRAM)
+[InkCUDA] memory: 1227 MiB free after load, runner+KV took 814 MiB (max_batch=512), DSpark took 0 MiB, 413 MiB free now
+[InkHybrid] cold experts: no launch probe on this configuration, computed on the CPU where they are
+effective_ctx=18112
+result 4
