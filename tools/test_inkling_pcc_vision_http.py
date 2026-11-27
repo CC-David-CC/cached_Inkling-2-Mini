@@ -2,6 +2,7 @@
 import argparse
 import base64
 import hashlib
+from io import BytesIO
 import json
 from pathlib import Path
 from urllib.error import HTTPError
@@ -9,6 +10,21 @@ from urllib.request import Request, urlopen
 import uuid
 
 from test_inkling_http import solid_png
+
+
+def image_cases():
+    from PIL import Image
+
+    red, blue = (255, 0, 0), (0, 0, 255)
+    for color, left, right in [('red', red, blue), ('blue', blue, red)]:
+        raw = base64.b64decode(solid_png(left).split(',', 1)[1])
+        yield color, color, 'Is the image red or blue? Answer with one word.', raw
+
+        image = Image.new('RGB', (224, 224), left)
+        image.paste(right, (112, 0, 224, 224))
+        buffer = BytesIO()
+        image.save(buffer, format='PNG')
+        yield 'left-' + color, color, 'What color is the LEFT half of the image? Answer with one word.', buffer.getvalue()
 
 
 def main():
@@ -48,31 +64,32 @@ def main():
     if args.mode == 'write':
         namespace = post('namespace', dict(title='Inkling vision test', operation_id=operation()))['namespace_id']
         results = {}
-        for color, rgb in (('red', (255, 0, 0)), ('blue', (0, 0, 255))):
-            raw = base64.b64decode(solid_png(rgb).split(',', 1)[1])
+        for case_id, color, question, raw in image_cases():
             uploaded = post('images?namespace=' + namespace, raw, image=True)
             messages = [dict(role='user', content=[
                 dict(type='image', image_id=uploaded['image_id']),
-                dict(type='text', text='Is the image red or blue? Answer with one word.'),
+                dict(type='text', text=question),
             ])]
-            branch = color + '-' + uuid.uuid4().hex
+            branch = case_id + '-' + uuid.uuid4().hex
             root = post('text/prepare', dict(branch=branch, namespace_id=namespace,
                                             messages=messages, operation_id=operation(), stream=False))
             receipt = root['receipt']
             fork = post('fork', dict(name=branch + '-restart', snapshot=receipt['snapshot'],
                                      source_branch=branch, operation_id=operation()))
             response = answer(branch, receipt['branch']['revision'], color)
-            results[color] = dict(fork=fork, response=response, root=receipt['snapshot'])
-            print(f'{color}: {response["answer"]["text"]}')
-        assert results['red']['root'] != results['blue']['root']
+            results[case_id] = dict(color=color, fork=fork, response=response, root=receipt['snapshot'])
+            print(f'{case_id}: {response["answer"]["text"]}')
+        assert len({record['root'] for record in results.values()}) == len(results)
         args.fixture.write_text(json.dumps(results))
     else:
-        for color, fixture in json.loads(args.fixture.read_text()).items():
+        for case_id, fixture in json.loads(args.fixture.read_text()).items():
             fork, expected = fixture['fork'], fixture['response']
-            response = answer(fork['name'], fork['revision'], color)
-            assert response['answer']['tokens'] == expected['answer']['tokens']
-            assert response['receipt']['payload_sha256'] == expected['receipt']['payload_sha256']
-            print(f'{color} after restart: identical tokens and state hash, zero image or text replay')
+            response = answer(fork['name'], fork['revision'], fixture.get('color', case_id))
+            assert response['answer']['tokens'] == expected['answer']['tokens'], case_id
+            actual_hash = response['receipt']['payload_sha256']
+            expected_hash = expected['receipt']['payload_sha256']
+            assert actual_hash == expected_hash, (case_id, actual_hash, expected_hash)
+            print(f'{case_id} after restart: identical tokens and state hash, zero image or text replay')
 
 
 if __name__ == '__main__':
