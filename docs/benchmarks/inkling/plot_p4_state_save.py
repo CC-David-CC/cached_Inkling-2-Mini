@@ -10,6 +10,7 @@ for filename, method in [
     ("p4-65k-state-save-http.csv", "Baseline"),
     ("p4-65k-owner-reuse-http.csv", "Digest reuse"),
     ("p4-65k-portable-save-http.csv", "Portable capture"),
+    ("p4-65k-checksum-save-http.csv", "Single payload hash"),
 ]:
     with (folder / filename).open() as stream:
         rows.extend(dict(row, method=method) for row in csv.DictReader(stream))
