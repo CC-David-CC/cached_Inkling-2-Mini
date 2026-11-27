@@ -1,0 +1,24 @@
+{
+  "document_tokens": 65536,
+  "full": [
+    39905,
+    200010,
+    200006
+  ],
+  "before_restart": [
+    39905
+  ],
+  "after_restart": [
+    200010,
+    200006
+  ],
+  "counters": {
+    "consumed_tokens": 2,
+    "forward_tokens": 2,
+    "resident_parent_restores": 0,
+    "resident_child_restores": 0,
+    "checkpoint_import_bytes": 2320531456,
+    "draft_nodes": 7,
+    "drafts_accepted": 1
+  }
+}
