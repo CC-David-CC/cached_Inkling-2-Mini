@@ -1347,6 +1347,18 @@
     "test_xtc_pipeline_native": {
       "campaign": "cpu",
       "requires": []
+    },
+    "test_backend_registry": {
+      "campaign": "cpu",
+      "requires": []
+    },
+    "test_operation_contracts": {
+      "campaign": "cpu",
+      "requires": []
+    },
+    "test_lark_grammar": {
+      "campaign": "cpu",
+      "requires": []
     }
   }
 }
