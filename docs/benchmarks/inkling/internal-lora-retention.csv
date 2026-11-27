@@ -1,0 +1,3 @@
+domain,questions,base_correct,adapter_correct,gained,lost,base_answer_restored
+coding,4,2,2,0,0,4
+linux,4,2,1,0,1,4
