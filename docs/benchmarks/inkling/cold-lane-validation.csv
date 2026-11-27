@@ -1,0 +1,10 @@
+saved,active,accepted,reason
+auto,auto,True,
+auto,0,False,Cold expert execution mode differs from the saved profile
+auto,1,False,Cold expert execution mode differs from the saved profile
+0,auto,False,Cold expert execution mode differs from the saved profile
+0,0,True,
+0,1,False,Cold expert execution mode differs from the saved profile
+1,auto,False,Cold expert execution mode differs from the saved profile
+1,0,False,Cold expert execution mode differs from the saved profile
+1,1,True,
