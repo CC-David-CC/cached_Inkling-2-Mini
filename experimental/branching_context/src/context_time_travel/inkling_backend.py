@@ -19,6 +19,11 @@ MODEL_SHA256 = '0bbfd52344f0dd4779a7807b5f73554a812f24c035e6877b63cd0d499f7e1b97
 TOKENIZER_SHA256 = '7f332727f9a3f093dd452a39cc978e6757627e5dad1b0673aa4e75174f236dd6'
 VISION_SHA256 = '6589eff47f9c20bc3a032faa3d449f10bf4f04a84cc6b2ee8a44d51d2b6fc677'
 GRAMMAR_TOKENIZER_SHA256 = '14132b1c19a0a44f3330db134fe6be44c68e22ddb6873cddd752a036e10b0f20'
+PACK_HASHES = {
+    'SQ-10': 'ac4d452ad03e4930abd9d46f9c5eec22b2f75a1da45a1e49bd24ccd58b065934',
+    'SQ-15': '2ea32eed533afba257e2cbee7b073dc2c3da80fe55d1d2d794779b5498e30737',
+    'SQ-20': MODEL_SHA256,
+}
 HEAD_WIDTH = 2304
 HEAD_ADAPTER_HEADER = struct.Struct('<8sI32s')
 HEAD_ADAPTER_MAGIC = b'IKLORA1\0'
@@ -31,8 +36,8 @@ EXECUTION = dict(capacity=8192, prefill_chunk=512, kv='fp16', draft='off',
                  eos_tokens=[199999, 200006], GPU=[0])
 
 
-def model_contract_id(vision=False, adapter_sha256=None):
-    identity = dict(architecture='inkling2_loop', weights_sha256=MODEL_SHA256,
+def model_contract_id(vision=False, adapter_sha256=None, weights_sha256=MODEL_SHA256):
+    identity = dict(architecture='inkling2_loop', weights_sha256=weights_sha256,
                     input_kind='mixed' if vision else 'token_ids',
                     adapters=[adapter_sha256] if adapter_sha256 else [],
                     vision=VISION_SHA256 if vision else False,
@@ -40,7 +45,12 @@ def model_contract_id(vision=False, adapter_sha256=None):
     return hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
 
 
-def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None, capacity=8192, grammar=False, draft=False):
+def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None, capacity=8192, grammar=False, draft=False, pack='SQ-20'):
+    if pack not in PACK_HASHES:
+        raise ValueError('Unknown Inkling pack')
+    if adapter and pack != 'SQ-20':
+        raise ValueError('This head adapter format is pinned to SQ-20 weights')
+    weights = PACK_HASHES[pack]
     bridge = str(runtime / 'native-build/libinkling_pcc_bridge.so')
     build = {'sha256': {bridge: digest_file(bridge)}}
     if type(capacity) is not int or not 8192 <= capacity <= 133120:
@@ -48,6 +58,10 @@ def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None, 
     execution = dict(EXECUTION, capacity=capacity,
                      cuda_cublas_compute_type=os.getenv('GGML_CUDA_CUBLAS_COMPUTE_TYPE', 'auto'),
                      nvidia_tf32_override=os.getenv('NVIDIA_TF32_OVERRIDE', 'unset'))
+    if 'STRATA_INK_EXACT' in os.environ:
+        execution['cold_expert_lane'] = os.environ['STRATA_INK_EXACT']
+    if 'CUDA_VISIBLE_DEVICES' in os.environ:
+        execution['cuda_visible_devices'] = os.environ['CUDA_VISIBLE_DEVICES']
     hardware = subprocess.check_output([
         'nvidia-smi', '--query-gpu=name,uuid,driver_version', '--format=csv,noheader'
     ], text=True).strip()
@@ -72,9 +86,9 @@ def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None, 
         extra['adapter_sha256'] = digest_file(adapter)
     identity = dict(build=build, execution=execution, hardware=hardware)
     return dict(backend='inkling-cuda', bridge_library=bridge, native_build=build,
-                model_path=str(runtime / 'Inkling-2-Mini-SQ-20.strata'),
+                model_path=str(runtime / f'Inkling-2-Mini-{pack}.strata'),
                 tokenizer_path=str(runtime / 'tokenizer-source.json'),
-                model_weights_sha256=MODEL_SHA256, model_contract_id=model_contract_id(vision, extra.get('adapter_sha256')),
+                model_weights_sha256=weights, model_contract_id=model_contract_id(vision, extra.get('adapter_sha256'), weights),
                 execution=execution, hardware=hardware,
                 execution_profile_id=hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest(),
                 **extra)
@@ -227,6 +241,8 @@ class InklingBackend(NativeBackend):
     def validate_execution_profile(self):
         profile = self.profile
         execution = profile['execution']
+        if execution.get('cold_expert_lane') != os.environ.get('STRATA_INK_EXACT'):
+            raise IntegrityError('Cold expert execution mode differs from the saved profile')
         if self.vision_path:
             if (any(execution.get(key) != value for key, value in VISION_EXECUTION.items())
                     or digest_file(self.vision_path) != VISION_SHA256):
@@ -240,8 +256,9 @@ class InklingBackend(NativeBackend):
             required.update(draft='dspark', state_format='inkling-cuda-fp16-dspark-v1')
             if self.adapter_sha256 or self.vision_path:
                 raise IntegrityError('Unsupported DSpark model configuration')
-        if (profile['model_weights_sha256'] != MODEL_SHA256
-                or profile['model_contract_id'] != model_contract_id(bool(self.vision_path), self.adapter_sha256)
+        weights = profile['model_weights_sha256']
+        if (weights not in PACK_HASHES.values() or (self.adapter_sha256 and weights != MODEL_SHA256)
+                or profile['model_contract_id'] != model_contract_id(bool(self.vision_path), self.adapter_sha256, weights)
                 or type(self.context_capacity) is not int or not 8192 <= self.context_capacity <= 133120
                 or any(execution.get(key) != value for key, value in required.items() if key != 'capacity')
                 or profile['bridge_library'] not in profile['native_build']['sha256']
