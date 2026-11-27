@@ -18,6 +18,8 @@ At 64K, three SQ-10 workers with all experts in host RAM decoded 32 steps each a
 
 A single Cached HTTP worker reading a 65,000-token document on SQ-10 with a 768 MiB GPU expert budget had 1,953 MiB free at 57,344 allocated KV slots and 1,697 MiB free at 65,536 slots. These are device-wide prefill samples from P4 index 2 on r730. [VRAM samples](docs/benchmarks/inkling/p4-prefill-vram-by-capacity.csv)
 
+Cached loaded a 65,000-token register through BranchWrite HTTP in 17m 55s on a single P4. The first question took 48.9s. After restarting the server, repeating it took 58.2s and imported 2.30 GB from tmpfs. A different question then took 43.4s and imported zero bytes. Both answers were correct, and each request forwarded 18 tokens. These measurements include checkpoint handling. [Per-request results](docs/benchmarks/inkling/p4-shared-document.csv)
+
 Three independent P4 workers also read the same 65,504-token register from scratch, using a 0.75 GiB expert budget on each card. Each produced the correct final-station temperature before the first message boundary. Reading took 17.9–18.8 minutes per worker. The native benchmark continued for 32 fixed greedy steps. The workers finished prefill at different times, so their individual decode rates cannot be added to infer simultaneous decode throughput.
 
 ![P4 long-register prefill and decode timings](docs/benchmarks/inkling/p4-register.png)
