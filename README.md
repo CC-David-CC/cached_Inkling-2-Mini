@@ -38,6 +38,12 @@ BranchWrite loaded one station register, forked three siblings from the same par
 
 [Download the shared-parent measurements](docs/benchmarks/inkling/resident-128k.csv)
 
+An offline delta-storage experiment used the saved checkpoints from these same three children. Each 4.47 GB child reconstructed from the parent plus a 12.41 MB rsync delta, with its full SHA-256 verified. Applying each delta to a parent copy in RAM took 5.58–5.76 seconds, excluding the initial parent copy and final hash check. The live server still exports full child payloads.
+
+![Cumulative checkpoint storage for one parent and zero to three branches](docs/benchmarks/inkling/shared-parent-storage.png)
+
+[Download the cumulative payload sizes](docs/benchmarks/inkling/shared-parent-storage.csv)
+
 ### 3K and 6K single requests
 
 One NVIDIA RTX PRO 6000 Blackwell, SQ-20 weights resident on the GPU, FP16 KV.
