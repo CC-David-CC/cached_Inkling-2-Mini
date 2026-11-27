@@ -15,7 +15,11 @@ def main():
     parser.add_argument('--port', type=int, default=18061)
     parser.add_argument('--chat', action='store_true')
     parser.add_argument('--adapter', type=Path)
+    parser.add_argument('--dspark-long', action='store_true', help='test 1024-token greedy chat with the draft engine')
     args = parser.parse_args()
+    if args.dspark_long:
+        args.chat = True
+    limit = 1024 if args.dspark_long else 5
     expected_contract = None
     if args.adapter:
         import hashlib
@@ -39,7 +43,10 @@ def main():
         return result
 
     messages = [{'role': 'user', 'content': 'What is 2 + 2? Reply with just the number.'}]
-    namespace = 'text/' if args.chat else ''
+    if args.dspark_long:
+        messages[0]['content'] = ('Copy every line verbatim. Start with the first line.\n' +
+                                  '\n'.join(f'Item {i}: the sample value is {i}.' for i in range(1, 501)))
+    namespace = 'text/'  if args.chat else ''
 
     def create(branch):
         prompt = dict(messages=messages) if args.chat else dict(token_ids=[100, 101, 102])
@@ -48,7 +55,7 @@ def main():
 
     def generate(branch, revision):
         prompt = dict(messages=messages) if args.chat else dict(rendered_token_ids=[100, 101, 102])
-        return call(namespace + 'generate', dict(branch=branch, revision=revision, max_tokens=5,
+        return call(namespace + 'generate', dict(branch=branch, revision=revision, max_tokens=limit,
                                                  **prompt, settings={'temperature': 0}, stream=False,
                                                  operation_id='op-' + uuid.uuid4().hex))
 
@@ -58,11 +65,14 @@ def main():
         left_root, right_root = create(left), create(right)
         assert left_root['receipt']['snapshot'] == right_root['receipt']['snapshot']
         answer = generate(left, left_root['receipt']['branch']['revision'])
-        assert 1 <= len(answer['answer']['tokens']) <= 5, answer
-        if args.chat:
+        assert 1 <= len(answer['answer']['tokens']) <= limit, answer
+        if args.dspark_long:
+            assert len(answer['answer']['tokens']) == limit
+            assert answer['answer']['counter_deltas']['draft_nodes'] > 0
+        elif args.chat:
             assert answer['answer']['text'].strip() == '4', answer
         args.fixture.write_text(json.dumps(dict(branch=right, root=right_root, answer=answer)))
-        print(f'HTTP create and generate passed: {answer["answer"]["tokens"]}')
+        print(f'HTTP create and generate passed with {len(answer["answer"]["tokens"])} tokens')
     else:
         fixture = json.loads(args.fixture.read_text())
         answer = generate(fixture['branch'], fixture['root']['receipt']['branch']['revision'])
@@ -73,9 +83,13 @@ def main():
         generated = len(answer['answer']['tokens'])
         # The chat renderer appends exactly two assistant framing tokens.
         assert forward == generated + (2 if args.chat else 0), answer
-        if args.chat:
+        if args.dspark_long:
+            assert len(answer['answer']['tokens']) == limit
+            assert answer['answer']['counter_deltas']['draft_nodes'] > 0
+        elif args.chat:
             assert answer['answer']['text'].strip() == '4', answer
-        print(f'HTTP continuation after restart matched: {answer["answer"]["tokens"]}')
+        print(json.dumps(dict(result='restart matched', generated=generated, forward=forward,
+                              counters=answer['answer']['counter_deltas'], payload=answer['receipt']['payload_sha256'])))
 
 
 if __name__ == '__main__':

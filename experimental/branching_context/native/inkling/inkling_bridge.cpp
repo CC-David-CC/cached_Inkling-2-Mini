@@ -10,7 +10,7 @@
 #include <string_view>
 
 namespace {
-constexpr int capacity = 8192;
+constexpr int default_capacity = 8192;
 constexpr int chunk = 512;
 constexpr int max_image_rows = 1024;
 thread_local std::string error;
@@ -20,9 +20,13 @@ struct Model {
     std::unique_ptr<ink2::InkBackend> backend;
     ink2::CpuVisionEncoder vision;
     std::vector<float> lora_a, lora_b;
+    int capacity = default_capacity;
+    bool dspark = false;
     int lora_rank = 0;
     uint64_t work = 0;
     bool leased = false;
+    int pinned_length = 0;
+    int exported_length = 0;
 };
 
 struct ImageEmbedding {
@@ -42,14 +46,17 @@ struct Lease {
 extern "C" {
 const char* ctt_error() { return error.c_str(); }
 
-void* ctt_load(const char* path) try {
+void* ctt_load_profile(const char* path, int capacity, bool dspark) try {
+    if (capacity < default_capacity || capacity > 133120) { error = "Invalid Inkling context capacity"; return nullptr; }
     auto model = std::make_unique<Model>();
+    model->capacity = capacity;
     if (!model->file.open(path, error, false, "")) return nullptr;
     ink2::BackendOpts opts;
     opts.max_ctx = capacity;
     opts.chunk = chunk;
     opts.chunk_auto = false;
-    opts.enable_dspark = false;
+    opts.enable_dspark = dspark;
+    model->dspark = dspark;
     opts.kv_dtype_auto = false;
     opts.kv_offload = "off";
     model->backend = ink2::make_cuda_backend();
@@ -64,6 +71,10 @@ void* ctt_load(const char* path) try {
     error = e.what();
     return nullptr;
 }
+
+void* ctt_load_capacity(const char* path, int capacity) { return ctt_load_profile(path, capacity, false); }
+
+void* ctt_load(const char* path) { return ctt_load_capacity(path, default_capacity); }
 
 void ctt_unload(void* model) { delete static_cast<Model*>(model); }
 int ctt_vocab(void* model) { return static_cast<Model*>(model)->file.m.c.vocab_unpadded; }
@@ -93,7 +104,7 @@ void* ctt_new(void* raw) try {
         return nullptr;
     }
     auto lease = std::make_unique<Lease>(Lease{model, std::vector<float>(ctt_vocab(raw))});
-    if (!model.backend->alloc_slot(0, capacity, ink2::KvDtype::FP16, error)) return nullptr;
+    if (!model.pinned_length && !model.backend->alloc_slot(0, model.capacity, ink2::KvDtype::FP16, error)) return nullptr;
     model.leased = true;
     return lease.release();
 } catch (const std::exception& e) {
@@ -103,7 +114,7 @@ void* ctt_new(void* raw) try {
 
 void ctt_free(void* raw) {
     std::unique_ptr<Lease> lease(static_cast<Lease*>(raw));
-    lease->model.backend->free_slot(0);
+    if (!lease->model.pinned_length) lease->model.backend->free_slot(0);
     lease->model.leased = false;
 }
 
@@ -114,7 +125,7 @@ static int consume(void* raw, const int32_t* ids, const int32_t* image_rows,
                       const float* embeddings, int rows, int count,
                       float* training_hidden = nullptr) try {
     auto& lease = *static_cast<Lease*>(raw);
-    if (!ids || count < 1 || count > capacity - lease.length ||
+    if (!ids || count < 1 || count > lease.model.capacity - lease.length ||
         rows < 0 || rows > count || (rows && (!embeddings || !image_rows)) ||
         std::any_of(ids, ids + count, [&](int token) {
             return token < 0 || size_t(token) >= lease.logits.size();
@@ -138,9 +149,15 @@ static int consume(void* raw, const int32_t* ids, const int32_t* image_rows,
             return 1;
         }
     }
+    lease.model.exported_length = 0;
+    if (!lease.length && lease.model.pinned_length) {
+        lease.model.backend->reset_slot(0);
+        lease.model.pinned_length = 0;
+    }
     lease.frontier = false;
     for (int offset = 0; offset < count;) {
         ink2::StepBatch batch;
+        batch.capture_taps = lease.model.dspark;
         batch.img_embeds = embeddings;
         const int take = std::min(chunk, count - offset);
         for (int i = 0; i < take; ++i) {
@@ -274,6 +291,37 @@ int ctt_select_greedy(void* raw) {
     return int(std::max_element(lease.logits.begin(), lease.logits.end()) - lease.logits.begin());
 }
 
+// Return consumed tokens with a full verifier frontier at the last token.
+int ctt_draft_block(void* raw, int remaining, int32_t* output, int* verified_nodes) try {
+    auto& lease = *static_cast<Lease*>(raw);
+    if (!lease.model.dspark || !output || !verified_nodes || remaining < 1) return -1;
+    *verified_nodes = 0;
+    const int anchor = ctt_select_greedy(raw);
+    if (anchor < 0) return -1;
+    output[0] = anchor;
+    int n = 0;
+    if (remaining > 1 && !ctt_eog(&lease.model, anchor)) {
+        n = lease.model.backend->dspark_spec_step_greedy(0, anchor, lease.length,
+            std::min(8, remaining - 1), output + 1, verified_nodes, error);
+        if (n < 0) return -1;
+    }
+    int last = n;
+    for (int i = 1; i < n; ++i) {
+        if (ctt_eog(&lease.model, output[i])) {
+            last = i;
+            lease.model.backend->rollback_slot(0, lease.length + last);
+            break;
+        }
+    }
+    lease.length += last;
+    lease.model.work += last;
+    if (ctt_consume(raw, output + last, 1)) return -1;
+    return last + 1;
+} catch (const std::exception& e) {
+    error = e.what();
+    return -1;
+}
+
 size_t ctt_state_size(void* raw) {
     auto& lease = *static_cast<Lease*>(raw);
     return lease.frontier ? lease.model.backend->portable_state_size(0, lease.length) : 0;
@@ -281,9 +329,44 @@ size_t ctt_state_size(void* raw) {
 
 size_t ctt_export(void* raw, void* target, size_t size) {
     auto& lease = *static_cast<Lease*>(raw);
-    return lease.frontier && lease.model.backend->export_portable_state(0, lease.length, target, size)
-        ? size : 0;
+    if (!lease.frontier || !lease.model.backend->export_portable_state(0, lease.length, target, size)) return 0;
+    lease.model.exported_length = lease.length;
+    return size;
 }
+
+// A resident parent keeps its append-only global KV on the device. The backend
+// saves the ShortConv and sliding-window rows overwritten by later questions.
+int ctt_pin_shared(void* raw) try {
+    auto& lease = *static_cast<Lease*>(raw);
+    if (!lease.frontier || lease.model.pinned_length ||
+        !lease.model.backend->supports_shared_checkpoint() ||
+        !lease.model.backend->save_shared_checkpoint(0, lease.length)) return 0;
+    lease.model.pinned_length = lease.length;
+    return 1;
+} catch (const std::exception& e) { error = e.what(); return 0; }
+
+// The latest exported child still occupies slot zero across leases while its parent is pinned.
+int ctt_reuse_exported(void* raw, int length, const float* frontier, size_t count) {
+    auto& lease = *static_cast<Lease*>(raw);
+    if (!lease.model.pinned_length || length <= 0 || length != lease.model.exported_length ||
+        !frontier || count != lease.logits.size()) return 0;
+    std::copy_n(frontier, count, lease.logits.data());
+    lease.length = length;
+    lease.frontier = true;
+    return 1;
+}
+
+int ctt_reuse_shared(void* raw, int length, const float* frontier, size_t count) try {
+    auto& lease = *static_cast<Lease*>(raw);
+    if (length <= 0 || length != lease.model.pinned_length || !frontier ||
+        count != lease.logits.size()) return 0;
+    lease.model.exported_length = 0;
+    if (!lease.model.backend->restore_shared_checkpoint(0, length)) return 0;
+    std::copy_n(frontier, count, lease.logits.data());
+    lease.length = length;
+    lease.frontier = true;
+    return 1;
+} catch (const std::exception& e) { error = e.what(); return 0; }
 
 // PCC provides the authenticated position and separately stored frontier.
 size_t ctt_import_checkpoint(void* raw, const void* data, size_t size, int length,
@@ -292,6 +375,8 @@ size_t ctt_import_checkpoint(void* raw, const void* data, size_t size, int lengt
     if (!frontier || count != lease.logits.size() || !size ||
         size != lease.model.backend->portable_state_size(0, length)) return 0;
     lease.frontier = false;
+    lease.model.pinned_length = 0;
+    lease.model.exported_length = 0;
     if (!lease.model.backend->import_portable_state(0, length, data, size)) return 0;
     std::copy_n(frontier, count, lease.logits.data());
     lease.length = length;

@@ -1,0 +1,69 @@
+--- a/engine/src/inkling2/cuda/ink_cuda_backend.cu
++++ b/engine/src/inkling2/cuda/ink_cuda_backend.cu
+@@ -405,13 +405,20 @@
+     size_t portable_state_size(int slot, int length) const override {
+         using namespace strata::ink;
+         if (!initialized_ || slot < 0 || slot >= max_slots_ || !slot_alloc_[slot]
+-            || length <= 0 || length > eff_max_ctx_ || model_.ls_active || dspark_
++            || length <= 0 || length > eff_max_ctx_ || model_.ls_active || (dspark_ && (!dspark_->ready || slot != 0 || length > dspark_->max_ctx))
+             || !d_sconv_snap_ || kv_dtype_ != KvDtype::FP16) return 0;
+         size_t bytes = portable_sconv_bytes();
+         for (const auto& kv : runner_->kv_desc) {
+             if (kv.host_cap != 0 || kv.kv_fmt != 0) return 0;
+             const int rows = kv.is_swa ? std::min(length, kInkSwaWin) : length;
+             bytes += 2 * size_t(rows) * kInkKVDim * sizeof(__half);
++        }
++        if (dspark_) {
++            for (int il = 0; il < 3; ++il) {
++                const int rows = model_.man.c.dspark_is_swa[il] ? std::min(length, model_.man.c.dspark_swa_win) : length;
++                bytes += size_t(2) * rows * kInkKVDim * sizeof(__half);
++            }
++            bytes += size_t(kInkHidden) * sizeof(float);
+         }
+         return bytes;
+     }
+@@ -1253,6 +1260,23 @@
+                 if (!ok) break;
+             }
+         }
++        if (dspark_) {
++            if constexpr (Export) { if (dspark_slot_ != 0) return false; }
++            else if (!dspark_->ensure_ctx_cap(length)) return false;
++            for (int il = 0; il < 3; ++il) {
++                const int cap = dspark_->ctx_cap[il];
++                const int rows = model_.man.c.dspark_is_swa[il] ? std::min(length, model_.man.c.dspark_swa_win) : length;
++                if (rows > cap) return false;
++                const int start = (length - rows) % cap;
++                const int first = std::min(rows, cap - start);
++                for (auto* buffer : {dspark_->d_ctx_k[il], dspark_->d_ctx_v[il]}) {
++                    if (!copy(buffer + size_t(start)*kInkKVDim, size_t(first)*row_bytes)) return false;
++                    if (first < rows && !copy(buffer, size_t(rows-first)*row_bytes)) return false;
++                }
++            }
++            if (!copy(dspark_->d_f_rnn + size_t((length-1)%dspark_->frnn_cap)*kInkHidden, size_t(kInkHidden)*sizeof(float))) return false;
++            if constexpr (!Export) dspark_slot_ = 0;
++        }
+         return cudaStreamSynchronize(stream) == cudaSuccess && ok;
+     }
+ 
+--- a/engine/src/inkling2/cuda/ink_runner.cuh
++++ b/engine/src/inkling2/cuda/ink_runner.cuh
+@@ -4050,7 +4050,17 @@
+     void head_logits_from(const float* d_h_src, int n_want, bool softcap = true) {
+         ensure_logits(n_want);
+         const int V = m.man.c.vocab_unpadded;
+-        linear("model.llm.unembed.weight", d_h_src, d_logits, n_want, V);
++        static const bool exact_head = [] {
++            const char* value = std::getenv("INKLING_EXACT_HEAD");
++            return value && std::strcmp(value, "1") == 0;
++        }();
++        if (n_want > 1 && exact_head) {
++            for (int row = 0; row < n_want; ++row)
++                linear("model.llm.unembed.weight", d_h_src + size_t(row) * m.man.c.hidden,
++                       d_logits + size_t(row) * V, 1, V);
++        } else {
++            linear("model.llm.unembed.weight", d_h_src, d_logits, n_want, V);
++        }
+         if (!softcap) return;
+         const size_t n = (size_t)n_want * V;
+         k_ink_softcap<<<(n + 255) / 256, 256, 0, st>>>(d_logits, n, m.man.c.logit_softcap);

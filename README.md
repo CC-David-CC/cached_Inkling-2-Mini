@@ -65,8 +65,7 @@ compiler path, GPU architecture and build parallelism.
 PCC's Inkling CUDA adapter stores per-visit full-attention and sliding-window
 KV, ShortConv state, and a separately stored full-vocabulary frontier. The
 pinned profile consumes canonical text token IDs at 8K context with FP16 KV,
-512-token prefill chunks, and drafting disabled. The RAM cache retains up to
-2 GiB of native payloads and 32 entries. Disk checkpoints use PCC's existing
+512-token prefill chunks, and drafting disabled. The HTTP service defaults to an 8 GiB resident checkpoint budget at 8K context and scales it up for longer contexts. Use `--ram-cache-gib N` to set the budget explicitly. The worker cache also has a 32-entry limit. Disk checkpoints use PCC's existing
 checksummed envelope and bind the model, tokenizer, execution profile and
 token history. An optional vision profile uses the pinned vision tower and
 absolute-position image embedding rows. Its histories also bind the original
@@ -155,11 +154,13 @@ zero replay. The fresh-process test had no image encoding step.
 ### PCC HTTP token and chat service
 
 After building the PCC bridge, start the authenticated localhost service
-with a persistent store:
+with a private, temporary store under Linux `/dev/shm`:
 
 ```bash
 python tools/inkling_pcc_serve.py /mnt/fast_cache/inkling
 ```
+
+The temporary store holds checkpoint files and branch metadata in tmpfs and is removed on normal shutdown. This still uses RAM for serialized checkpoints in addition to resident cache entries. For restart and disk durability testing, pass `--persistent` to reuse the profile’s runtime directory or `--store PATH` to select a directory. Use the same option on both launches.
 
 The launcher creates a private `pcc-http.key` in the runtime directory.
 The service listens on port 18061 by default. It offers `/cow/create` and
@@ -243,3 +244,15 @@ llm-60 as an opt-in profile. Compare against DSpark and draft-off under matched 
 Include draft acceptance, verifier cost, memory overhead, and post-restore
 continuation. Qualify the drafter's state and rejection rollback before
 enabling it with PCC checkpoints.
+
+### Experimental Cached DSpark text serving
+
+For the single-GPU unadapted greedy text profile, apply
+`experimental/branching_context/native/inkling/dspark-checkpoint.patch` after
+`portable-state.patch`, then rebuild the PCC bridge from this checkout.
+Launch with `INKLING_EXACT_HEAD=1 python tools/inkling_pcc_serve.py RUNTIME --dspark`.
+The selected output projection and drafting mode participate in checkpoint identity.
+The server commits a full verifier frontier at the end of each speculative block.
+The `draft_nodes` counter reports proposed tree nodes. Use the complete HTTP
+operation, including root creation and branch acknowledgment, to measure
+end-to-end throughput.

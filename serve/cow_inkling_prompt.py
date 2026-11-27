@@ -22,6 +22,36 @@ class InklingPromptEncoder(CowPromptEncoder):
             rendered += '<|message_model|><|content_text|>'
         return rendered
 
+    def question_frame(self, canonical, controller, content):
+        if not isinstance(content, str) or self.root_mode(canonical, controller) != 'context_only':
+            raise ValueError('Inkling question requires a closed context root')
+        return self._question_tokens(content)
+
+    def followup_frame(self, canonical, controller, content):
+        if controller.get('status') != 'stopped' or not isinstance(content, str):
+            raise ValueError('Inkling follow-up requires a stopped answer')
+        if not canonical or canonical[-1] not in controller.get('policy', {}).get('eos_tokens', []):
+            raise ValueError('Inkling follow-up requires a consumed stop token')
+        return self._question_tokens(content)
+
+    def _question_tokens(self, content):
+        anchor = [dict(role='system', content='Reference.')]
+        messages = anchor + [dict(role='user', content=content)]
+        prefix = tuple(self.encode_rendered(anchor, self.render(anchor, add_generation_prompt=False), False))
+        full = tuple(self.encode_rendered(messages, self.render(messages, add_generation_prompt=True), True))
+        if full[:len(prefix)] != prefix:
+            raise ValueError('Inkling question changed the context prefix')
+        return full[len(prefix):]
+
+    def root_mode(self, canonical, controller):
+        if controller.get('status') == 'idle':
+            opener = tuple(self.tok.encode('<|message_model|><|content_text|>', parse_special=True))
+            if tuple(canonical[-len(opener):]) == opener:
+                return 'prepared_answer'
+            if canonical and canonical[-1] == self.tok.special_tokens['<|end_message|>']:
+                return 'context_only'
+        return 'unsupported'
+
 
 class InklingTextDecoder:
     """Render the visible channel of a non-thinking assistant completion."""
@@ -52,12 +82,14 @@ def text_components(runtime, *, vision=False):
     encoder = InklingPromptEncoder(tokenizer, ChatTemplate(template_path), {'reasoning_effort': 'none'})
     components = dict(tokenizer=InklingTextDecoder(tokenizer), render=encoder.render,
                       encode_rendered=encoder.encode_rendered)
+    renderer_id = hashlib.sha256(Path(__file__).read_bytes()
+                                 + bytes.fromhex(TOKENIZER_IMPLEMENTATION_SHA256)
+                                 + bytes.fromhex(TOKENIZER_SHA256)
+                                 + bytes.fromhex(TEMPLATE_SHA256)).hexdigest()
+    components.update(renderer_id=renderer_id, initial_root_mode=encoder.root_mode,
+                      append_initial_user_suffix=encoder.question_frame, append_user_suffix=encoder.followup_frame)
     if vision:
         from .cow_inkling_vision import InklingVisionPromptEncoder
-        renderer_id = hashlib.sha256(Path(__file__).read_bytes()
-                                     + bytes.fromhex(TOKENIZER_IMPLEMENTATION_SHA256)
-                                     + bytes.fromhex(TOKENIZER_SHA256)
-                                     + bytes.fromhex(TEMPLATE_SHA256)).hexdigest()
         opener = tuple(tokenizer.encode('<|message_model|><|content_text|>', parse_special=True))
         components.update(renderer_id=renderer_id,
                           mixed_renderer=InklingVisionPromptEncoder(encoder, renderer_id=renderer_id),

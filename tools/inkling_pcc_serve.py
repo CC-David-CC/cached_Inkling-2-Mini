@@ -8,6 +8,7 @@ import secrets
 import signal
 import stat
 import sys
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT), str(ROOT / 'experimental/branching_context/src')]
@@ -48,21 +49,54 @@ def local_key(path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('runtime', type=Path)
-    parser.add_argument('--store', type=Path)
+    storage = parser.add_mutually_exclusive_group()
+    storage.add_argument('--store', type=Path, help='persistent checkpoint and branch directory')
+    storage.add_argument('--persistent', action='store_true', help='use the profile’s runtime checkpoint directory')
+    parser.add_argument('--ram-cache-gib', type=int, help='resident checkpoint pool capacity in GiB')
     parser.add_argument('--adapter', type=Path, help='trained Inkling head LoRA artifact')
+    parser.add_argument('--grammar-store', type=Path, help='enable BranchWrite inline grammar registration')
+    parser.add_argument('--capacity', type=int, default=8192, help='total prompt and generation token budget')
+    parser.add_argument('--dspark', action='store_true', help='experimental fused DSpark for greedy text requests')
     parser.add_argument('--vision', action='store_true')
     parser.add_argument('--port', type=int, default=18061)
     args = parser.parse_args()
+    if args.ram_cache_gib is not None and args.ram_cache_gib <= 0:
+        parser.error('--ram-cache-gib must be positive')
+    if args.store is not None or args.persistent:
+        serve(args, None)
+    else:
+        # Keep PCC's atomic publication and branch semantics inside a private tmpfs store.
+        with tempfile.TemporaryDirectory(prefix='cached-inkling-', dir='/dev/shm') as temporary:
+            serve(args, Path(temporary))
+
+
+def serve(args, temporary):
     runtime = args.runtime.resolve(strict=True)
     key = local_key(runtime / 'pcc-http.key')
     normalizer = CowImageNormalizer() if args.vision else None
-    profile = runtime_profile(runtime, vision=args.vision,
+    profile = runtime_profile(runtime, vision=args.vision, capacity=args.capacity, draft=args.dspark, grammar=bool(args.grammar_store),
                               normalizer_id=normalizer.identity if normalizer else None, adapter=args.adapter)
     store_name = 'pcc-vision-http-store' if args.vision else 'pcc-http-store'
+    if args.dspark:
+        store_name += '-dspark'
     if args.adapter is not None:
         store_name += '-' + profile['adapter_sha256']
-    directory = args.store or runtime / store_name
+    if args.capacity != 8192:
+        store_name += f'-ctx-{args.capacity}'
+    directory = temporary or args.store or runtime / store_name
+    ram_bytes = (args.ram_cache_gib * 1024**3 if args.ram_cache_gib is not None
+                 else max(8 * 1024**3, args.capacity * 262144))
+    profile['ram_cache_bytes'] = ram_bytes
+    store_bytes = max(16 * 1024**3, args.capacity * 524288)
+    if temporary is not None:
+        fs = os.statvfs(temporary)
+        store_bytes = min(store_bytes, fs.f_bavail * fs.f_frsize)
     components = text_components(runtime, vision=args.vision)
+    catalog = None
+    if args.grammar_store:
+        from serve.cow_grammar_disk import DurableGrammarCatalog
+        catalog = DurableGrammarCatalog(args.grammar_store, components['render'].__self__.tok,
+                                        profile['execution']['eos_tokens'])
     preparer = (InklingVisionPreparer(Store(directory), normalizer, components['mixed_renderer'], profile)
                 if args.vision else None)
 
@@ -74,7 +108,8 @@ def main():
             backend.close()
             raise
 
-    config = PoolConfig(gpus=(0,), ram_bytes=4 * 1024**3, disk_bytes=16 * 1024**3,
+    config = PoolConfig(gpus=(0,), ram_bytes=ram_bytes,
+                        disk_bytes=store_bytes,
                         min_available_bytes=8 * 1024**3)
     coordinator = ContextCoordinator(directory, config, factory, input_preparer=preparer)
     try:
@@ -82,19 +117,23 @@ def main():
         adapter = CowAdapter(coordinator)
         text = CowTextAdapter(adapter, **components, vision_preparer=preparer)
         with make_server(adapter, '127.0.0.1', args.port, key, text_adapter=text,
-                         connection_info={name: profile[name] for name in
+                         grammar_catalog=catalog, connection_info={name: profile[name] for name in
                                           ('model_contract_id', 'execution_profile_id')}
                          | {'eos_tokens': profile['execution']['eos_tokens']}) as server:
             def stop(_signum, _frame):
                 raise KeyboardInterrupt
 
             signal.signal(signal.SIGTERM, stop)
-            print(json.dumps({'event': 'ready', 'address': server.server_address}), flush=True)
+            print(json.dumps({'event': 'ready', 'address': server.server_address, 'store': str(directory),
+                              'storage': 'temporary RAM' if temporary else 'persistent',
+                              'ram_cache_bytes': ram_bytes, 'store_limit_bytes': store_bytes}), flush=True)
             server.serve_forever()
     except KeyboardInterrupt:
         pass
     finally:
         coordinator.close()
+        if catalog is not None:
+            catalog.close()
 
 
 if __name__ == '__main__':

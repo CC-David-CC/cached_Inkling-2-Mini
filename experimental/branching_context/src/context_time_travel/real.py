@@ -28,6 +28,9 @@ def supports_consumed_selection(profile):
     """Declared operator boundary; the factory separately verifies native code."""
     e=profile.get('execution',{})
     if e.get('selected_token_protocol')!='consumed-selected-receipt-v1':return False
+    if profile.get('backend')=='inkling-cuda':
+        return (e.get('generated_operator')=='normal-verifier-decode' and
+                e.get('state_format')=='inkling-cuda-fp16-v1' and e.get('draft')=='off')
     if profile.get('backend')=='llama-dense-llama.cpp':
         return (e.get('generated_operator')=='llama-forward-consumed-v1'
             and e.get('resume_contract')=='identical-native-batches-v1'

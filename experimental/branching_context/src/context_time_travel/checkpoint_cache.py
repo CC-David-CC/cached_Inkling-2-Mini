@@ -28,6 +28,9 @@ def validate_manifest(envelope, expected):
     for name in ('consumed', 'logits_count', 'state_bytes'):
         if type(manifest[name]) is not int or manifest[name] < (0 if name == 'consumed' else 1):
             raise IntegrityError('Invalid checkpoint size')
+    stored_profile = manifest['execution_profile_id']
+    if stored_profile != expected.get('execution_profile_id', stored_profile):
+        raise IntegrityError('Checkpoint manifest incompatible (execution profile differs)')
     if any(manifest.get(key) != value for key, value in expected.items()):
         raise IntegrityError('Checkpoint manifest incompatible')
     digest = manifest['payload_sha256']

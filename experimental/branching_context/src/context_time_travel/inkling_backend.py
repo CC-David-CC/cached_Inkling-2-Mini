@@ -18,6 +18,7 @@ from .store import IntegrityError, InvalidOperation
 MODEL_SHA256 = '0bbfd52344f0dd4779a7807b5f73554a812f24c035e6877b63cd0d499f7e1b97'
 TOKENIZER_SHA256 = '7f332727f9a3f093dd452a39cc978e6757627e5dad1b0673aa4e75174f236dd6'
 VISION_SHA256 = '6589eff47f9c20bc3a032faa3d449f10bf4f04a84cc6b2ee8a44d51d2b6fc677'
+GRAMMAR_TOKENIZER_SHA256 = '14132b1c19a0a44f3330db134fe6be44c68e22ddb6873cddd752a036e10b0f20'
 HEAD_WIDTH = 2304
 HEAD_ADAPTER_HEADER = struct.Struct('<8sI32s')
 HEAD_ADAPTER_MAGIC = b'IKLORA1\0'
@@ -39,16 +40,27 @@ def model_contract_id(vision=False, adapter_sha256=None):
     return hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
 
 
-def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None):
+def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None, capacity=8192, grammar=False, draft=False):
     bridge = str(runtime / 'native-build/libinkling_pcc_bridge.so')
     build = {'sha256': {bridge: digest_file(bridge)}}
-    execution = dict(EXECUTION,
+    if type(capacity) is not int or not 8192 <= capacity <= 133120:
+        raise ValueError('Inkling capacity must be between 8192 and 133120 tokens')
+    execution = dict(EXECUTION, capacity=capacity,
                      cuda_cublas_compute_type=os.getenv('GGML_CUDA_CUBLAS_COMPUTE_TYPE', 'auto'),
                      nvidia_tf32_override=os.getenv('NVIDIA_TF32_OVERRIDE', 'unset'))
     hardware = subprocess.check_output([
         'nvidia-smi', '--query-gpu=name,uuid,driver_version', '--format=csv,noheader'
     ], text=True).strip()
+    if os.environ.get('INKLING_EXACT_HEAD') == '1':
+        execution['exact_single_row_head'] = True
     extra = {}
+    if draft:
+        if vision or adapter or grammar:
+            raise ValueError("DSpark currently supports unadapted text generation")
+        execution.update(draft="dspark", state_format="inkling-cuda-fp16-dspark-v1")
+    if grammar:
+        execution.update(selected_token_protocol="consumed-selected-receipt-v1",
+                         grammar_tokenizer_sha256=GRAMMAR_TOKENIZER_SHA256)
     if vision:
         execution.update(VISION_EXECUTION)
         if normalizer_id is not None:
@@ -72,8 +84,12 @@ class InklingBackend(NativeBackend):
     context_capacity = EXECUTION['capacity']
 
     def __init__(self, profile):
+        self.context_capacity = profile['execution']['capacity']
+        self.draft = profile['execution']['draft'] == 'dspark'
         self._lock = RLock()
         self._leased = False
+        self._pinned_digest = None
+        self._exported_digest = None
         self._close_pending = False
         self.vision_path = profile.get('vision_path')
         self.adapter_sha256 = profile.get('adapter_sha256')
@@ -133,7 +149,27 @@ class InklingBackend(NativeBackend):
         self.lib.ctt_logit_softcap.restype = C.c_float
         self.lib.ctt_attach_head_lora.argtypes = [C.c_void_p, C.c_int, C.c_void_p, C.c_void_p]
         self.lib.ctt_attach_head_lora.restype = C.c_int
-        model = super()._load_model()
+        if self.context_capacity == 8192 and not self.draft:
+            model = super()._load_model()
+        else:
+            self.lib.ctt_pin_shared.argtypes = [C.c_void_p]
+            self.lib.ctt_pin_shared.restype = C.c_int
+            self.lib.ctt_reuse_shared.argtypes = [C.c_void_p, C.c_int, C.POINTER(C.c_float), C.c_size_t]
+            self.lib.ctt_reuse_shared.restype = C.c_int
+            self.lib.ctt_reuse_exported.argtypes = self.lib.ctt_reuse_shared.argtypes
+            self.lib.ctt_reuse_exported.restype = C.c_int
+            load = self.lib.ctt_load_capacity
+            load.argtypes = [C.c_char_p, C.c_int]
+            load.restype = C.c_void_p
+            if self.draft:
+                load = self.lib.ctt_load_profile
+                load.argtypes = [C.c_char_p, C.c_int, C.c_bool]
+                load.restype = C.c_void_p
+                self.lib.ctt_draft_block.argtypes = [C.c_void_p, C.c_int, C.POINTER(C.c_int32), C.POINTER(C.c_int)]
+                self.lib.ctt_draft_block.restype = C.c_int
+                model = load(os.fsencode(self.profile['model_path']), self.context_capacity, True)
+            else:
+                model = load(os.fsencode(self.profile['model_path']), self.context_capacity)
         if model and self.adapter_sha256:
             try:
                 self._attach_adapter(model)
@@ -157,6 +193,16 @@ class InklingBackend(NativeBackend):
         if self.lib.ctt_attach_head_lora(model, rank, C.c_char_p(data[HEAD_ADAPTER_HEADER.size:split]),
                                          C.c_char_p(data[split:])):
             raise IntegrityError('Inkling native LoRA attach failed')
+
+    def validate_grammar_engine(self, engine):
+        from .grammar_first import GrammarEngine
+        if not isinstance(engine, GrammarEngine) or engine.tokenizer_sha256 != GRAMMAR_TOKENIZER_SHA256:
+            raise IntegrityError('Inkling grammar tokenizer fingerprint mismatch')
+
+    def consume_generated(self, lease, ids):
+        if len(ids) != 1:
+            raise InvalidOperation('Inkling decode requires one selected token')
+        self.consume(lease, ids)
 
     def head_features(self, lease, tokens):
         if self.adapter_sha256:
@@ -185,16 +231,23 @@ class InklingBackend(NativeBackend):
             raise IntegrityError('Inkling vision profile requires the pinned vision weights')
         if bool(profile.get('adapter_path')) != bool(self.adapter_sha256):
             raise IntegrityError('Inkling adapter path and identity must be provided together')
+        required = dict(EXECUTION)
+        if self.draft:
+            required.update(draft='dspark', state_format='inkling-cuda-fp16-dspark-v1')
+            if self.adapter_sha256 or self.vision_path:
+                raise IntegrityError('Unsupported DSpark model configuration')
         if (profile['model_weights_sha256'] != MODEL_SHA256
                 or profile['model_contract_id'] != model_contract_id(bool(self.vision_path), self.adapter_sha256)
-                or any(profile['execution'].get(key) != value for key, value in EXECUTION.items())
+                or type(self.context_capacity) is not int or not 8192 <= self.context_capacity <= 133120
+                or any(execution.get(key) != value for key, value in required.items() if key != 'capacity')
                 or profile['bridge_library'] not in profile['native_build']['sha256']
                 or not Path(profile['bridge_library']).is_absolute()):
             raise IntegrityError('Unsupported Inkling model or execution profile')
         super().validate_execution_profile()
 
     def new_cache(self):
-        return CheckpointCache(byte_limit=2 * 1024**3, entry_limit=32)
+        default_limit = max(2 * 1024**3, 3 * (self.context_capacity * 32768 + 180 * 1024**2))
+        return CheckpointCache(byte_limit=self.profile.get('ram_cache_bytes', default_limit), entry_limit=32)
 
     def contract_fields(self):
         return dict(attention='full-and-sliding', state_kind='looped-kv-shortconv',
@@ -280,6 +333,20 @@ class InklingBackend(NativeBackend):
     @contextmanager
     def generate_request(self, lease, max_steps):
         def generate():
+            if self.draft:
+                block = (C.c_int32 * 9)()
+                nodes = C.c_int()
+                remaining = max_steps
+                while remaining:
+                    count = self.lib.ctt_draft_block(lease, remaining, block, C.byref(nodes))
+                    if not 1 <= count <= min(9, remaining):
+                        raise IntegrityError(self.lib.ctt_error().decode() or 'Invalid DSpark block')
+                    self.stats['draft_nodes'] = self.stats.get('draft_nodes', 0) + nodes.value
+                    remaining -= count
+                    yield from block[:count]
+                    if self.is_eog(block[count - 1]):
+                        break
+                return
             for _ in range(max_steps):
                 token = self.lib.ctt_select_greedy(lease)
                 if token < 0:
@@ -300,16 +367,42 @@ class InklingBackend(NativeBackend):
             if not self.model:
                 raise RuntimeError('Inkling backend is closed')
             tokens = self.lib.ctt_model_work(self.model)
-            return dict(consumed_tokens=tokens, forward_tokens=tokens)
+            counters = dict(consumed_tokens=tokens, forward_tokens=tokens)
+            if self.context_capacity > 8192:
+                counters.update(resident_parent_restores=self.stats.get('resident_parent_restores', 0),
+                                resident_child_restores=self.stats.get('resident_child_restores', 0),
+                                checkpoint_import_bytes=self.stats['checkpoint_import_bytes'])
+            if self.draft:
+                counters["draft_nodes"] = self.stats.get("draft_nodes", 0)
+            return counters
+
+    def export(self, lease):
+        blob = super().export(lease)
+        if self.context_capacity > 8192:
+            self._exported_digest = hashlib.sha256(blob).digest()
+            if self.lib.ctt_pin_shared(lease):
+                self._pinned_digest = self._exported_digest
+        return blob
 
     def restore(self, lease, blob, *, history=None, frontier=None):
         if not blob or not history or frontier is None or len(frontier) != self.vocab_size:
             raise IntegrityError('Incomplete Inkling checkpoint')
         row = (C.c_float * self.vocab_size)(*frontier)
+        if self.context_capacity > 8192:
+            digest = hashlib.sha256(blob).digest()
+            if digest == self._pinned_digest and self.lib.ctt_reuse_shared(lease, len(history), row, len(row)):
+                self.stats['resident_parent_restores'] = self.stats.get('resident_parent_restores', 0) + 1
+                return blob
+            if digest == self._exported_digest and self.lib.ctt_reuse_exported(lease, len(history), row, len(row)):
+                self.stats['resident_child_restores'] = self.stats.get('resident_child_restores', 0) + 1
+                return blob
+            self._pinned_digest = None
         if self.lib.ctt_import_checkpoint(lease, C.c_char_p(blob), len(blob),
                                           len(history), row, len(row)) != len(blob):
             self.close()
             raise IntegrityError('Inkling state transfer failed')
+        if self.context_capacity > 8192 and self.lib.ctt_pin_shared(lease):
+            self._pinned_digest = digest
         self.stats['checkpoint_import_bytes'] += len(blob)
         return blob
 
