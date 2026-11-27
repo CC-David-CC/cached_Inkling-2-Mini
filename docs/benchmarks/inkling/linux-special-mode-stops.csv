@@ -1,0 +1,4 @@
+pack,completion_tokens,distinct_token_ids,first_end_message_position_1based,first_profile_eos_position_1based,visible_lines
+SQ-10,512,133,12,,4
+SQ-15,512,3,,,171
+SQ-20,4,4,3,4,1
