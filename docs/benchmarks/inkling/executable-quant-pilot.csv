@@ -1,0 +1,11 @@
+runtime,pack,task,fixtures_passed,fixtures_total,reported_completion_tokens
+stock Strata,SQ-10,latest,1,3,
+stock Strata,SQ-10,permissions,3,3,
+stock Strata,SQ-15,latest,3,3,
+stock Strata,SQ-15,permissions,0,3,
+stock Strata,SQ-20,latest,3,3,
+stock Strata,SQ-20,permissions,0,3,
+stock Strata,UD-Q4_K_M,latest,1,3,
+stock Strata,UD-Q4_K_M,permissions,0,3,
+vLLM,NVFP4/MXFP8,latest,3,3,381
+vLLM,NVFP4/MXFP8,permissions,3,3,316
