@@ -58,6 +58,11 @@ def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None, 
     execution = dict(EXECUTION, capacity=capacity,
                      cuda_cublas_compute_type=os.getenv('GGML_CUDA_CUBLAS_COMPUTE_TYPE', 'auto'),
                      nvidia_tf32_override=os.getenv('NVIDIA_TF32_OVERRIDE', 'unset'))
+    if 'INKLING_EXPERT_VRAM_MIB' in os.environ:
+        value = os.environ['INKLING_EXPERT_VRAM_MIB']
+        if not value.isascii() or not value.isdecimal() or int(value) > 0xffffffff:
+            raise ValueError('INKLING_EXPERT_VRAM_MIB must be an unsigned 32-bit MiB count')
+        execution['expert_vram_mib'] = value
     if 'STRATA_INK_EXACT' in os.environ:
         execution['cold_expert_lane'] = os.environ['STRATA_INK_EXACT']
     if 'CUDA_VISIBLE_DEVICES' in os.environ:
@@ -131,6 +136,10 @@ class InklingBackend(NativeBackend):
             raise IntegrityError('Unknown Inkling token ID') from error
 
     def _load_model(self):
+        if 'expert_vram_mib' in self.profile['execution']:
+            supported = getattr(self.lib, 'ctt_supports_expert_vram_budget', None)
+            if supported is None or supported() != 1:
+                raise IntegrityError('Rebuild the Inkling bridge to apply the expert VRAM budget')
         self.lib.ctt_model_work.argtypes = [C.c_void_p]
         self.lib.ctt_model_work.restype = C.c_uint64
         self._drafts_accepted = getattr(self.lib, "ctt_drafts_accepted", None)
@@ -241,6 +250,8 @@ class InklingBackend(NativeBackend):
     def validate_execution_profile(self):
         profile = self.profile
         execution = profile['execution']
+        if execution.get('expert_vram_mib') != os.environ.get('INKLING_EXPERT_VRAM_MIB'):
+            raise IntegrityError('Expert VRAM budget differs from the saved profile')
         if execution.get('cold_expert_lane') != os.environ.get('STRATA_INK_EXACT'):
             raise IntegrityError('Cold expert execution mode differs from the saved profile')
         if self.vision_path:

@@ -4,6 +4,8 @@
 #include "ink_vision.h"
 
 #include <algorithm>
+#include <charconv>
+#include <cstdlib>
 #include <cmath>
 #include <cstring>
 #include <stdexcept>
@@ -45,6 +47,8 @@ struct Lease {
 }
 
 extern "C" {
+int ctt_supports_expert_vram_budget() { return 1; }
+
 const char* ctt_error() { return error.c_str(); }
 
 void* ctt_load_profile(const char* path, int capacity, bool dspark) try {
@@ -53,6 +57,16 @@ void* ctt_load_profile(const char* path, int capacity, bool dspark) try {
     model->capacity = capacity;
     if (!model->file.open(path, error, false, "")) return nullptr;
     ink2::BackendOpts opts;
+    if (const char* value = std::getenv("INKLING_EXPERT_VRAM_MIB")) {
+        unsigned int mib = 0;
+        const char* end = value + std::strlen(value);
+        const auto parsed = std::from_chars(value, end, mib);
+        if (parsed.ec != std::errc{} || parsed.ptr != end) {
+            error = "Invalid Inkling expert VRAM budget in MiB";
+            return nullptr;
+        }
+        opts.vram_experts_gb = mib / 1024.0;
+    }
     opts.max_ctx = capacity;
     opts.chunk = chunk;
     opts.chunk_auto = false;

@@ -306,6 +306,12 @@ python tools/inkling_pcc_serve.py /mnt/fast_cache/inkling
 
 Use `--pack SQ-10`, `--pack SQ-15`, or the default `--pack SQ-20` to select a fingerprinted checkpoint in the runtime directory. Each pack has its own model contract and default persistent store. On the r730, `CUDA_VISIBLE_DEVICES=2 STRATA_INK_EXACT=1` with SQ-10 reproduced a short chat after a process restart with FP16 KV and hybrid expert placement.
 
+For a single P4 with a 65,536-token capacity, the following configuration gives the GPU expert pool 768 MiB. The remaining experts live in host RAM. The budget is part of the execution profile. Rebuild the native bridge when upgrading to this option.
+
+```bash
+CUDA_VISIBLE_DEVICES=1 STRATA_INK_EXACT=1 INKLING_EXPERT_VRAM_MIB=768 python tools/inkling_pcc_serve.py RUNTIME --pack SQ-10 --capacity 65536
+```
+
 The temporary store holds checkpoint files and branch metadata in tmpfs and is removed on normal shutdown. This still uses RAM for serialized checkpoints in addition to resident cache entries. For restart and disk durability testing, pass `--persistent` to reuse the profile’s runtime directory or `--store PATH` to select a directory. Use the same option on both launches.
 
 The launcher creates a private `pcc-http.key` in the runtime directory.
