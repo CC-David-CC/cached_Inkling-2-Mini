@@ -2,6 +2,8 @@
 
 Results cover the RTX PRO 6000 Blackwell on llm-60 unless a row names both hosts. A pass applies to the profile and workload described in its row. The [benchmark charts](../../../README.md#measured-performance) include sample counts and timings.
 
+![SQL and chmod fixtures passed by weight pack and runtime](executable-quant-pilot.png)
+
 | Goal | Status | Verified result and remaining work |
 |---|---|---|
 | Reproducible install | Partial | A clean public checkout built the pinned CUDA bridge and passed text and vision checkpoint tests in a new virtual environment. Fresh-machine provisioning of CUDA and model assets is open. |
