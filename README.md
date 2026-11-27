@@ -72,6 +72,14 @@ Stock Strata reported prompt processing speed and the number of DSpark draft tok
 
 [Download the cross-engine proposal counts](docs/benchmarks/inkling/dspark-acceptance.csv)
 
+### Matched drafting throughput
+
+On a synthetic administration log, native fused DSpark averaged 148.2 tokens/s (6.7 ms per output token). All four modes produced the same 259 token IDs. The chart pools decode time across the runs shown for each mode, including four plain SQ-10 controls. It excludes startup and prefill. Per-token streaming latency was not instrumented.
+
+![Decode tokens per second and mean milliseconds per token for DSpark, plain SQ-10, and two DFlash2 prototype modes](docs/benchmarks/inkling/matched-drafting.png)
+
+[DSpark trials](docs/benchmarks/inkling/dspark-hybrid-control.csv) · [Batched DFlash2 trial](docs/benchmarks/inkling/dflash2-batch-control.csv) · [Serial DFlash2 trial](docs/benchmarks/inkling/dflash2-3072-greedy-control.csv)
+
 The DFlash2 prototype ran live with hybrid SQ-10 and serial target verification on llm-60. Keeping the output head on the GPU reduced median proposal time across all three prompts. [Per-block timings](docs/benchmarks/inkling/dflash2-head-placement.csv)
 
 ![Decode throughput and proposal time with the DFlash2 output head resident or copied per block](docs/benchmarks/inkling/dflash2-head-placement.png)
