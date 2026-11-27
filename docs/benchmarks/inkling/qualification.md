@@ -1,6 +1,6 @@
 # Inkling 2 Mini qualification
 
-Results cover one RTX PRO 6000 Blackwell on llm-60. A pass applies to the profile and workload described in its row. The [benchmark charts](../../../README.md#measured-performance) include sample counts and timings.
+Results cover the RTX PRO 6000 Blackwell on llm-60 unless a row names both hosts. A pass applies to the profile and workload described in its row. The [benchmark charts](../../../README.md#measured-performance) include sample counts and timings.
 
 | Goal | Status | Verified result and remaining work |
 |---|---|---|
@@ -19,6 +19,7 @@ Results cover one RTX PRO 6000 Blackwell on llm-60. A pass applies to the profil
 | Stock Strata comparison | Measured for single cold requests | Matched 64K and 128K transcription runs cover generation speed, complete throughput, TTFT and GPU memory. Stock was faster end to end. Repeated long-context tail latency and shared-parent crossover remain open. |
 | DSpark | Experimental | Acceptance, speed, VRAM and restart continuation were measured for greedy unadapted text. A native linear-proposal test forced rejection after retaining 1, 4 or 7 positions. All four continuation rows matched the sequential reference in each of 12 cases. Verifier-only timing and forced rejection on the production tree path remain open. [Forced rollback results](dspark-forced-rollback.csv) |
 | DFlash2 and MTP | Open | Pin distinct compatible draft artifacts and verifier implementations, then qualify correctness, speed, memory and restore for each. |
+| Single-request speed on two GPU models | Rough qualification passed | Across 16 greedy transcription runs at 3K and 6K input and 1,024 output tokens, both GPUs fit SQ-20 entirely in VRAM and returned identical token sequences for each matched prompt. With DSpark at 6K, the RTX 4090 on llm-49 averaged 238 generation and 134 end-to-end output tok/s. The RTX PRO 6000 on llm-60 averaged 287 and 170 respectively. [Per-trial timings](gpu-comparison.csv) |
 | Parallel serving and GPU topology | Partial | Independent native slots were benchmarked, and queued PCC requests passed cancellation isolation. Concurrent decoding on a shared PCC parent, restart under sustained load and additional GPU topologies remain open. |
 | BranchWrite integration | Partial | Separate branches asked questions of a shared 128K register and receipt recovery was exercised. Two guided attempts independently fixed a real launcher bug in scoped workspaces. A separate client resumed after the edit at a step-budget boundary and completed verification. Whole-checkout registration and recovery during an interrupted tool write remain open. |
 
