@@ -1,0 +1,13 @@
+prompt,block_zero_based,prefilled_tokens,matching_prefix_tokens,proposed_tokens
+python,0,23,2,7
+python,1,26,1,7
+python,2,28,7,7
+python,3,36,7,7
+linux,0,18,3,7
+linux,1,22,4,7
+linux,2,27,7,7
+linux,3,35,5,7
+json,0,38,7,7
+json,1,46,2,7
+json,2,49,0,7
+json,3,50,0,7
