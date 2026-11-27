@@ -14,6 +14,22 @@ from context_time_travel import digest_attestation
 
 
 class CheckpointDigestAttestationTests(unittest.TestCase):
+    def test_export_hash_is_shared_only_for_the_same_bytes_during_save(self):
+        blob = bytes(range(251))
+        other = bytes(bytearray(blob))
+        frontier = (1.25, -2.5)
+        expected = Checkpoint.digest(blob, frontier)
+        with mock.patch.object(digest_attestation.hashlib, 'sha256',
+                               wraps=digest_attestation.hashlib.sha256) as hash_payload:
+            with digest_attestation.checkpoint_export_scope():
+                digest_attestation.exported_payload_digest(blob)
+                self.assertEqual(Checkpoint.digest(blob, frontier), expected)
+                self.assertEqual(hash_payload.call_count, 1)
+                self.assertEqual(Checkpoint.digest(other, frontier), expected)
+                self.assertEqual(hash_payload.call_count, 2)
+            self.assertEqual(Checkpoint.digest(blob, frontier), expected)
+            self.assertEqual(hash_payload.call_count, 3)
+
     def test_prepared_publish_and_pool_handoff_reuse_verified_owner_digest(self):
         """The same prepared owner crosses writer validation and pool admission."""
         durable_fixtures.DurableRestoreControlTests.setUp(self)

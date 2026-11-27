@@ -4,6 +4,7 @@ This is only a host-side digest memo for RAM objects. It does not certify disk
 contents or native/GPU state, and it does not replace canonical binding checks.
 """
 from collections import OrderedDict
+from contextlib import contextmanager
 import hashlib
 import math
 import struct
@@ -16,9 +17,36 @@ _LOCK = threading.RLock()
 _OWNERS = OrderedDict()
 
 
+_export = threading.local()
+
+
+@contextmanager
+def checkpoint_export_scope():
+    previous = getattr(_export, 'active', False)
+    previous_payload = getattr(_export, 'payload', None)
+    _export.active = True
+    _export.payload = None
+    try:
+        yield
+    finally:
+        _export.active = previous
+        _export.payload = previous_payload
+
+
+def exported_payload_digest(blob):
+    digest = hashlib.sha256(blob)
+    if type(blob) is bytes and getattr(_export, 'active', False):
+        _export.payload = (blob, digest)
+    return digest.digest()
+
+
 def _compute_digest(blob, frontier):
     state_identity = blob if isinstance(blob, bytes) else blob.identity
-    digest = hashlib.sha256(state_identity)
+    payload = getattr(_export, 'payload', None)
+    if payload is not None and blob is payload[0]:
+        digest = payload[1].copy()
+    else:
+        digest = hashlib.sha256(state_identity)
     digest.update(struct.pack('<' + str(len(frontier)) + 'f', *frontier))
     return digest.hexdigest()
 

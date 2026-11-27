@@ -10,6 +10,7 @@ import subprocess
 from tempfile import TemporaryDirectory
 from threading import RLock
 
+from .digest_attestation import exported_payload_digest
 from .checkpoint_cache import CheckpointCache
 from .input_spans import InputHistory
 from .real import NativeBackend, digest_file
@@ -441,7 +442,7 @@ class InklingBackend(NativeBackend):
     def export(self, lease):
         blob = super().export(lease)
         if self.context_capacity > 8192:
-            self._exported_digest = hashlib.sha256(blob).digest()
+            self._exported_digest = exported_payload_digest(blob)
             if self.lib.ctt_pin_shared(lease):
                 self._pinned_digest = self._exported_digest
         return blob

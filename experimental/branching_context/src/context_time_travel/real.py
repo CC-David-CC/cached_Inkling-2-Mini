@@ -20,7 +20,7 @@ from types import MappingProxyType
 from .oracle import FreshOracle
 from .store import Store, IntegrityError, InvalidOperation, _stage, _sync_dir, _json_bytes, _decode, _private_directory
 from . import controller
-from .digest_attestation import _attest_factory_result, verified_checkpoint_digest
+from .digest_attestation import _attest_factory_result, checkpoint_export_scope, verified_checkpoint_digest
 from .input_spans import InputHistory
 from .vision_execution import RESUME_CONTRACT, POSITION_CONVENTION, input_binding, validate_boundary
 
@@ -311,6 +311,7 @@ class BranchingModel:
         self.store.authorize(snapshot, 'read')
         return (self.store.objects/(snapshot+'.json')).read_bytes()
 
+    @checkpoint_export_scope()
     def _save(self, lease, history, schedule=()):
         self._allocation_fault('before_native_export',lease)
         blob = self.backend.export(lease)
