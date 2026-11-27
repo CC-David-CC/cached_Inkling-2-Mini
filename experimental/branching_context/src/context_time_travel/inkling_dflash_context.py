@@ -114,3 +114,17 @@ def select_draft_path(drafter, hidden, head, anchor):
         predecessor = choices.gather(-1, scores.argmax(-1, keepdim=True))[:, 0]
         path.append(predecessor)
     return torch.stack(path, dim=1)
+
+
+@torch.inference_mode()
+def propose_draft_block(drafter, context, anchor, embedding, embedding_norm, head):
+    """Propose seven successors using the pinned Inkling target's embedding and output head."""
+    device = context.device
+    positions = torch.arange(context.shape[1] + 8, device=device).unsqueeze(0)
+    ids = torch.full((1, 8), 200056, dtype=torch.long, device=device)
+    ids[0, 0] = anchor
+    noise = torch.nn.functional.rms_norm(
+        embedding[ids].float(), (2304,), embedding_norm.float(), 1e-6
+    ).to(torch.bfloat16)
+    hidden = drafter(position_ids=positions, noise_embedding=noise, target_hidden=context)
+    return select_draft_path(drafter, hidden[:, 1:], head, ids[:, 0])[0].tolist()
