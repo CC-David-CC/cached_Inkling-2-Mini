@@ -46,7 +46,7 @@ def model_contract_id(vision=False, adapter_sha256=None, weights_sha256=MODEL_SH
     return hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
 
 
-def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None, capacity=8192, grammar=False, draft=False, gpus=1, pack="SQ-20", dflash2=None, dflash2_resident=False):
+def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None, capacity=8192, grammar=False, draft=False, gpus=1, pack="SQ-20", dflash2=None, dflash2_resident=False, kv_offload="off"):
     if pack not in PACK_HASHES:
         raise ValueError('Unknown Inkling pack')
     weights = PACK_HASHES[pack]
@@ -60,6 +60,12 @@ def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None, 
                      nvidia_tf32_override=os.getenv('NVIDIA_TF32_OVERRIDE', 'unset'))
     if type(gpus) is not int or gpus not in (1, 2, 3):
         raise ValueError('Inkling requires one, two or three GPUs')
+    if kv_offload not in ('off', 'auto', 'on'):
+        raise ValueError('Invalid Inkling KV offload mode')
+    if kv_offload != 'off':
+        if gpus != 1 or draft or dflash2:
+            raise ValueError('Host KV requires a single GPU with drafting off')
+        execution['kv_offload'] = kv_offload
     # EP2 uses both devices inside one coordinator worker on logical GPU 0.
     if gpus == 2:
         execution['expert_parallel_devices'] = [0, 1]
@@ -197,7 +203,7 @@ class InklingBackend(NativeBackend):
         gpu_count = len(execution.get('layer_split_devices', execution.get('expert_parallel_devices', [0])))
         if gpu_count > 1 and self.draft:
             raise ValueError('Multi-GPU DSpark requires separate qualification')
-        if self.context_capacity == 8192 and not self.draft and gpu_count == 1:
+        if self.context_capacity == 8192 and not self.draft and gpu_count == 1 and 'kv_offload' not in execution:
             model = super()._load_model()
         else:
             self.lib.ctt_pin_shared.argtypes = [C.c_void_p]
@@ -209,7 +215,14 @@ class InklingBackend(NativeBackend):
             load = self.lib.ctt_load_capacity
             load.argtypes = [C.c_char_p, C.c_int]
             load.restype = C.c_void_p
-            if self.draft:
+            if 'kv_offload' in execution:
+                if not hasattr(self.lib, 'ctt_load_host_kv'):
+                    raise IntegrityError('Inkling bridge does not support host KV')
+                load = self.lib.ctt_load_host_kv
+                load.argtypes = [C.c_char_p, C.c_int, C.c_bool]
+                load.restype = C.c_void_p
+                model = load(os.fsencode(self.profile['model_path']), self.context_capacity, execution['kv_offload'] == 'auto')
+            elif self.draft:
                 load = self.lib.ctt_load_profile
                 load.argtypes = [C.c_char_p, C.c_int, C.c_bool]
                 load.restype = C.c_void_p
@@ -331,6 +344,9 @@ class InklingBackend(NativeBackend):
         devices = execution.get('expert_parallel_devices', [0])
         if devices not in ([0], [0, 1]) or any(type(i) is not int for i in devices):
             raise IntegrityError('Invalid Inkling GPU placement')
+        if 'kv_offload' in execution and (execution['kv_offload'] not in ('on', 'auto')
+                or execution['draft'] != 'off' or devices != [0] or 'layer_split_devices' in execution):
+            raise IntegrityError('Unsupported Inkling host KV profile')
         required = dict(EXECUTION)
         if execution['draft'] == 'dflash2':
             if self.adapter_sha256 or self.vision_path or devices != [0] or 'layer_split_devices' in execution:

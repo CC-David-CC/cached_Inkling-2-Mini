@@ -51,7 +51,7 @@ int ctt_supports_expert_vram_budget() { return 1; }
 
 const char* ctt_error() { return error.c_str(); }
 
-void* ctt_load_devices(const char* path, int capacity, bool dspark, int gpus) try {
+static void* load_devices(const char* path, int capacity, bool dspark, int gpus, const char* kv_offload) try {
     if (gpus < 1 || gpus > 3) { error = "Invalid Inkling GPU count"; return nullptr; }
     if (capacity < default_capacity || capacity > 133120) { error = "Invalid Inkling context capacity"; return nullptr; }
     auto model = std::make_unique<Model>();
@@ -78,7 +78,7 @@ void* ctt_load_devices(const char* path, int capacity, bool dspark, int gpus) tr
     opts.enable_dspark = dspark;
     model->dspark = dspark;
     opts.kv_dtype_auto = false;
-    opts.kv_offload = "off";
+    opts.kv_offload = kv_offload;
     model->backend = ink2::make_cuda_backend();
     if (!model->backend->init(model->file, opts, error)) return nullptr;
     if (gpus == 2 && std::string_view(model->backend->backend_name()) != "cuda-ep2") {
@@ -98,6 +98,14 @@ void* ctt_load_devices(const char* path, int capacity, bool dspark, int gpus) tr
 } catch (const std::exception& e) {
     error = e.what();
     return nullptr;
+}
+
+void* ctt_load_devices(const char* path, int capacity, bool dspark, int gpus) {
+    return load_devices(path, capacity, dspark, gpus, "off");
+}
+
+void* ctt_load_host_kv(const char* path, int capacity, bool automatic) {
+    return load_devices(path, capacity, false, 1, automatic ? "auto" : "on");
 }
 
 void* ctt_load_profile(const char* path, int capacity, bool dspark) {

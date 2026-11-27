@@ -21,8 +21,9 @@ static void same_logits(const std::vector<float>& actual, const std::vector<floa
 int main(int argc, char** argv) try {
     const bool draft = argc == 5 && std::string(argv[4]) == "--dspark";
     const bool layer_split = argc == 5 && std::string(argv[4]) == "--three-gpu";
-    require(argc == 4 || draft || layer_split,
-            "usage: check_portable_state MODEL write|read FILE [--dspark|--three-gpu]");
+    const bool host_kv = argc == 5 && std::string(argv[4]) == "--host-kv";
+    require(argc == 4 || draft || layer_split || host_kv,
+            "usage: check_portable_state MODEL write|read FILE [--dspark|--three-gpu|--host-kv]");
     const std::string mode = argv[2];
     require(mode == "write" || mode == "read", "invalid mode");
     constexpr int prefix = 4097;
@@ -37,7 +38,8 @@ int main(int argc, char** argv) try {
     opts.chunk_auto = false;
     opts.enable_dspark = draft;
     opts.kv_dtype_auto = false;
-    opts.kv_offload = "off";
+    opts.kv_offload = host_kv ? "on" : "off";
+    if (host_kv) opts.vram_experts_gb = 0;
 
     InkModelFile model;
     std::string error;

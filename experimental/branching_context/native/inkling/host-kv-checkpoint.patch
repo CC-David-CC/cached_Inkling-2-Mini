@@ -1,0 +1,49 @@
+--- a/engine/src/inkling2/cuda/ink_cuda_backend.cu
++++ b/engine/src/inkling2/cuda/ink_cuda_backend.cu
+@@ -409,7 +409,7 @@
+             || (!model_.ls_active && !d_sconv_snap_) || kv_dtype_ != KvDtype::FP16) return 0;
+         size_t bytes = portable_sconv_bytes();
+         for (const auto& kv : runner_->kv_desc) {
+-            if (kv.host_cap != 0 || kv.kv_fmt != 0) return 0;
++            if (((model_.ls_active || kv.is_swa) && kv.host_cap != 0) || kv.kv_fmt != 0) return 0;
+             const int rows = kv.is_swa ? std::min(length, kInkSwaWin) : length;
+             bytes += 2 * size_t(rows) * kInkKVDim * sizeof(__half);
+         }
+@@ -1223,7 +1223,9 @@
+         // Validate every address range before reading or writing any state.
+         for (const auto& kv : runner_->kv_desc) {
+             const int rows = kv.is_swa ? std::min(length, kInkSwaWin) : length;
+-            if (!kv.k_f16 || !kv.v_f16 || rows > kv.dev_cap) return false;
++            if (rows > kv.dev_cap + kv.host_cap) return false;
++            if (kv.dev_cap && (!kv.k_f16 || !kv.v_f16)) return false;
++            if (rows > kv.dev_cap && (!kv.h_k_f16 || !kv.h_v_f16)) return false;
+         }
+ 
+         if constexpr (!Export) reset_slot(slot);
+@@ -1261,9 +1263,23 @@
+             const int start = kv.is_swa ? (length - rows) % kv.dev_cap : 0;
+             const int first = std::min(rows, kv.dev_cap - start);
+             const size_t base = size_t(slot) * kv.dev_cap * kInkKVDim;
+-            for (auto* buffer : {kv.k_f16, kv.v_f16}) {
+-                ok = copy(buffer + base + size_t(start) * kInkKVDim, size_t(first) * row_bytes);
+-                if (ok && first < rows) ok = copy(buffer + base, size_t(rows - first) * row_bytes);
++            for (int plane = 0; plane < 2; ++plane) {
++                auto* buffer = plane ? kv.v_f16 : kv.k_f16;
++                if (first) ok = copy(buffer + base + size_t(start) * kInkKVDim, size_t(first) * row_bytes);
++                if (!ok) break;
++                if (first == rows) continue;
++                const size_t tail_bytes = size_t(rows - first) * row_bytes;
++                if (kv.is_swa) {
++                    ok = copy(buffer + base, tail_bytes);
++                } else {
++                    auto* mapped = plane ? kv.h_v_f16 : kv.h_k_f16;
++                    mapped += size_t(slot) * kv.host_cap * kInkKVDim;
++                    if constexpr (Export)
++                        ok = cudaMemcpyAsync(data, mapped, tail_bytes, cudaMemcpyDefault, stream) == cudaSuccess;
++                    else
++                        ok = cudaMemcpyAsync(mapped, data, tail_bytes, cudaMemcpyDefault, stream) == cudaSuccess;
++                    data += tail_bytes;
++                }
+                 if (!ok) break;
+             }
+         }

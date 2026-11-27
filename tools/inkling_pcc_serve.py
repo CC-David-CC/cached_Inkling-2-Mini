@@ -57,6 +57,8 @@ def main():
     parser.add_argument('--grammar-store', type=Path, help='enable BranchWrite inline grammar registration')
     parser.add_argument('--capacity', type=int, default=8192, help='total prompt and generation token budget')
     parser.add_argument('--pack', choices=('SQ-10', 'SQ-15', 'SQ-20'), default='SQ-20')
+    parser.add_argument('--kv-offload', choices=('off', 'auto', 'on'), default='off',
+                        help='Place global KV in GPU memory, split automatically, or use host RAM')
     parser.add_argument('--gpus', type=int, choices=(1, 2, 3), default=1)
     parser.add_argument('--dspark', action='store_true', help='experimental fused DSpark for greedy text requests')
     parser.add_argument('--dflash2', nargs=3, type=Path, metavar=('REFERENCE', 'DRAFT_DIR', 'TARGET'),
@@ -81,7 +83,7 @@ def serve(args, temporary):
     runtime = args.runtime.resolve(strict=True)
     key = local_key(runtime / 'pcc-http.key')
     normalizer = CowImageNormalizer() if args.vision else None
-    profile = runtime_profile(runtime, vision=args.vision, capacity=args.capacity, draft=args.dspark, gpus=args.gpus, pack=args.pack, dflash2=args.dflash2, dflash2_resident=args.dflash2_resident, grammar=bool(args.grammar_store),
+    profile = runtime_profile(runtime, vision=args.vision, capacity=args.capacity, draft=args.dspark, gpus=args.gpus, kv_offload=args.kv_offload, pack=args.pack, dflash2=args.dflash2, dflash2_resident=args.dflash2_resident, grammar=bool(args.grammar_store),
                               normalizer_id=normalizer.identity if normalizer else None, adapter=args.adapter)
     store_name = 'pcc-vision-http-store' if args.vision else 'pcc-http-store'
     if args.pack != 'SQ-20':
@@ -92,6 +94,8 @@ def serve(args, temporary):
         store_name += '-dspark'
     if args.adapter is not None:
         store_name += '-' + profile['adapter_sha256']
+    if args.kv_offload != 'off':
+        store_name += '-kv-' + args.kv_offload
     if args.capacity != 8192:
         store_name += f'-ctx-{args.capacity}'
     directory = temporary or args.store or runtime / store_name
