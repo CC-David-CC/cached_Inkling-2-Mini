@@ -465,7 +465,7 @@ For the single-GPU unadapted greedy text profile, apply
 `experimental/branching_context/native/inkling/dspark-checkpoint.patch` after
 `portable-state.patch`, then rebuild the PCC bridge from this checkout.
 Launch with `INKLING_EXACT_HEAD=1 python tools/inkling_pcc_serve.py RUNTIME --dspark`.
-The selected output projection and drafting mode participate in checkpoint identity.
+The selected output projection, drafting mode, and `CUBLAS_WORKSPACE_CONFIG` participate in checkpoint identity. Cached records the workspace value even when it is unset. Checkpoints created before workspace tracking require their original Cached version for restoration. Create a new checkpoint under the current profile to use it with this version.
 The server commits a full verifier frontier at the end of each speculative block.
 The `draft_nodes` counter reports proposed tree nodes. Updated bridges also report `drafts_accepted` for committed proposals under the stock greedy tree-walk accounting rule. Use the complete HTTP
 operation, including root creation and branch acknowledgment, to measure

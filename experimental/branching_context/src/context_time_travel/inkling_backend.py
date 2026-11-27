@@ -54,6 +54,7 @@ def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None, 
     if type(capacity) is not int or not 8192 <= capacity <= 133120:
         raise ValueError('Inkling capacity must be between 8192 and 133120 tokens')
     execution = dict(EXECUTION, capacity=capacity,
+                     cublas_workspace_config=os.getenv('CUBLAS_WORKSPACE_CONFIG'),
                      cuda_cublas_compute_type=os.getenv('GGML_CUDA_CUBLAS_COMPUTE_TYPE', 'auto'),
                      nvidia_tf32_override=os.getenv('NVIDIA_TF32_OVERRIDE', 'unset'))
     if type(gpus) is not int or gpus not in (1, 2, 3):
@@ -264,6 +265,10 @@ class InklingBackend(NativeBackend):
     def validate_execution_profile(self):
         profile = self.profile
         execution = profile['execution']
+        if 'cublas_workspace_config' not in execution:
+            raise IntegrityError('Legacy Inkling profile has no recorded cuBLAS workspace setting')
+        if execution['cublas_workspace_config'] != os.getenv('CUBLAS_WORKSPACE_CONFIG'):
+            raise IntegrityError('cuBLAS workspace setting differs from the saved profile')
         if execution.get('expert_vram_mib') != os.environ.get('INKLING_EXPERT_VRAM_MIB'):
             raise IntegrityError('Expert VRAM budget differs from the saved profile')
         if execution.get('cold_expert_lane') != os.environ.get('STRATA_INK_EXACT'):
