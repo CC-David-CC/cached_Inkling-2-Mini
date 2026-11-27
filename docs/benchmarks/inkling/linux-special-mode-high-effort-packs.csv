@@ -1,0 +1,4 @@
+pack,correct,visible_chars,visible_answer_prefix,completion_tokens,generation_s
+SQ-10,False,0,,2048,55.911914608906955
+SQ-15,True,4,2755,1603,61.884217279963195
+SQ-20,False,0,,2048,96.14648205693811
