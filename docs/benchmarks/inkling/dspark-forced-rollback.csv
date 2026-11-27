@@ -1,0 +1,13 @@
+prompt_fixture,layout,retained,discarded,matching_continuation_rows,checked_rows,logits_per_row
+register,batch,1,2,4,4,200058
+register,batch,4,1,4,4,200058
+register,batch,7,1,4,4,200058
+register,single-row,1,2,4,4,200058
+register,single-row,4,1,4,4,200058
+register,single-row,7,1,4,4,200058
+irregular,batch,1,2,4,4,200058
+irregular,batch,4,1,4,4,200058
+irregular,batch,7,1,4,4,200058
+irregular,single-row,1,2,4,4,200058
+irregular,single-row,4,1,4,4,200058
+irregular,single-row,7,1,4,4,200058
