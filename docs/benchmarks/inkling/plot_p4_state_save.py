@@ -9,11 +9,12 @@ rows = []
 for filename, method in [
     ("p4-65k-state-save-http.csv", "Baseline"),
     ("p4-65k-owner-reuse-http.csv", "Digest reuse"),
+    ("p4-65k-portable-save-http.csv", "Portable capture"),
 ]:
     with (folder / filename).open() as stream:
         rows.extend(dict(row, method=method) for row in csv.DictReader(stream))
 
-fig, ax = plt.subplots(figsize=(10, 4.2), layout="constrained")
+fig, ax = plt.subplots(figsize=(11, 5), layout="constrained")
 stages = [
     ("generation_s", "Generation", "#1b6486"),
     ("state_save_s", "State save", "#297660"),
@@ -27,7 +28,8 @@ for i, row in enumerate(rows):
         duration = float(row[field]) if field else wall - elapsed
         assert duration >= 0
         ax.barh(i, duration, left=elapsed, height=.48, color=color, label=label if i == 0 else None)
-        ax.text(elapsed + duration / 2, i, f"{duration:.1f}", ha="center", va="center", color="white")
+        if duration >= 3:
+            ax.text(elapsed + duration / 2, i, f"{duration:.1f}", ha="center", va="center", color="white")
         elapsed += duration
     ax.text(wall + .6, i, f"{wall:.1f} s", va="center")
 ax.set_yticks(range(len(rows)), [f"{r['method']} · branch {r['trial']}" for r in rows])
