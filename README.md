@@ -4,6 +4,27 @@ This local PCC fork targets Thinking Machines Lab's Inkling 2 Mini. The
 initial profile uses one RTX PRO 6000 Blackwell, one request and an 8,192-token
 context. GPU count is a runtime setting for later trials.
 
+## Measured performance
+
+One NVIDIA RTX PRO 6000 Blackwell, SQ-20 weights resident on the GPU, FP16 KV.
+Each HTTP throughput bar summarizes four single-request transcription trials
+with 1,024 output tokens. The complete Cached request includes root creation
+and the branch receipt. The generation panel uses each engine’s reported
+generation time. Stock used a 2,048-token prefill chunk and Cached used 512.
+
+![Stock and Cached HTTP throughput with and without DSpark on 3K and 6K prompts](docs/benchmarks/inkling/http-throughput.png)
+
+The following memory measurements sample the serving process and its children
+during one request per configuration. Host checkpoint RAM is excluded.
+
+![Sampled peak GPU memory on 3K and 6K transcription requests](docs/benchmarks/inkling/http-vram.png)
+
+The native concurrency sweep used independent 4,097-token prompts and 256
+output tokens per slot. Each point is one run. At 54 slots the engine reached
+1,006.9 aggregate tokens/s and 18.6 tokens/s per slot.
+
+![Native throughput, per-slot speed and GPU memory by concurrent slot count](docs/benchmarks/inkling/native-concurrency.png)
+
 ## Native inference baseline
 
 Use the Linux x86-64 CUDA 13 `strata-inkling` 0.1.69 package from
