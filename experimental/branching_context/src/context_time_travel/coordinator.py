@@ -1741,8 +1741,10 @@ class ContextCoordinator:
             if size is None:
                 path=model.checkpoint_directory/(head.tip+'.json')
                 if os.path.lexists(path):
-                    manifest=model.checkpoint_manifest(head.tip)
-                    size=manifest['state_bytes']+4*manifest['logits_count']
+                    size = self._suffix_restore_bytes(model, head.tip)
+                    if not size:
+                        manifest=model.checkpoint_manifest(head.tip)
+                        size=manifest['state_bytes']+4*manifest['logits_count']
                 else:
                     size=0
                     work+=len(model.history(head.tip))
@@ -1962,12 +1964,19 @@ class ContextCoordinator:
                         break
                 self._condition.wait(.05)
             if lookahead is not None:
-                try: self._preload(*lookahead)
+                try:
+                    if not self._suffix_restore_bytes(*lookahead):
+                        self._preload(*lookahead)
                 except (PoolFull,KeyError,FileNotFoundError): pass
                 except Exception:
                     # Worker activation validates again and surfaces the failure
                     # to the request; a failed speculative read is never a pass.
                     self._preload_failures += 1
+
+    @staticmethod
+    def _suffix_restore_bytes(model, snapshot):
+        extent = getattr(model, 'suffix_restore_bytes', None)
+        return extent(snapshot) if callable(extent) else 0
 
     def _preload(self,model,snapshot,*,timeout=0,extra_bytes=0):
         key = self._key(model,snapshot)
@@ -2363,7 +2372,14 @@ class ContextCoordinator:
             return answer
         key = self._key(model,source)
         cached = model.cache.get(source)
-        if cached is not None and isinstance(cached.blob,StrataImage):
+        suffix_extent = self._suffix_restore_bytes(model, source)
+        if suffix_extent:
+            self._headroom()
+            with self.pool.reserve(3 * suffix_extent + 12 * len(model.history(source)),
+                                   timeout=self._admission_timeout):
+                answer = execute()
+            self.disk.touch(source)
+        elif cached is not None and isinstance(cached.blob,StrataImage):
             self.pool.record_transition('request_source_acquired',key,
                 operation_id=job.request.operation,branch=job.branch,source_snapshot=source,
                 source_kind='model_cache')

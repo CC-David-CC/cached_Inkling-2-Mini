@@ -1653,6 +1653,23 @@ class BranchingModel:
                     parent_consumed=parent_manifest['consumed'], parent_payload_sha256=parent_manifest['payload_sha256'])
                 yield parent, required
 
+    def suffix_restore_bytes(self, snapshot):
+        """Return the checked parent and child extent for a local suffix restore."""
+        from .checkpoint_cache import validate_manifest
+        if self.profile.get('backend') != 'inkling-cuda':
+            return 0
+        self.store.authorize(snapshot, 'materialize')
+        if not os.path.lexists(self.checkpoint_directory / (snapshot + '.json')):
+            return 0
+        envelope = self._checkpoint_envelope(snapshot)
+        manifest = envelope.get('manifest') if isinstance(envelope, dict) else None
+        if not isinstance(manifest, dict) or manifest.get('schema') != 5:
+            return 0
+        with self._suffix_binding(snapshot) as (parent, required):
+            child = validate_manifest(envelope, required)
+            base = self.checkpoint_manifest(parent)
+            return sum(item['state_bytes'] + 4 * item['logits_count'] for item in (base, child))
+
     def prepare_suffix_checkpoint(self, snapshot):
         """Capture a portable child delta while its durable parent is pinned."""
         from .digest_attestation import restore_payload_digest
