@@ -1212,8 +1212,12 @@ class BranchingModel:
         if type(blob) is not bytes or not blob or not all(map(math.isfinite,saved.frontier)):
             raise IntegrityError('Incomplete prepared numerical checkpoint')
         history = self.history(snapshot)
-        cold = Checkpoint.create(saved.model_contract_id,saved.execution_profile_id,saved.consumed,
-            blob,saved.frontier,saved.input_identity,saved.execution_schedule)
+        # A backend can return the same immutable bytes it already exported.
+        # Keep that owner so envelope verification can reuse its digest.
+        cold = saved
+        if blob is not saved.blob or type(saved) is not Checkpoint:
+            cold = Checkpoint.create(saved.model_contract_id,saved.execution_profile_id,saved.consumed,
+                blob,saved.frontier,saved.input_identity,saved.execution_schedule)
         return PreparedCheckpoint(snapshot,cold,self._prepared_envelope(snapshot,cold,history))
 
     def prepare_checkpoint(self, snapshot):

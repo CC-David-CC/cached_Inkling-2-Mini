@@ -16,6 +16,23 @@ class PreparedCheckpointTests(unittest.TestCase):
             self.model._input_identity(self.model.history(self.sid)))
         return self.model.prepare_checkpoint(self.sid)
 
+    def test_serialized_owner_reuses_digest_only_for_identical_bytes(self):
+        from unittest.mock import patch
+        from context_time_travel import digest_attestation
+        history = self.model.history(self.sid)
+        blob = b'native-state'
+        saved = Checkpoint.create('model', 'execution', len(history), blob, (1., 2.),
+                                  self.model._input_identity(history))
+        with patch.object(digest_attestation, '_compute_digest',
+                          wraps=digest_attestation._compute_digest) as digest:
+            same = self.model._prepared_checkpoint(self.sid, saved, blob)
+            self.assertIs(same.checkpoint, saved)
+            digest.assert_not_called()
+            copied = self.model._prepared_checkpoint(self.sid, saved, bytes(bytearray(blob)))
+            self.assertIsNot(copied.checkpoint, saved)
+            digest.assert_called_once()
+            self.assertEqual(copied.envelope, same.envelope)
+
     def test_publish_in_foreign_thread_never_enters_native_lease(self):
         ready = self.prepared()
         self.model.store.fork('main',self.sid)
