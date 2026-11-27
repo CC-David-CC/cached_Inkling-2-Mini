@@ -1,0 +1,30 @@
+{
+  "host": "llm-60",
+  "pack": "SQ-10",
+  "capacity": 8192,
+  "revision": "73ea1ed",
+  "messages": [
+    {
+      "role": "user",
+      "text": "Remember the label elm-728 for my next question. Reply OK."
+    },
+    {
+      "role": "assistant",
+      "text": "OK."
+    },
+    {
+      "role": "user",
+      "text": "What was the label? Reply with just the label."
+    },
+    {
+      "role": "assistant",
+      "text": "elm-728"
+    }
+  ],
+  "turn_count": 2,
+  "saved_revision": 3,
+  "live_revision": 3,
+  "saved_tip": "8c6c637964bcabfdf82c0b43938462c85f43652dac6d79bcd9142c56c29dea89",
+  "live_tip": "8c6c637964bcabfdf82c0b43938462c85f43652dac6d79bcd9142c56c29dea89",
+  "pending_operation": null
+}
