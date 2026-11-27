@@ -1,0 +1,17 @@
+{
+  "host": "r730",
+  "gpu": "Tesla P4",
+  "pack": "SQ-20",
+  "prefix_tokens": 4097,
+  "logits_per_row": 200058,
+  "expert_vram_mib": 768,
+  "checkpoint_bytes": 306656744,
+  "restore_seconds": 2.118,
+  "forward_tokens_on_restore": 0,
+  "hashes": {
+    "frontier": "649be7579dad769a755d4aef90fa669adcaeafca397c2287cf5ae226385b17fa",
+    "continuation": "5c5e10664f2b58d0c7f313681777f9c08400df0415a00ec3eb73cdde395eb1b7",
+    "libinkling_pcc_bridge.so": "65f6a97f21934fa6e9fd0b162da125fca78bdf2ff9b5fad45141203e3e50f117",
+    "tools/test_inkling_pcc.py": "cda95082812c06cddb2e4b1653f296c517db1d8bae619a4e3ead093b01b99712"
+  }
+}
