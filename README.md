@@ -82,6 +82,14 @@ output tokens per slot. A repeat at 38, 54, 56 and 64 slots found 1,093.2 aggreg
 
 ![Native throughput, per-slot speed and GPU memory by concurrent slot count](docs/benchmarks/inkling/native-concurrency.png)
 
+### Independent 128K contexts
+
+Eight native slots each processed 131,072 prompt tokens and generated 256 output tokens. All 3,072 experts were GPU-resident with FP16 KV, KV offload disabled and drafting off. At eight slots, aggregate decode reached 196.5 tokens/s and sampled process memory peaked at 55.4 GiB. Each point is one run. The benchmark allocates an independent context per slot.
+
+![Independent 128K slot counts, decode rates and process memory](docs/benchmarks/inkling/native-128k-concurrency.png)
+
+[Download the 128K concurrency measurements](docs/benchmarks/inkling/native-128k-concurrency.csv)
+
 ### Training on the latest mistakes
 
 A rank-4 AdamW output-head adapter trained for eight steps on three missed lookups, then took one step per round on the previous round’s misses. Each checkpoint answered all 54 questions against the same 128K document. Step 8 fixed two original misses and lost 39 previously correct answers. Step 11 recovered all 51 original successes and fixed two misses, reaching 53/54. On a fresh 24-question register the base scored 22 and the step-11 adapter scored 21. The base remains the serving default.
