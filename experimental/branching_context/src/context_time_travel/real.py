@@ -1133,7 +1133,14 @@ class BranchingModel:
             output.flush()
             os.fsync(output.fileno())
             self._checkpoint_fault(kind+'_before_publish')
-            os.replace(stage,destination)
+            if kind == 'manifest':
+                try:
+                    os.link(stage, destination)
+                except FileExistsError:
+                    if destination.read_bytes() != data:
+                        raise IntegrityError('Existing checkpoint manifest differs')
+            else:
+                os.replace(stage, destination)
             _sync_dir(self.checkpoint_directory)
             self._checkpoint_fault(kind+'_durable')
 

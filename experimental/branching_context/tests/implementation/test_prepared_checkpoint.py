@@ -68,6 +68,33 @@ class PreparedCheckpointTests(unittest.TestCase):
         self.assertEqual(result[0]['branch']['revision'],1)
         self.assertEqual(self.model._load_checkpoint(self.sid,self.model.history(self.sid)).blob,b'native-state')
 
+    def test_concurrent_conflicting_manifests_only_acknowledge_the_published_payload(self):
+        from concurrent.futures import ThreadPoolExecutor
+
+        first = self.prepared()
+        second = self.model._prepared_checkpoint(self.sid, first.checkpoint, b'different-state')
+        barrier = threading.Barrier(2)
+
+        def synchronize(point):
+            if point == 'manifest_before_publish':
+                barrier.wait(timeout=5)
+
+        self.model._checkpoint_fault = synchronize
+        with ThreadPoolExecutor(max_workers=2) as workers:
+            attempts = [(item, workers.submit(self.model.publish_prepared_checkpoint, item))
+                        for item in (first, second)]
+        winners = []
+        for item, future in attempts:
+            try:
+                future.result()
+            except IntegrityError:
+                continue
+            winners.append(item)
+        self.assertEqual(len(winners), 1)
+        stored = self.model.validate_checkpoint(self.sid)
+        self.assertEqual(stored['payload_sha256'], winners[0].checkpoint.checksum)
+        self.model.publish_prepared_checkpoint(winners[0])
+
     def test_wrong_profile_or_modified_payload_rejected_before_publish(self):
         from dataclasses import replace
         ready = self.prepared()
