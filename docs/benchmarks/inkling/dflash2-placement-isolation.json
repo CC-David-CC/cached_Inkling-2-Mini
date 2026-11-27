@@ -1,0 +1,30 @@
+{
+  "source": "host-staged",
+  "attempted_restore": "GPU-resident",
+  "rejection": {
+    "status": 409,
+    "detail": {
+      "error": "Checkpoint manifest incompatible (execution profile differs)"
+    }
+  },
+  "matched_restore": {
+    "full": [
+      39905,
+      200010,
+      200006
+    ],
+    "before_restart": [
+      39905
+    ],
+    "after_restart": [
+      200010,
+      200006
+    ],
+    "counters": {
+      "consumed_tokens": 2,
+      "forward_tokens": 2,
+      "draft_nodes": 7,
+      "drafts_accepted": 1
+    }
+  }
+}
