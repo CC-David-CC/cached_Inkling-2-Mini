@@ -1,0 +1,4 @@
+topology,worker,station,document_tokens,root_load_s,lookup_s,expected,answer,exact,save_s,forward_tokens,checkpoint_import_bytes,resident_parent_restores,completed_group_wall_s,completed_requests_overlap_s,error
+llm60-prepared-sequential,0,17,130000,31.749,6.923,34,34 degrees.,False,3.117,35,0,1,21.75,0,
+llm60-prepared-sequential,0,5712,130000,31.749,7.618,63,63 degrees.,False,3.193,35,0,1,21.75,0,
+llm60-prepared-sequential,0,11182,130000,31.749,7.209,49,49 degrees.,False,3.132,35,0,1,21.75,0,
