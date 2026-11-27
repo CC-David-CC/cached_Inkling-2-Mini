@@ -1,0 +1,6 @@
+{"trial": 1, "mode": "copied", "prefix_tokens": 23, "proposal_ms": 67.48404586687684, "path": [196986, 149963, 68014, 2, 156203, 25, 198]}
+{"trial": 1, "mode": "resident", "prefix_tokens": 23, "proposal_ms": 5.235638003796339, "path": [196986, 149963, 68014, 2, 156203, 25, 198]}
+{"trial": 2, "mode": "resident", "prefix_tokens": 23, "proposal_ms": 5.752763012424111, "path": [196986, 149963, 68014, 2, 156203, 25, 198]}
+{"trial": 2, "mode": "copied", "prefix_tokens": 23, "proposal_ms": 69.28145815618336, "path": [196986, 149963, 68014, 2, 156203, 25, 198]}
+{"trial": 3, "mode": "copied", "prefix_tokens": 23, "proposal_ms": 67.12264800444245, "path": [196986, 149963, 68014, 2, 156203, 25, 198]}
+{"trial": 3, "mode": "resident", "prefix_tokens": 23, "proposal_ms": 5.1154280081391335, "path": [196986, 149963, 68014, 2, 156203, 25, 198]}
