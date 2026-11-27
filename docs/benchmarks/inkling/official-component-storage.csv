@@ -1,0 +1,4 @@
+component,tensor_count,tensor_bytes,GiB
+routed_experts,176,15670464672,14.5943
+shared_language,646,3218893824,2.9978
+vision,422,636512256,0.5928
