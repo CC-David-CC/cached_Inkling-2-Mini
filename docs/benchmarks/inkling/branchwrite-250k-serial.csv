@@ -1,0 +1,7 @@
+process,position,seconds,correct,output_tokens,import_bytes,payload_sha256,same_hash,same_tokens
+1,early,5.048,True,3,0,220722f5c9fa77c5d087009bf9bb9817fe24e8002f50dea1f734853ea143d22d,True,True
+1,middle,5.175,True,12,0,1b12395f45e30aee3d51d67b4cfcad25aa56b4a97c4d0a78c5d5d947e7761d0f,True,True
+1,late,5.099,True,3,0,5271827ba426ad2b9dd58840c2046c61910820fb32ddac90f21b5471e6fec461,True,True
+2,early,21.385,True,3,8365703168,220722f5c9fa77c5d087009bf9bb9817fe24e8002f50dea1f734853ea143d22d,True,True
+2,middle,11.427,True,12,0,1b12395f45e30aee3d51d67b4cfcad25aa56b4a97c4d0a78c5d5d947e7761d0f,True,True
+2,late,11.663,True,3,0,5271827ba426ad2b9dd58840c2046c61910820fb32ddac90f21b5471e6fec461,True,True

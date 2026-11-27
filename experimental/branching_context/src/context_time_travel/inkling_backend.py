@@ -47,7 +47,7 @@ def model_contract_id(vision=False, adapter_sha256=None, weights_sha256=MODEL_SH
     return hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
 
 
-def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None, capacity=8192, grammar=False, draft=False, gpus=1, pack="SQ-20", dflash2=None, dflash2_resident=False, kv_offload="off"):
+def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None, capacity=8192, grammar=False, draft=False, gpus=1, pack="SQ-20", dflash2=None, dflash2_resident=False, kv_offload="off", serial_followup=False):
     if pack not in PACK_HASHES:
         raise ValueError('Unknown Inkling pack')
     weights = PACK_HASHES[pack]
@@ -72,6 +72,10 @@ def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None, 
         execution['expert_parallel_devices'] = [0, 1]
     elif gpus == 3:
         execution['layer_split_devices'] = [0, 1, 2]
+    if serial_followup:
+        if vision or draft or dflash2:
+            raise ValueError('Serial follow-up prefill requires undrafted text')
+        execution['followup_prefill'] = 'single-token'
     if 'INKLING_EXPERT_VRAM_MIB' in os.environ:
         value = os.environ['INKLING_EXPERT_VRAM_MIB']
         if not value.isascii() or not value.isdecimal() or int(value) > 0xffffffff:

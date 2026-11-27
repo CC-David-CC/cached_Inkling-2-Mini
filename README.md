@@ -16,6 +16,8 @@ One SQ-10 worker processed 250,000 station-register tokens in **138.53 seconds**
 
 A separate native restart run saved an 8,363,606,016-byte parent and a 4,227,072-byte suffix for a two-token child. A fresh process imported both from disk and reproduced all 32 greedy continuation IDs and every full logit row after those steps. Its forward counter recorded exactly 32 tokens. This covers native checkpoint transfer. Across two processes, all three randomized lookups returned the expected visible label and identical generated token IDs. 0 of 3 child payload hashes matched. Each process imported the 250,064-token parent for its first question, then served two warm questions with zero checkpoint import bytes. [Six durable timings and hashes](docs/benchmarks/inkling/branchwrite-250k-lookup.csv) [Restart measurements and logit hashes](docs/benchmarks/inkling/llm60-250k-native-restart.json)
 
+For repeated questions that need reproducible child checkpoints, pass `--serial-followup` to `tools/inkling_pcc_serve.py` with undrafted text. Root prefill stays batched. Each generation request consumes its appended text tokens individually. This setting has a distinct execution profile. On llm-60 with SQ-10, three randomized lookups produced identical output tokens and child payload hashes after restarting from one saved 250,064-token parent. The two warm requests after restart took 11.43 and 11.66 seconds. [Per-request measurements](docs/benchmarks/inkling/branchwrite-250k-serial.csv)
+
 ### Repeated questions on one 130K-token document
 
 ![Elapsed client time for three sequential warm BranchWrite questions on r730 and llm-60](docs/benchmarks/inkling/warm-130k-pooled-client.png)
