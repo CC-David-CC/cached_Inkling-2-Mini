@@ -169,6 +169,13 @@ class NativeBackend:
             raise IntegrityError('Missing consumed frontier')
         return tuple(data[:self.vocab_size])
 
+    def _export_into(self, lease, view):
+        size = len(view)
+        address = C.addressof(C.c_char.from_buffer(view)) if size else None
+        if self.lib.ctt_export(lease, address, size) != size:
+            raise IntegrityError('Incomplete state export')
+        self.stats['checkpoint_export_bytes'] += size
+
     def export(self, lease):
         size = self.lib.ctt_state_size(lease)
         # CPython BytesIO can hand its backing bytes to getvalue() once the
@@ -178,12 +185,8 @@ class NativeBackend:
                 buffer.seek(size - 1)
                 buffer.write(b'\0')
             with buffer.getbuffer() as view:
-                address = C.addressof(C.c_char.from_buffer(view)) if size else None
-                if self.lib.ctt_export(lease, address, size) != size:
-                    raise IntegrityError('Incomplete state export')
-            blob = buffer.getvalue()
-        self.stats['checkpoint_export_bytes'] += size
-        return blob
+                self._export_into(lease, view)
+            return buffer.getvalue()
 
     def piece(self, token):
         data = C.create_string_buffer(4096)

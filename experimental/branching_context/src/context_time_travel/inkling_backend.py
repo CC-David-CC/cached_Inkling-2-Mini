@@ -483,11 +483,14 @@ class InklingBackend(NativeBackend):
 
     def export(self, lease):
         blob = super().export(lease)
+        self._pin_export(lease, blob)
+        return blob
+
+    def _pin_export(self, lease, blob):
         if self.context_capacity > 8192:
             self._exported_digest = exported_payload_digest(blob)
             if self.lib.ctt_pin_shared(lease):
                 self._pinned_digest = self._exported_digest
-        return blob
 
     def restore(self, lease, blob, *, history=None, frontier=None):
         if not blob or not history or frontier is None or len(frontier) != self.vocab_size:

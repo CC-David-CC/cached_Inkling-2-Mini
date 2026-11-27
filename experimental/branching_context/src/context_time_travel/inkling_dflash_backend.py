@@ -65,14 +65,24 @@ class DFlashBackend(InklingBackend):
         return counters
 
     def export(self, lease):
-        target = super().export(lease)
+        size = self.lib.ctt_state_size(lease)
+        if size == 0:
+            raise IntegrityError('Missing DFlash2 target state')
         count = self.position(lease) + 1
-        stream = BytesIO()
-        stream.write(self.header.pack(self.magic, len(target), count))
-        stream.write(target)
-        for chunk in self.rows[0, :count].split(512):
-            stream.write(memoryview(chunk.cpu().view(torch.uint16).numpy()).cast('B'))
-        return stream.getvalue()
+        offset = self.header.size + size
+        with BytesIO() as stream:
+            stream.seek(offset + count * 9216 * 2 - 1)
+            stream.write(b'\0')
+            with stream.getbuffer() as view:
+                self.header.pack_into(view, 0, self.magic, size, count)
+                with view[self.header.size:offset] as target:
+                    self._export_into(lease, target)
+                    self._pin_export(lease, target)
+                for chunk in self.rows[0, :count].split(512):
+                    data = memoryview(chunk.cpu().view(torch.uint16).numpy()).cast('B')
+                    view[offset:offset + len(data)] = data
+                    offset += len(data)
+            return stream.getvalue()
 
     def restore(self, lease, blob, *, history=None, frontier=None):
         if len(blob) < self.header.size or not history:
