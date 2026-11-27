@@ -79,12 +79,24 @@ def _remember(owner, digest):
         # Weak-reference support is an optimization constraint, not part of
         # the existing checkpoint admission contract. Keep hashing normally.
         return
-    entry = (owner_ref, owner.blob, owner.frontier, owner.checksum, digest)
+    payload = getattr(_export, "payload", None)
+    raw_digest = payload[1].digest() if payload is not None and payload[0] is owner.blob else None
+    entry = (owner_ref, owner.blob, owner.frontier, owner.checksum, digest, raw_digest)
     with _LOCK:
         _OWNERS[key] = entry
         _OWNERS.move_to_end(key)
         while len(_OWNERS) > MAX_ATTESTED_OWNERS:
             _OWNERS.popitem(last=False)
+
+
+def restore_payload_digest(blob):
+    """Reuse a scoped export hash only for the very same immutable bytes."""
+    if type(blob) is bytes:
+        with _LOCK:
+            for owner_ref, payload, _, _, _, raw_digest in reversed(_OWNERS.values()):
+                if payload is blob and raw_digest is not None and owner_ref() is not None:
+                    return raw_digest
+    return hashlib.sha256(blob).digest()
 
 
 def verified_checkpoint_digest(owner):
@@ -93,7 +105,7 @@ def verified_checkpoint_digest(owner):
     with _LOCK:
         entry = _OWNERS.get(key)
         if entry is not None:
-            owner_ref, blob, frontier, checksum, digest = entry
+            owner_ref, blob, frontier, checksum, digest, _ = entry
             # The retained tuple was eligible when certified: its elements
             # were exact immutable builtin numbers, and the strong reference
             # below guarantees this exact tuple is still present. Rechecking

@@ -10,7 +10,7 @@ import subprocess
 from tempfile import TemporaryDirectory
 from threading import RLock
 
-from .digest_attestation import exported_payload_digest
+from .digest_attestation import exported_payload_digest, restore_payload_digest
 from .checkpoint_cache import CheckpointCache
 from .input_spans import InputHistory
 from .real import NativeBackend, digest_file
@@ -513,7 +513,7 @@ class InklingBackend(NativeBackend):
             raise IntegrityError('Incomplete Inkling checkpoint')
         row = (C.c_float * self.vocab_size)(*frontier)
         if self.context_capacity > 8192:
-            digest = hashlib.sha256(blob).digest()
+            digest = restore_payload_digest(blob)
             if digest == self._pinned_digest and self.lib.ctt_reuse_shared(lease, len(history), row, len(row)):
                 self.stats['resident_parent_restores'] = self.stats.get('resident_parent_restores', 0) + 1
                 return blob
