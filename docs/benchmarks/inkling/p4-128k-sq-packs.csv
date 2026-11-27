@@ -1,0 +1,4 @@
+pack,trunk_gb,gpu_experts,host_experts,host_expert_gb,gpu_kv_positions,host_kv_positions,mapped_host_mib,decode_steps,decode_tps,tpot_ms,free_mib
+SQ-10,1.87,0,3072,8.60,84224,46848,1464.0,32,2.76353,361.9,1524
+SQ-15,2.07,0,3072,12.28,80128,50944,1592.0,32,2.81118,355.7,1458
+SQ-20,3.67,0,3072,15.68,47360,83712,2616.0,32,2.16125,462.7,948
