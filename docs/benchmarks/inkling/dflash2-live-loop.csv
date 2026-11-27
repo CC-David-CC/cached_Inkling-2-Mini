@@ -1,0 +1,4 @@
+prompt,blocks,proposals,accepted,committed_including_anchor,decode_seconds,committed_tokens_per_second
+python,8,56,40,48,2.643419,18.16
+linux,8,56,33,41,1.349674,30.38
+json,8,56,18,26,1.127445,23.06
