@@ -13,6 +13,7 @@ def main():
     parser.add_argument('fixture', type=Path)
     parser.add_argument('mode', choices=('write', 'read'))
     parser.add_argument('--port', type=int, default=18061)
+    parser.add_argument('--chat', action='store_true')
     args = parser.parse_args()
     key = (args.runtime / 'pcc-http.key').read_text().strip()
 
@@ -28,15 +29,19 @@ def main():
         assert result['event'] == 'complete', result
         return result
 
+    messages = [{'role': 'user', 'content': 'What is 2 + 2? Reply with just the number.'}]
+    namespace = 'text/' if args.chat else ''
+
     def create(branch):
-        return call('create', dict(branch=branch, token_ids=[100, 101, 102],
-                                   operation_id="op-" + uuid.uuid4().hex, stream=False))
+        prompt = dict(messages=messages) if args.chat else dict(token_ids=[100, 101, 102])
+        return call(namespace + 'create', dict(branch=branch, **prompt,
+                                               operation_id='op-' + uuid.uuid4().hex, stream=False))
 
     def generate(branch, revision):
-        return call('generate', dict(branch=branch, revision=revision, max_tokens=5,
-                                     rendered_token_ids=[100, 101, 102],
-                                     settings={'temperature': 0}, stream=False,
-                                     operation_id="op-" + uuid.uuid4().hex))
+        prompt = dict(messages=messages) if args.chat else dict(rendered_token_ids=[100, 101, 102])
+        return call(namespace + 'generate', dict(branch=branch, revision=revision, max_tokens=5,
+                                                 **prompt, settings={'temperature': 0}, stream=False,
+                                                 operation_id='op-' + uuid.uuid4().hex))
 
     if args.mode == 'write':
         suffix = uuid.uuid4().hex
@@ -45,6 +50,8 @@ def main():
         assert left_root['receipt']['snapshot'] == right_root['receipt']['snapshot']
         answer = generate(left, left_root['receipt']['branch']['revision'])
         assert 1 <= len(answer['answer']['tokens']) <= 5, answer
+        if args.chat:
+            assert answer['answer']['text'].strip() == '4', answer
         args.fixture.write_text(json.dumps(dict(branch=right, root=right_root, answer=answer)))
         print(f'HTTP create and generate passed: {answer["answer"]["tokens"]}')
     else:
@@ -53,7 +60,12 @@ def main():
         expected = fixture['answer']
         assert answer['answer']['tokens'] == expected['answer']['tokens'], answer
         assert answer['receipt']['payload_sha256'] == expected['receipt']['payload_sha256'], answer
-        assert answer["answer"]["counter_deltas"]["forward_tokens"] == len(answer["answer"]["tokens"])
+        forward = answer['answer']['counter_deltas']['forward_tokens']
+        generated = len(answer['answer']['tokens'])
+        # The chat renderer appends exactly two assistant framing tokens.
+        assert forward == generated + (2 if args.chat else 0), answer
+        if args.chat:
+            assert answer['answer']['text'].strip() == '4', answer
         print(f'HTTP continuation after restart matched: {answer["answer"]["tokens"]}')
 
 

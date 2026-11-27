@@ -26,6 +26,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import jinja2
+from jinja2.ext import Extension
 from jinja2.sandbox import ImmutableSandboxedEnvironment
 
 LOGGER = logging.getLogger(__name__)
@@ -35,6 +36,15 @@ LOGGER = logging.getLogger(__name__)
 class TemplateRequestError(jinja2.exceptions.TemplateError, ValueError):
     """The template refused the request's messages (e.g. "No user query found in messages."): a ValueError, so the
     client gets a 400 with the template's message instead of a dropped connection (#365)."""
+
+
+class _GenerationExtension(Extension):
+    """Render Hugging Face generation blocks without tracking training masks."""
+    tags = {'generation'}
+
+    def parse(self, parser):
+        next(parser.stream)
+        return parser.parse_statements(('name:endgeneration',), drop_needle=True)
 
 
 class ChatTemplate:
@@ -54,7 +64,7 @@ class ChatTemplate:
             from .cow_minicpm_tools import validate_binding, json_value_finalizer
             validate_binding(tool_binding, self.source)
             finalize = json_value_finalizer
-        env = ImmutableSandboxedEnvironment(trim_blocks=True, lstrip_blocks=True, extensions=["jinja2.ext.loopcontrols"], finalize=finalize)
+        env = ImmutableSandboxedEnvironment(trim_blocks=True, lstrip_blocks=True, extensions=["jinja2.ext.loopcontrols", _GenerationExtension], finalize=finalize)
         env.filters["tojson"] = tojson
         env.globals["raise_exception"] = raise_exception
         self.template = env.from_string(self.source)

@@ -152,7 +152,7 @@ produced distinct history IDs and frontier logits. Each image matched all
 writes and disk restore in a fresh process. The native work counter recorded
 zero replay. The fresh-process test had no image encoding step.
 
-### PCC HTTP token service
+### PCC HTTP token and chat service
 
 After building the PCC bridge, start the authenticated localhost service
 with a persistent store:
@@ -162,16 +162,21 @@ python tools/inkling_pcc_serve.py /mnt/fast_cache/inkling
 ```
 
 The launcher creates a private `pcc-http.key` in the runtime directory.
-The service listens on port 18061 by default and uses PCC's
-`/cow/create` and `/cow/generate` token APIs. It serves greedy text-token
-requests. The separate Strata baseline serves OpenAI-compatible text and
-vision requests on port 18060.
+The service listens on port 18061 by default. It offers `/cow/create` and
+`/cow/generate` for token IDs, and `/cow/text/create` and
+`/cow/text/generate` for chat messages. Chat uses the pinned Inkling
+tokenizer and template, with greedy decoding and thinking disabled. Install
+`jinja2` and `regex` in the runtime environment. The separate Strata baseline
+serves OpenAI-compatible text and vision requests on port 18060.
 
 Run `tools/test_inkling_pcc_http.py RUNTIME FIXTURE write` against the live
 service, then restart it with the same store and run the test in `read` mode.
 On llm-60 the restart returned the same five tokens and the same numerical
 payload SHA-256. The native counter recorded five forward tokens for the
-five generated tokens.
+five generated tokens. The same regression with `--chat` returned the
+visible answer `4` before and after restart with the same numerical payload
+SHA-256. The counter recorded three generated tokens and two appended
+assistant framing tokens.
 
 ### DFlash2 and Splash
 

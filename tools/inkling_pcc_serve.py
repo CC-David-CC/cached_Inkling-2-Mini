@@ -19,6 +19,8 @@ from context_time_travel.pools import PoolConfig
 from context_time_travel.real import BranchingModel
 from serve.cow_adapter import CowAdapter
 from serve.cow_http import make_server
+from serve.cow_inkling_prompt import text_components
+from serve.cow_text_adapter import CowTextAdapter
 
 
 def local_key(path):
@@ -50,6 +52,7 @@ def main():
     directory = args.store or runtime / 'pcc-http-store'
     key = local_key(runtime / 'pcc-http.key')
     profile = runtime_profile(runtime)
+    components = text_components(runtime)
 
     def factory(gpu):
         backend = load_backend(profile, gpu_id=gpu)
@@ -65,7 +68,8 @@ def main():
     try:
         coordinator.ready()
         adapter = CowAdapter(coordinator)
-        with make_server(adapter, '127.0.0.1', args.port, key,
+        text = CowTextAdapter(adapter, **components)
+        with make_server(adapter, '127.0.0.1', args.port, key, text_adapter=text,
                          connection_info={name: profile[name] for name in
                                           ('model_contract_id', 'execution_profile_id')}
                          | {'eos_tokens': profile['execution']['eos_tokens']}) as server:
