@@ -1593,15 +1593,12 @@ class BranchingModel:
             raise IntegrityError('Invalid checkpoint payload') from exc
 
     @contextmanager
-    def materialize_suffix(self, snapshot, envelope):
-        """Restore a stored Inkling suffix over its exact canonical parent."""
-        from .checkpoint_cache import validate_manifest
-        from .digest_attestation import restore_payload_digest
-
+    def _suffix_binding(self, snapshot):
         self.store.authorize(snapshot, 'materialize')
-        restore = getattr(self.backend, 'restore_pinned_suffix', None)
-        if self.profile.get('backend') != 'inkling-cuda' or not callable(restore):
-            raise InvalidOperation('Backend does not support Inkling suffix checkpoints')
+        execution = self.profile['execution']
+        if (self.profile.get('backend') != 'inkling-cuda' or execution.get('draft') != 'off'
+                or execution.get('state_format') != 'inkling-cuda-fp16-v1'):
+            raise InvalidOperation('Suffix checkpoints require the undrafted Inkling FP16 state format')
         with self.store.read_lease(snapshot):
             record = self.store.get_snapshot(snapshot)
             parent = record['parent']
@@ -1616,18 +1613,48 @@ class BranchingModel:
                     logits_count=self.backend.vocab_size, model_contract_id=self.profile['model_contract_id'],
                     execution_profile_id=self.profile['execution_profile_id'], parent_snapshot=parent,
                     parent_consumed=parent_manifest['consumed'], parent_payload_sha256=parent_manifest['payload_sha256'])
-                manifest = validate_manifest(envelope, required)
-                child = self._read_checkpoint_payload(manifest)
-                with self._materialize(parent) as (lease, _):
-                    owner = self.cache[parent]
-                    if owner.checksum != required['parent_payload_sha256']:
-                        raise IntegrityError('Resident parent differs from suffix binding')
-                    if not restore(lease, owner.consumed, restore_payload_digest(owner.blob),
-                                   child.consumed, child.blob, child.frontier):
-                        raise IntegrityError('Native suffix restore unavailable')
-                    if self.backend.position(lease) + 1 != child.consumed:
-                        raise IntegrityError('Restored suffix position mismatch')
-                    yield lease, child.frontier
+                yield parent, required
+
+    def prepare_suffix_checkpoint(self, snapshot):
+        """Capture a portable child delta while its durable parent is pinned."""
+        from .digest_attestation import restore_payload_digest
+
+        self.store.authorize(snapshot, 'checkpoint')
+        with self._suffix_binding(snapshot) as (parent, required):
+            owner = self.cache.get(parent)
+            if owner is None or verified_checkpoint_digest(owner) != required['parent_payload_sha256']:
+                raise InvalidOperation('Suffix capture requires the matching resident parent')
+            with self._materialize(snapshot) as (lease, row):
+                suffix = self.backend.export_pinned_suffix(lease, owner.consumed, restore_payload_digest(owner.blob))
+                if not suffix:
+                    raise InvalidOperation('Native suffix capture unavailable')
+                if len(row) != self.backend.vocab_size or not all(map(math.isfinite, row)):
+                    raise IntegrityError('Invalid suffix frontier')
+                child = Checkpoint.create(owner.model_contract_id, owner.execution_profile_id,
+                    required['consumed'], suffix, row, required['input_identity'])
+                manifest = dict(required, state_bytes=len(suffix), payload_sha256=child.checksum)
+                envelope = dict(manifest=manifest, checksum=hashlib.sha256(_json_bytes(manifest)).hexdigest())
+                return PreparedCheckpoint(snapshot, child, _json_bytes(envelope))
+
+    @contextmanager
+    def materialize_suffix(self, snapshot, envelope):
+        """Restore a stored Inkling suffix over its exact canonical parent."""
+        from .checkpoint_cache import validate_manifest
+        from .digest_attestation import restore_payload_digest
+
+        with self._suffix_binding(snapshot) as (parent, required):
+            manifest = validate_manifest(envelope, required)
+            child = self._read_checkpoint_payload(manifest)
+            with self._materialize(parent) as (lease, _):
+                owner = self.cache[parent]
+                if owner.checksum != required['parent_payload_sha256']:
+                    raise IntegrityError('Resident parent differs from suffix binding')
+                if not self.backend.restore_pinned_suffix(lease, owner.consumed, restore_payload_digest(owner.blob),
+                               child.consumed, child.blob, child.frontier):
+                    raise IntegrityError('Native suffix restore unavailable')
+                if self.backend.position(lease) + 1 != child.consumed:
+                    raise IntegrityError('Restored suffix position mismatch')
+                yield lease, child.frontier
 
     def _load_checkpoint(self, snapshot, history):
         return self._read_checkpoint_payload(self.checkpoint_manifest(snapshot, history))

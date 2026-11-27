@@ -6,7 +6,6 @@ from pathlib import Path
 import struct
 
 from context_time_travel.backend_registry import load_backend
-from context_time_travel.digest_attestation import restore_payload_digest
 from context_time_travel.inkling_backend import runtime_profile
 from context_time_travel.real import BranchingModel
 from context_time_travel.store import IntegrityError, _json_bytes
@@ -31,24 +30,15 @@ def main():
             saved = json.loads(fixture.read_bytes())
             child = saved['child']
         parent = model.store.get_snapshot(child)['parent']
-        history = model.history(child)
         parent_history = model.history(parent)
-        required = dict(schema=5, snapshot=child, consumed=len(history),
-                        input_identity=model._input_identity(history), positions='absolute-zero-based',
-                        logits_count=backend.vocab_size, model_contract_id=profile['model_contract_id'],
-                        execution_profile_id=profile['execution_profile_id'], parent_snapshot=parent,
-                        parent_consumed=len(parent_history),
-                        parent_payload_sha256=model.checkpoint_manifest(parent)['payload_sha256'])
         row_format = f'<{backend.vocab_size}f'
         if args.phase == 'write':
-            with model.materialize(child) as (lease, row):
-                digest = restore_payload_digest(model.cache[parent].blob)
-                suffix = backend.export_pinned_suffix(lease, len(parent_history), digest)
-                assert suffix
-                data = suffix + struct.pack(row_format, *row)
-                manifest = dict(required, state_bytes=len(suffix), payload_sha256=hashlib.sha256(data).hexdigest())
-                envelope = dict(manifest=manifest, checksum=hashlib.sha256(_json_bytes(manifest)).hexdigest())
-                model._publish_checkpoint_file(model.checkpoint_directory / (manifest['payload_sha256'] + '.state'), data)
+            prepared = model.prepare_suffix_checkpoint(child)
+            envelope = json.loads(prepared.envelope)
+            checkpoint = prepared.checkpoint
+            model._publish_checkpoint_parts(model.checkpoint_directory / (checkpoint.checksum + '.state'),
+                                            (checkpoint.blob, struct.pack(row_format, *checkpoint.frontier)))
+            with model.materialize(child) as (lease, _):
                 backend.consume(lease, (501,))
                 expected = hashlib.sha256(struct.pack(row_format, *backend.logits(lease))).hexdigest()
             fixture.write_text(json.dumps(dict(child=child, envelope=envelope, expected=expected)))
