@@ -336,19 +336,21 @@ class BranchingModel:
                 yield state
 
     @contextmanager
-    def _materialize(self, snapshot, *, frontier_only=False, retain_suffix_image=True):
+    def _materialize(self, snapshot, *, frontier_only=False, retain_suffix_image=True, transient_owner=False):
         record = self.store.get_snapshot(snapshot)
         if record['model_contract_id'] != self.profile['model_contract_id']:
             raise IntegrityError('Snapshot model contract mismatch')
         history = self.history(snapshot)
         input_identity = self._input_identity(history)
         with ExitStack() as leases:
+            resident = None
             saved = self.cache.get(snapshot)
             if saved is None and (self.checkpoint_directory/(snapshot+'.json')).exists():
                 if self.profile.get('backend') == 'inkling-cuda':
                     envelope = _decode((self.checkpoint_directory / (snapshot + '.json')).read_bytes())
                     if isinstance(envelope, dict) and isinstance(envelope.get('manifest'), dict) and envelope['manifest'].get('schema') == 5:
-                        with self.materialize_suffix(snapshot, envelope, frontier_only=frontier_only) as (lease, row):
+                        with self.materialize_suffix(snapshot, envelope, frontier_only=frontier_only,
+                                                     transient_parent=not retain_suffix_image) as (lease, row):
                             if retain_suffix_image and not frontier_only:
                                 self.cache[snapshot] = self._save(lease, history)
                             yield lease, row
@@ -397,7 +399,12 @@ class BranchingModel:
                 self.cache[snapshot] = saved
             if self.backend.position(lease) != len(history)-1:
                 raise IntegrityError('Restored consumed position mismatch')
-            yield lease,saved.frontier
+            frontier = saved.frontier
+            if transient_owner:
+                # The suffix caller holds the cache owner through digest verification.
+                # The active native lease needs only the row after that handoff.
+                del saved, resident
+            yield lease,frontier
 
     def create(self, ids, *, contract=None):
         snapshot, _ = self.create_with_reuse(ids, contract=contract)
@@ -1758,7 +1765,7 @@ class BranchingModel:
             return files
 
     @contextmanager
-    def materialize_suffix(self, snapshot, envelope=None, *, frontier_only=False):
+    def materialize_suffix(self, snapshot, envelope=None, *, frontier_only=False, transient_parent=False):
         """Restore a stored Inkling suffix over its exact canonical parent."""
         from .checkpoint_cache import validate_manifest
         from .digest_attestation import restore_payload_digest
@@ -1771,7 +1778,8 @@ class BranchingModel:
             if frontier_only:
                 yield None, child.frontier
                 return
-            with self._materialize(parent) as (lease, _):
+            transient = transient_parent and parent not in self.cache
+            with self._materialize(parent, transient_owner=transient) as (lease, _):
                 owner = self.cache[parent]
                 if owner.checksum != required['parent_payload_sha256']:
                     raise IntegrityError('Resident parent differs from suffix binding')
@@ -1780,6 +1788,9 @@ class BranchingModel:
                     raise IntegrityError('Native suffix restore unavailable')
                 if self.backend.position(lease) + 1 != child.consumed:
                     raise IntegrityError('Restored suffix position mismatch')
+                if transient:
+                    self.cache.pop(parent, None)
+                    del owner
                 yield lease, child.frontier
 
     def _load_checkpoint(self, snapshot, history):
