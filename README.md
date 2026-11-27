@@ -471,6 +471,16 @@ Include draft acceptance, verifier cost, memory overhead, and post-restore
 continuation. Qualify the drafter's state and rejection rollback before
 enabling it with PCC checkpoints.
 
+For experimental single-GPU greedy text serving, use
+`python tools/inkling_pcc_serve.py RUNTIME --pack SQ-10 --dflash2 REFERENCE.py DRAFT_DIRECTORY TARGET.safetensors`
+in the PyTorch/Transformers environment with a tap-enabled bridge. The three
+paths identify the pinned implementation, DFlash2 checkpoint directory and
+official mixed-precision target checkpoint. The service stages the output head
+from host RAM. Its checkpoint contains the native target image and BF16 hidden
+rows for each consumed token. The DFlash2 profile uses a separate checkpoint
+identity. On llm-60 a streamed Linux command answer and a request resumed
+after its first token produced identical output IDs, including the native stop.
+
 The chart measures seven-token DFlash2 proposals using the resident output head
 and hidden states captured during SQ-10 prefill on llm-60. Each bar is the
 median of three synchronized warm trials. Target verification and HTTP serving

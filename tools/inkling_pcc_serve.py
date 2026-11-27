@@ -59,6 +59,8 @@ def main():
     parser.add_argument('--pack', choices=('SQ-10', 'SQ-15', 'SQ-20'), default='SQ-20')
     parser.add_argument('--gpus', type=int, choices=(1, 2, 3), default=1)
     parser.add_argument('--dspark', action='store_true', help='experimental fused DSpark for greedy text requests')
+    parser.add_argument('--dflash2', nargs=3, type=Path, metavar=('REFERENCE', 'DRAFT_DIR', 'TARGET'),
+                        help='experimental greedy DFlash2 using pinned local assets')
     parser.add_argument('--vision', action='store_true')
     parser.add_argument('--port', type=int, default=18061, help='TCP port (0 selects an available port)')
     args = parser.parse_args()
@@ -78,11 +80,13 @@ def serve(args, temporary):
     runtime = args.runtime.resolve(strict=True)
     key = local_key(runtime / 'pcc-http.key')
     normalizer = CowImageNormalizer() if args.vision else None
-    profile = runtime_profile(runtime, vision=args.vision, capacity=args.capacity, draft=args.dspark, gpus=args.gpus, pack=args.pack, grammar=bool(args.grammar_store),
+    profile = runtime_profile(runtime, vision=args.vision, capacity=args.capacity, draft=args.dspark, gpus=args.gpus, pack=args.pack, dflash2=args.dflash2, grammar=bool(args.grammar_store),
                               normalizer_id=normalizer.identity if normalizer else None, adapter=args.adapter)
     store_name = 'pcc-vision-http-store' if args.vision else 'pcc-http-store'
     if args.pack != 'SQ-20':
         store_name += '-' + args.pack.lower()
+    if args.dflash2:
+        store_name += '-dflash2'
     if args.dspark:
         store_name += '-dspark'
     if args.adapter is not None:

@@ -79,6 +79,8 @@ def _legacy_llama(profile, gpu_id):
 def _inkling(profile, gpu_id):
     if gpu_id not in (None, 0):
         raise IntegrityError('The Inkling CUDA profile uses visible device zero')
+    if profile['execution'].get('draft') == 'dflash2':
+        return import_module('.inkling_dflash_backend', __package__).DFlashBackend(profile)
     return import_module('.inkling_backend', __package__).InklingBackend(profile)
 
 
