@@ -1,0 +1,3 @@
+pack,fixtures_passed,fixtures_total,completion_tokens,native_stop
+UD-Q4_K_M,6,7,209,True
+official-NVFP4-MXFP8,0,7,512,False
