@@ -95,16 +95,57 @@ def save_training_checkpoint(path, state):
         staged.unlink(missing_ok=True)
 
 
+def export_adapter(output, parameters):
+    final = output / 'adapter.iklora'
+    with final.open('xb') as stream:
+        stream.write(HEAD_ADAPTER_HEADER.pack(HEAD_ADAPTER_MAGIC, RANK, bytes.fromhex(MODEL_SHA256)))
+        for factor in parameters[:2]:
+            stream.write(factor.detach().cpu().contiguous().numpy().tobytes())
+    return hashlib.sha256(final.read_bytes()).hexdigest()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('runtime', type=Path)
     parser.add_argument('output', type=Path, help='new private output directory')
-    parser.add_argument('--optimizer', choices=('adamw', 'muon'), default='adamw')
+    parser.add_argument('--optimizer', choices=('adamw', 'muon'), default=None)
+    parser.add_argument('--resume', type=Path, help='continue a saved optimizer checkpoint')
+    parser.add_argument('--additional-steps', type=int, default=1, help='updates after --resume')
     args = parser.parse_args()
+    if args.additional_steps < 1 or (not args.resume and args.additional_steps != 1):
+        parser.error('--additional-steps requires --resume and a positive count')
+    restored = torch.load(args.resume, weights_only=True) if args.resume else None
+    if restored is not None:
+        saved = restored['metadata']
+        if saved['optimizer'] not in ('adamw', 'muon') or args.optimizer not in (None, saved['optimizer']):
+            parser.error('checkpoint optimizer mismatch')
+        args.optimizer = saved['optimizer']
+    else:
+        args.optimizer = args.optimizer or 'adamw'
     args.output.mkdir(mode=0o700)
     torch.use_deterministic_algorithms(True)
     features, raw, targets, cap, profile_id = capture(args.runtime.resolve(strict=True))
     initial = initialize(raw.shape[1], args.optimizer)
+    if args.resume:
+        expected = dict(profile_id=profile_id, rank=RANK, base_sha256=MODEL_SHA256,
+                        torch_version=str(torch.__version__), examples=repr(EXAMPLES))
+        if any(saved.get(k) != v for k, v in expected.items()):
+            raise ValueError('Training checkpoint identity differs from this run')
+        with torch.no_grad():
+            initial[0].copy_(restored['a'])
+            initial[1].copy_(restored['b'])
+        initial[2].load_state_dict(restored['optimizer'])
+        losses = [train_step(initial, features, raw, targets, cap) for _ in range(args.additional_steps)]
+        steps = saved['steps'] + args.additional_steps
+        metadata = dict(saved, steps=steps)
+        save_training_checkpoint(args.output / f'step-{steps}.pt',
+                                 dict(metadata=metadata, a=initial[0].detach(), b=initial[1].detach(),
+                                      optimizer=initial[2].state_dict()))
+        report = dict(metadata, resumed_from_step=saved['steps'], losses=losses,
+                      adapter_sha256=export_adapter(args.output, initial))
+        (args.output / 'receipt.json').write_text(json.dumps(report, indent=2) + '\n')
+        print(json.dumps(report))
+        return
     previous_b = initial[1].detach().clone()
     losses = [train_step(initial, features, raw, targets, cap) for _ in range(2)]
     assert not torch.equal(initial[1], previous_b), 'LoRA update left B unchanged'
@@ -128,13 +169,9 @@ def main():
     assert all(torch.equal(initial[i], resumed[i]) for i in (0, 1))
     assert equal_state(initial[2].state_dict(), resumed[2].state_dict())
 
-    final = args.output / 'adapter.iklora'
-    with final.open('xb') as stream:
-        stream.write(HEAD_ADAPTER_HEADER.pack(HEAD_ADAPTER_MAGIC, RANK, bytes.fromhex(MODEL_SHA256)))
-        for factor in resumed[:2]:
-            stream.write(factor.detach().cpu().contiguous().numpy().tobytes())
+    adapter_hash = export_adapter(args.output, resumed)
     report = dict(metadata, verified_steps=3, losses=losses,
-                  exact_optimizer_resume=True, adapter_sha256=hashlib.sha256(final.read_bytes()).hexdigest(),
+                  exact_optimizer_resume=True, adapter_sha256=adapter_hash,
                   peak_cuda_allocated_bytes=torch.cuda.max_memory_allocated())
     (args.output / 'receipt.json').write_text(json.dumps(report, indent=2) + '\n')
     print(json.dumps(report))

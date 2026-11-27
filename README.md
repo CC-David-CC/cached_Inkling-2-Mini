@@ -338,6 +338,13 @@ python tools/test_inkling_head_lora.py "$runtime" "$store" \
     "$runtime/lora-adamw/adapter.iklora" "$runtime/lora-muon/adapter.iklora"
 ```
 
+Resume a saved output-head optimizer checkpoint into a new output directory. Each resumed run writes the updated optimizer checkpoint, serving adapter and receipt. The optimizer is inferred from the checkpoint.
+
+```bash
+python tools/inkling_train_head.py "$runtime" "$runtime/lora-resumed" \
+    --resume "$runtime/lora-muon/step-2.pt" --additional-steps 1
+```
+
 Launch PCC with `--adapter /path/to/adapter.iklora` to attach the adapter.
 Each adapter gets a distinct model contract and default store. Omitting the
 option selects the base model. Keep training outputs and optimizer checkpoints
