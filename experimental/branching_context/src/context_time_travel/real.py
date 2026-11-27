@@ -1597,15 +1597,24 @@ class BranchingModel:
             manifest = self.checkpoint_manifest(snapshot,history)
             schedule = tuple(manifest.get('execution_schedule',()))
             sha = manifest['payload_sha256']
-            payload = (self.checkpoint_directory/(sha+'.state')).read_bytes()
             size = manifest['state_bytes']
-            if type(size) is not int or size<=0 or len(payload)!=size+4*self.backend.vocab_size or hashlib.sha256(payload).hexdigest()!=sha:
+            width = 4 * self.backend.vocab_size
+            with (self.checkpoint_directory / (sha + '.state')).open('rb') as stream:
+                if type(size) is not int or size <= 0 or os.fstat(stream.fileno()).st_size != size + width:
+                    raise IntegrityError('Checkpoint payload corruption')
+                state = stream.read(size)
+                frontier = stream.read(width)
+                if len(state) != size or len(frontier) != width or stream.read(1):
+                    raise IntegrityError('Checkpoint payload corruption')
+            digest = hashlib.sha256(state)
+            digest.update(frontier)
+            if digest.hexdigest() != sha:
                 raise IntegrityError('Checkpoint payload corruption')
-            logits = struct.unpack('<'+str(self.backend.vocab_size)+'f',payload[size:])
+            logits = struct.unpack('<'+str(self.backend.vocab_size)+'f',frontier)
             if not all(map(math.isfinite, logits)):
                 raise IntegrityError('Nonfinite checkpoint frontier')
             return Checkpoint(manifest['model_contract_id'],manifest['execution_profile_id'],len(history),
-                payload[:size],logits,sha,manifest['input_identity'],schedule)
+                state,logits,sha,manifest['input_identity'],schedule)
         except (OSError,KeyError,TypeError,ValueError) as error:
             raise IntegrityError('Invalid or incomplete checkpoint') from error
 
