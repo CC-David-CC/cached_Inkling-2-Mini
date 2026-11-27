@@ -1,0 +1,123 @@
+diff --git a/engine/src/inkling2/CMakeLists.txt b/engine/src/inkling2/CMakeLists.txt
+index 1e7d168..fbda1b6 100644
+--- a/engine/src/inkling2/CMakeLists.txt
++++ b/engine/src/inkling2/CMakeLists.txt
+@@ -298,2 +298,9 @@ if(STRATA_INK_BUILD_PREFIX_TESTS)
+   set_tests_properties(ink_shared_prefix PROPERTIES TIMEOUT 30)
+ endif()
++
++if(STRATA_ENABLE_CUDA AND INKLING_PORTABLE_STATE_TEST_SOURCE)
++  add_executable(inkling_portable_state_test "${INKLING_PORTABLE_STATE_TEST_SOURCE}")
++  target_include_directories(inkling_portable_state_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
++  target_compile_definitions(inkling_portable_state_test PRIVATE INKLING_ENABLE_CUDA=1)
++  target_link_libraries(inkling_portable_state_test PRIVATE strata_inkling_core strata_inkling_cuda strata_inkling_core)
++endif()
+diff --git a/engine/src/inkling2/cuda/ink_cuda_backend.cu b/engine/src/inkling2/cuda/ink_cuda_backend.cu
+index d43d90a..92835f3 100644
+--- a/engine/src/inkling2/cuda/ink_cuda_backend.cu
++++ b/engine/src/inkling2/cuda/ink_cuda_backend.cu
+@@ -403,4 +403,26 @@ public:
+     }
+
++    size_t portable_state_size(int slot, int length) const override {
++        using namespace strata::ink;
++        if (!initialized_ || slot < 0 || slot >= max_slots_ || !slot_alloc_[slot]
++            || length <= 0 || length > eff_max_ctx_ || model_.ls_active || dspark_
++            || !d_sconv_snap_ || kv_dtype_ != KvDtype::FP16) return 0;
++        size_t bytes = portable_sconv_bytes();
++        for (const auto& kv : runner_->kv_desc) {
++            if (kv.host_cap != 0 || kv.kv_fmt != 0) return 0;
++            const int rows = kv.is_swa ? std::min(length, kInkSwaWin) : length;
++            bytes += 2 * size_t(rows) * kInkKVDim * sizeof(__half);
++        }
++        return bytes;
++    }
++
++    bool export_portable_state(int slot, int length, void* data, size_t size) override {
++        return transfer_portable_state<true>(slot, length, static_cast<uint8_t*>(data), size);
++    }
++
++    bool import_portable_state(int slot, int length, const void* data, size_t size) override {
++        return transfer_portable_state<false>(slot, length, static_cast<const uint8_t*>(data), size);
++    }
++
+     // #6627: Save/restore slot's ShortConv (3.83 MB) + 40 SWA KV ring windows (<=160 MiB in host RAM) + DSpark SWA KV
+     // so multi-turn chats and exact repeats reuse the full prior prompt even if hidden thinking or trailing tokens diverged!
+@@ -1165,4 +1187,62 @@ public:
+
+ private:
++    static constexpr size_t portable_sconv_bytes() {
++        using namespace strata::ink;
++        return size_t(kInkVisits) * 3 * kInkSconvCh * sizeof(float);
++    }
++
++    template<bool Export, typename Byte>
++    bool transfer_portable_state(int slot, int length, Byte* data, size_t size) {
++        using namespace strata::ink;
++        if (!data || size == 0 || size != portable_state_size(slot, length)) return false;
++        if (cudaSetDevice(gpu_id_) != cudaSuccess) return false;
++        if constexpr (!Export) {
++            if (!runner_->ensure_global_kv_cap(length)
++                || size != portable_state_size(slot, length)) return false;
++        }
++
++        // Validate every address range before reading or writing any state.
++        for (const auto& kv : runner_->kv_desc) {
++            const int rows = kv.is_swa ? std::min(length, kInkSwaWin) : length;
++            if (!kv.k_f16 || !kv.v_f16 || rows > kv.dev_cap) return false;
++        }
++
++        if constexpr (!Export) reset_slot(slot);
++        const auto stream = runner_->st;
++        auto copy = [&](void* device, size_t bytes) {
++            cudaError_t error;
++            if constexpr (Export)
++                error = cudaMemcpyAsync(data, device, bytes, cudaMemcpyDeviceToHost, stream);
++            else
++                error = cudaMemcpyAsync(device, data, bytes, cudaMemcpyHostToDevice, stream);
++            data += bytes;
++            return error == cudaSuccess;
++        };
++        auto copy_conv = [&]() {
++            k_ink_sconv_slot_copy<<<dim3(kInkVisits, 4), 256, 0, stream>>>(
++                runner_->d_sconv_pool_arr, d_sconv_snap_, slot, runner_->max_slots, Export);
++            return cudaGetLastError() == cudaSuccess;
++        };
++
++        bool ok;
++        if constexpr (Export) ok = copy_conv() && copy(d_sconv_snap_, portable_sconv_bytes());
++        else ok = copy(d_sconv_snap_, portable_sconv_bytes()) && copy_conv();
++
++        constexpr size_t row_bytes = kInkKVDim * sizeof(__half);
++        for (const auto& kv : runner_->kv_desc) {
++            if (!ok) break;
++            const int rows = kv.is_swa ? std::min(length, kInkSwaWin) : length;
++            const int start = kv.is_swa ? (length - rows) % kv.dev_cap : 0;
++            const int first = std::min(rows, kv.dev_cap - start);
++            const size_t base = size_t(slot) * kv.dev_cap * kInkKVDim;
++            for (auto* buffer : {kv.k_f16, kv.v_f16}) {
++                ok = copy(buffer + base + size_t(start) * kInkKVDim, size_t(first) * row_bytes);
++                if (ok && first < rows) ok = copy(buffer + base, size_t(rows - first) * row_bytes);
++                if (!ok) break;
++            }
++        }
++        return cudaStreamSynchronize(stream) == cudaSuccess && ok;
++    }
++
+     void ensure_pinned_logits(int nw, int V) {
+         if (nw <= h_logits_cap_ && h_logits_pin_) return;
+diff --git a/engine/src/inkling2/ink_backend.h b/engine/src/inkling2/ink_backend.h
+index 4cdc6ec..b3ab1c0 100644
+--- a/engine/src/inkling2/ink_backend.h
++++ b/engine/src/inkling2/ink_backend.h
+@@ -113,4 +113,10 @@ public:
+     }
+
++    // Native state payload only. The caller binds the token history, frontier,
++    // model and execution profile and validates the payload before import.
++    virtual size_t portable_state_size(int, int) const { return 0; }
++    virtual bool export_portable_state(int, int, void*, size_t) { return false; }
++    virtual bool import_portable_state(int, int, const void*, size_t) { return false; }
++
+     // Returns true when the on-device DSpark drafter is initialized and ready to serve drafts (#6633).
+     virtual bool dspark_ready() const { return false; }

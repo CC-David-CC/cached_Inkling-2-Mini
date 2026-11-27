@@ -90,3 +90,33 @@ tests. Then measure native FP4 kernels and DSpark drafting with the same
 weights, prompts, decoding settings and context sizes. Explore selective
 layer and expert residency when the full checkpoint exceeds available VRAM.
 Compare concurrent requests after the single-request results are reproducible.
+
+### Native checkpoint regression
+
+Apply [the CUDA state patch](experimental/branching_context/native/inkling/portable-state.patch)
+to the pinned Strata checkout. Build the standalone regression with
+`-DINKLING_PORTABLE_STATE_TEST_SOURCE=/absolute/path/to/check_portable_state.cpp`
+in the native CMake build directory. Then run:
+
+```bash
+cmake --build native-build --target inkling_portable_state_test
+native-build/inkling_portable_state_test Inkling-2-Mini-SQ-20.strata write portable-test.bin
+native-build/inkling_portable_state_test Inkling-2-Mini-SQ-20.strata read portable-test.bin
+```
+
+On llm-60 the 4,097-token fixture exported 305,856,512 bytes of native state.
+RAM restore after a sibling write and disk restore in a fresh process
+matched all 200,058 continuation logits bit for bit with CUDA, FP16 KV,
+8K context, 512-token prefill chunks and DSpark disabled. The fixture stores
+unframed test bytes. The PCC integration still needs a versioned envelope
+with integrity and identity checks and an independently stored frontier.
+
+### DFlash2 and Splash
+
+[Splash](https://github.com/incoai/splash) is an Apple Silicon engine with
+Inkling 2 Mini DFlash2 support. Use it as a separate Mac reference and
+evaluate the Inkling-specific DFlash2 drafter on CUDA for llm-60 as an
+opt-in profile. Compare against DSpark and draft-off under matched conditions.
+Include draft acceptance, verifier cost, memory overhead, and post-restore
+continuation. Qualify the drafter's state and rejection rollback before
+enabling it with PCC checkpoints.
