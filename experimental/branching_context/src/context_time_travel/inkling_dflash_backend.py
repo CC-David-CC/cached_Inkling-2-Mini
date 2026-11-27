@@ -17,7 +17,8 @@ class DFlashBackend(InklingBackend):
     def __init__(self, profile):
         super().__init__(profile)
         try:
-            self.propose = load_proposer(*profile['dflash2_assets'], device='cuda:0', stage_target=True)
+            stage_target = profile['execution'].get('dflash2_target_placement', 'host') == 'host'
+            self.propose = load_proposer(*profile['dflash2_assets'], device='cuda:0', stage_target=stage_target)
             self.rows = torch.empty((1, self.context_capacity, 9216), dtype=torch.bfloat16, device='cuda:0')
         except BaseException:
             self.close()

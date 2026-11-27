@@ -7,8 +7,9 @@ import matplotlib.pyplot as plt
 
 folder = Path(__file__).resolve().parent
 records = [json.loads(line) for line in (folder / 'draft-http-matched.jsonl').read_text().splitlines()]
-fig, axes = plt.subplots(1, 3, figsize=(10, 3.8), layout='constrained')
-modes = [('off', 'Draft off', '#326b8b'), ('dspark', 'DSpark', '#85549b'), ('dflash2', 'DFlash2', '#267556')]
+fig, axes = plt.subplots(1, 3, figsize=(12, 4.1), layout='constrained')
+modes = [('off', 'Draft off', '#326b8b'), ('dspark', 'DSpark', '#85549b'), ('dflash2', 'DFlash2\nstaged', '#267556'),
+         ('resident', 'DFlash2\nresident', '#c27730')]
 for ax, (metric, title) in zip(axes, [('end_to_end_tps', 'End-to-end tokens/s'),
                                       ('ttft_ms', 'First visible token (ms)'),
                                       ('tpot_ms', 'Generation ms/token')]):

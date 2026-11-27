@@ -46,7 +46,7 @@ def model_contract_id(vision=False, adapter_sha256=None, weights_sha256=MODEL_SH
     return hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
 
 
-def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None, capacity=8192, grammar=False, draft=False, gpus=1, pack="SQ-20", dflash2=None):
+def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None, capacity=8192, grammar=False, draft=False, gpus=1, pack="SQ-20", dflash2=None, dflash2_resident=False):
     if pack not in PACK_HASHES:
         raise ValueError('Unknown Inkling pack')
     weights = PACK_HASHES[pack]
@@ -84,10 +84,14 @@ def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None, 
         if vision or adapter or grammar:
             raise ValueError("DSpark currently supports unadapted text generation")
         execution.update(draft="dspark", state_format="inkling-cuda-fp16-dspark-v1")
+    if dflash2_resident and dflash2 is None:
+        raise ValueError("Resident DFlash2 weights require a DFlash2 profile")
     if dflash2 is not None:
         if vision or adapter or grammar or draft or gpus != 1:
             raise ValueError("DFlash2 requires single-GPU unadapted text")
         execution.update(draft="dflash2", state_format="inkling-cuda-dflash2-rows-v1")
+        if dflash2_resident:
+            execution["dflash2_target_placement"] = "gpu"
         extra["dflash2_assets"] = [str(Path(path).resolve(strict=True)) for path in dflash2]
     if grammar:
         execution.update(selected_token_protocol="consumed-selected-receipt-v1",
