@@ -210,6 +210,10 @@ def main():
     assert all(torch.equal(initial[i], resumed[i]) for i in (0, 1))
     assert equal_state(initial[2].state_dict(), resumed[2].state_dict())
 
+    metadata = dict(metadata, steps=len(losses))
+    save_training_checkpoint(args.output / 'step-3.pt',
+                             dict(metadata=metadata, a=resumed[0].detach(), b=resumed[1].detach(),
+                                  optimizer=resumed[2].state_dict()))
     adapter_hash = export_adapter(args.output, resumed, parent, args.collapse)
     report = dict(metadata, collapsed=args.collapse, verified_steps=3, losses=losses,
                   exact_optimizer_resume=True, adapter_sha256=adapter_hash,

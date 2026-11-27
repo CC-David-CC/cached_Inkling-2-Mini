@@ -28,6 +28,10 @@ def main():
         baseline = train(original, '--optimizer', args.optimizer)
         checkpoint = original / 'step-2.pt'
         third = train(resumed, '--resume', checkpoint)
+        assert baseline['steps'] == third['steps'] == 3
+        exported_states = [torch.load(path / 'step-3.pt', map_location='cpu', weights_only=True)
+                           for path in (original, resumed)]
+        assert equal_state(*exported_states)
         assert baseline['losses'][-1] == third['losses'][0]
         assert (original / 'adapter.iklora').read_bytes() == (resumed / 'adapter.iklora').read_bytes()
 
