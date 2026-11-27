@@ -1,0 +1,2 @@
+prompt_tokens,checkpoint_position,checkpoint_bytes,continuation_rows,bit_equal_rows,equal_next_argmax,first_different_continuation_row
+3072,3080,272531456,32,32,32,
