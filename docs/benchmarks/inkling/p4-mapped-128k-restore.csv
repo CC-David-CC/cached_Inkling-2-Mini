@@ -1,0 +1,3 @@
+check,checkpoint_bytes,final_position,vocab_logits,result
+write,4466540544,131071,200058,reference
+read,4466540544,131071,200058,bit-exact
