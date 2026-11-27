@@ -46,7 +46,9 @@ def main():
                 expected = exact_row(backend.logits(lease))
             root = model.create(prefix)
             before = backend.work_counters()
+            imports = backend.stats['checkpoint_import_bytes']
             assert exact_row(model.next_logits(root)) == frontier
+            assert backend.stats['checkpoint_import_bytes'] == imports
             assert backend.work_counters() == before
             model.feed(root, (291, 292))
             branch = model.feed(root, (token,))

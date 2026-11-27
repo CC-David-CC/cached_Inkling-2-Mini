@@ -320,13 +320,13 @@ class BranchingModel:
                 yield state
 
     @contextmanager
-    def _materialize(self, snapshot):
+    def _materialize(self, snapshot, *, frontier_only=False):
         record = self.store.get_snapshot(snapshot)
         if record['model_contract_id'] != self.profile['model_contract_id']:
             raise IntegrityError('Snapshot model contract mismatch')
         history = self.history(snapshot)
         input_identity = self._input_identity(history)
-        with self.backend.lease() as lease:
+        with ExitStack() as leases:
             saved = self.cache.get(snapshot)
             if saved is None and (self.checkpoint_directory/(snapshot+'.json')).exists():
                 saved = self._load_checkpoint(snapshot,history)
@@ -350,6 +350,10 @@ class BranchingModel:
                                                 self.profile['execution']['prefill_chunk'])
                     except (ValueError,TypeError) as error:
                         raise IntegrityError('Mixed checkpoint execution binding is invalid') from error
+                if frontier_only:
+                    yield None, saved.frontier
+                    return
+                lease = leases.enter_context(self.backend.lease())
                 observer=getattr(self,'_restore_observer',None)
                 started=time.monotonic() if observer is not None else None
                 resident = self.backend.restore(lease,saved.blob,history=history,frontier=saved.frontier)
@@ -362,6 +366,7 @@ class BranchingModel:
             else:
                 if isinstance(history,InputHistory) or self._schedule_contract() is not None:
                     raise IntegrityError('Exact batched materialization requires a retained numerical checkpoint')
+                lease = leases.enter_context(self.backend.lease())
                 if not self.backend.restore_cached(lease,history):
                     self.backend.consume(lease,history)
                 saved = self._save(lease,history)
@@ -1027,8 +1032,13 @@ class BranchingModel:
         return Generation(snapshot,tuple(tokens),tuple(boundaries))
 
     def next_logits(self, snapshot):
-        with self.materialize(snapshot) as (_,frontier):
-            return frontier
+        if self.profile.get('backend') != 'inkling-cuda':
+            with self.materialize(snapshot) as (_, frontier):
+                return frontier
+        self.store.authorize(snapshot, 'materialize')
+        with self.store.read_lease(snapshot):
+            with self._materialize(snapshot, frontier_only=True) as (_,frontier):
+                return frontier
 
     def consumed(self, snapshot):
         with self.materialize(snapshot) as (lease,_):
