@@ -1,0 +1,58 @@
+[InkCUDA] expert codecs (gate_up/down code: count, mean MB): 2/2: 585, 2.18; 3/2: 1814, 2.85; 3/3: 658, 3.18; 15/15: 15, 4.48;
+[InkHybrid] host expert arena 8.60 GB pinned (under 45% of the available RAM; available RAM 198.7 GB): the card reads the cold experts itself
+[InkCUDA] Loaded /dev/shm/inkling-p4-sq10.benchmark (SQ-10): trunk=1.87 GB (1.03s), experts=0 VRAM / 3072 host (7.90s, hyb=1, promo=59, pf_buf=64MB), sm120_tc=0, screen=0
+[InkCUDA] Auto Host KV Offload (kv_fmt=0, 5.13 GiB free VRAM): global KV = 85504 VRAM + 45568 mapped host tokens (1424.0 MiB host RAM, max_ctx=131072)
+[InkCUDA] memory: 5262 MiB free after load, runner+KV took 3684 MiB (max_batch=512), DSpark took 0 MiB, 1578 MiB free now
+[InkHybrid] cold experts: launch probe (18 decode steps each): CPU lane 91.7 ms/token, copy into the card 274.8 ms/token -> computed on the CPU where they are (the answer can differ from an all-resident run in rounding) (STRATA_INK_EXACT=1 or 0 forces a lane)
+effective_ctx=131072
+processed=8192
+processed=16384
+processed=24576
+processed=32768
+processed=40960
+processed=49152
+processed=57344
+processed=65536
+processed=73728
+processed=81920
+processed=90112
+processed=98304
+processed=106496
+processed=114688
+processed=122880
+prefill_seconds=8174.07
+output_id=69985
+output_id=200010
+output_id=200001
+output_id=200008
+output_id=371
+output_id=150409
+output_id=171960
+output_id=25
+output_id=196980
+output_id=1775
+output_id=151351
+output_id=150441
+output_id=152275
+output_id=220
+output_id=72291
+output_id=70755
+output_id=151323
+output_id=30
+output_id=174127
+output_id=149876
+output_id=150107
+output_id=150130
+output_id=13
+output_id=1
+output_id=68014
+output_id=40
+output_id=150261
+output_id=149882
+output_id=150367
+output_id=161011
+output_id=220
+output_id=72291
+start_ns=3451842092321750 end_ns=3451854632307469
+decode_tps=2.55183 seconds=12.54
+final_position=131071 finite_logits=200058 remaining_mib=1558
