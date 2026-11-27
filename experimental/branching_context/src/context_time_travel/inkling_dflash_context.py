@@ -95,3 +95,22 @@ def verify_greedy_block(backend, lease, context, proposal, *, remaining, stop_to
         if token in stop_tokens:
             break
     return committed
+
+
+@torch.inference_mode()
+def select_draft_path(drafter, hidden, head, anchor):
+    """Select seven Inkling DFlash2 successors from the 16 candidates at each position."""
+    unary, candidates = (hidden @ head.T).float().topk(16, dim=-1)
+    selector = drafter.candidate_selector
+    projected = selector.hidden_projection(hidden)
+    predecessor = anchor
+    path = []
+    for position in range(7):
+        choices = candidates[:, position]
+        edge = (selector.predecessor_codebook(predecessor)[:, None, :]
+                * projected[:, position:position + 1, :]
+                * selector.successor_codebook(choices)).float().sum(dim=-1)
+        scores = 30 * torch.tanh((unary[:, position] + edge) / 30)
+        predecessor = choices.gather(-1, scores.argmax(-1, keepdim=True))[:, 0]
+        path.append(predecessor)
+    return torch.stack(path, dim=1)
