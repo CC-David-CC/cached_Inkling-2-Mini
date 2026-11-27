@@ -1,0 +1,3 @@
+profile,effort,max_tokens,completion_tokens,visible_answer,correct
+base,0.99,2048,1603,2755,True
+muon,0.99,2048,2048,,False
