@@ -1,0 +1,3 @@
+transfer,input_tokens,blocks,accepted,committed,tap_bytes_read,median_proposal_ms,decode_seconds,tokens_per_second
+full,3072,33,226,259,3888082944,51.03,6.1269,42.27
+incremental,3072,33,226,259,122499072,7.73,4.62952,55.95
