@@ -1,0 +1,4 @@
+gpu,pack,context_tokens,final_position,finite_logits,free_vram_mib
+0,SQ-10,65536,65535,200058,2098
+1,SQ-10,65536,65535,200058,2200
+2,SQ-10,65536,65535,200058,2200
