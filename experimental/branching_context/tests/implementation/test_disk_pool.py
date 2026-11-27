@@ -1,4 +1,6 @@
 """Real filesystem pool/retention tests; synthetic checkpoint payloads."""
+import hashlib
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -36,6 +38,27 @@ class DiskPoolTests(unittest.TestCase):
             self.assertFalse(file.exists())
             self.assertEqual(self.pool.metrics()['reserved_bytes'],32)
         self.assertEqual(self.store.get_snapshot(self.tip)['inputs'],[2])
+
+    def test_suffix_read_lease_protects_parent_and_both_become_evictable(self):
+        directory = self.pool.directory
+        sibling = self.store.append(self.root, (3,), {'status': 'idle'})
+        for snapshot, data, binding in (
+                (self.root, b'parent', {'schema': 1}),
+                (sibling, b'sibling', {'schema': 5, 'parent_snapshot': self.root}),
+                (self.tip, b'child', {'schema': 5, 'parent_snapshot': self.root})):
+            digest = hashlib.sha256(data).hexdigest()
+            (directory / (digest + '.state')).write_bytes(data)
+            manifest = dict(binding, payload_sha256=digest)
+            (directory / (snapshot + '.json')).write_text(json.dumps({'manifest': manifest}))
+        with self.store.read_lease(self.tip):
+            self.pool.collect()
+            self.assertEqual({path.stem for path in directory.glob('*.json')}, {self.root, self.tip})
+            for data in (b'parent', b'child'):
+                self.assertTrue((directory / (hashlib.sha256(data).hexdigest() + '.state')).exists())
+            self.assertEqual(len(list(directory.glob('*.state'))), 2)
+        self.pool.collect()
+        self.assertEqual(list(directory.glob('*.json')), [])
+        self.assertEqual(list(directory.glob('*.state')), [])
 
     def test_failed_reservation_releases_and_does_not_exceed_limit(self):
         with self.assertRaises(RuntimeError):

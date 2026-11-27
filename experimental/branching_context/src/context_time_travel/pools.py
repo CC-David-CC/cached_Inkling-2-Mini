@@ -687,19 +687,26 @@ class DiskCheckpointPool:
         return (stamp,identity)
 
     @staticmethod
-    def _payload_id(path,retained):
+    def _payload_binding(path,retained):
         from .store import IntegrityError
         try:
             envelope=json.loads(path.read_bytes())
-            digest=envelope['manifest']['payload_sha256']
+            manifest=envelope['manifest']
+            digest=manifest['payload_sha256']
             if (not isinstance(digest,str) or len(digest)!=64
                     or any(ch not in '0123456789abcdef' for ch in digest)):
                 raise ValueError('invalid payload digest')
-            return digest
+            parent = None
+            if manifest.get('schema') == 5:
+                parent = manifest['parent_snapshot']
+                if (type(parent) is not str or len(parent) != 64 or parent == path.stem
+                        or any(ch not in '0123456789abcdef' for ch in parent)):
+                    raise ValueError('invalid suffix parent')
+            return digest, parent
         except (OSError,ValueError,KeyError,TypeError) as exc:
             if path.stem in retained:
                 raise IntegrityError('Retained checkpoint manifest is unreadable') from exc
-            return None
+            return None, None
 
     @staticmethod
     def _reservation_bytes(fd,record):
@@ -833,11 +840,16 @@ class DiskCheckpointPool:
                     self._recency.pop(snapshot,None)
             payload_by_manifest={}
             references={}
+            parent_by_child={}
+            dependents={}
             eligible=[path for path in image_paths
                 if path.stem not in protected_payloads and self._protected_payloads.get(path.stem,0)==0]
             used=self._bytes()
             for path in manifest_paths:
-                digest=self._payload_id(path,retained)
+                digest,parent=self._payload_binding(path,retained)
+                if parent is not None:
+                    parent_by_child[path.stem]=parent
+                    dependents[parent]=dependents.get(parent,0)+1
                 payload_by_manifest[path.stem]=digest
                 if digest is not None: references[digest]=references.get(digest,0)+1
                 if path.stem not in retained: eligible.append(path)
@@ -849,7 +861,10 @@ class DiskCheckpointPool:
                     size=path.stat().st_size
                     path.unlink();self._evictions+=1;changed=True
                     used-=size
-            eligible.sort(key=self._recency_key)
+            # Suffix records depend on standalone parent images. Consider parents
+            # last so one collection can free an entire unleased family.
+            eligible.sort(key=lambda path: (path.suffix == '.json' and path.stem in dependents,
+                                            self._recency_key(path)))
             for path in eligible:
                 idle_expired=(idle_now_ns is not None and self.checkpoint_idle_seconds is not None
                     and _idle_age_exceeded(path.stat().st_mtime_ns,idle_now_ns,
@@ -858,9 +873,13 @@ class DiskCheckpointPool:
                     if not idle_expired: continue
                 elif used+reserved+required <= self.byte_limit:
                     break
+                if path.suffix == '.json' and dependents.get(path.stem,0):
+                    continue
                 digest=None if path.suffix=='.sve' else payload_by_manifest[path.stem]
                 size=path.stat().st_size
                 path.unlink();self._evictions+=1;changed=True
+                if path.suffix=='.json' and path.stem in parent_by_child:
+                    dependents[parent_by_child[path.stem]]-=1
                 if path.suffix=='.json' and self._notifications is not None:
                     self._notifications.record('disk',path.stem)
                 if idle_expired: self._idle_evictions+=1
