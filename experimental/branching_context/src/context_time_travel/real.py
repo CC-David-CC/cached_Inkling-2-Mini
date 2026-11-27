@@ -646,11 +646,14 @@ class BranchingModel:
                 if decoder['accepted_in_scope']-accepted_before!=len(outputs):
                     raise InvalidOperation('Native output extends beyond the stopped controller')
                 self._lease_fault('after_token_consume')
+                save_started = time.monotonic()
                 saved = self._save(lease,consumed_history,schedule)
+                state_save_seconds = time.monotonic() - save_started
                 if saved.consumed != len(consumed_history):
                     raise IntegrityError('Resident request capture omitted consumed inputs')
             sid = self._publish_feed(snapshot,ids+tuple(outputs),decoder,saved)
         return dict(snapshot=sid,tokens=outputs,generation_seconds=generation_seconds,
+                    state_save_seconds=state_save_seconds,
                     request_seconds=time.monotonic()-started)
 
     def run_state_request(self, snapshot, ids, max_steps, *, engine, state, stream,
@@ -901,12 +904,15 @@ class BranchingModel:
                     except (ValueError,TypeError) as error:
                         raise IntegrityError('Mixed request publication schedule is invalid') from error
                 self._lease_fault('after_token_consume')
+                save_started = time.monotonic()
                 saved = self._save(lease, consumed_history, schedule)
+                state_save_seconds = time.monotonic() - save_started
                 if saved.consumed != len(consumed_history):
                     raise IntegrityError('Grammar request capture omitted consumed inputs')
             sid = self._publish_feed(snapshot, ids + tuple(outputs), decoder, saved)
         return dict(snapshot=sid, tokens=outputs, grammar_complete=session.is_complete(),
                     stopped=session.is_stopped(), generation_seconds=generation_seconds,
+                    state_save_seconds=state_save_seconds,
                     request_seconds=time.monotonic() - started)
 
     def run_sampled_request(self,snapshot,ids,max_steps,*,sampling,stream,resume=False,
