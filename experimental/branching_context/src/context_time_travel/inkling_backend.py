@@ -45,7 +45,7 @@ def model_contract_id(vision=False, adapter_sha256=None, weights_sha256=MODEL_SH
     return hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
 
 
-def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None, capacity=8192, grammar=False, draft=False, pack='SQ-20'):
+def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None, capacity=8192, grammar=False, draft=False, gpus=1, pack="SQ-20"):
     if pack not in PACK_HASHES:
         raise ValueError('Unknown Inkling pack')
     if adapter and pack != 'SQ-20':
@@ -58,6 +58,11 @@ def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None, 
     execution = dict(EXECUTION, capacity=capacity,
                      cuda_cublas_compute_type=os.getenv('GGML_CUDA_CUBLAS_COMPUTE_TYPE', 'auto'),
                      nvidia_tf32_override=os.getenv('NVIDIA_TF32_OVERRIDE', 'unset'))
+    if type(gpus) is not int or gpus not in (1, 2):
+        raise ValueError('Inkling requires one or two GPUs')
+    # EP2 uses both devices inside one coordinator worker on logical GPU 0.
+    if gpus == 2:
+        execution['expert_parallel_devices'] = [0, 1]
     if 'INKLING_EXPERT_VRAM_MIB' in os.environ:
         value = os.environ['INKLING_EXPERT_VRAM_MIB']
         if not value.isascii() or not value.isdecimal() or int(value) > 0xffffffff:
@@ -176,7 +181,10 @@ class InklingBackend(NativeBackend):
         self.lib.ctt_logit_softcap.restype = C.c_float
         self.lib.ctt_attach_head_lora.argtypes = [C.c_void_p, C.c_int, C.c_void_p, C.c_void_p]
         self.lib.ctt_attach_head_lora.restype = C.c_int
-        if self.context_capacity == 8192 and not self.draft:
+        gpu_count = len(self.profile['execution'].get('expert_parallel_devices', [0]))
+        if gpu_count > 1 and self.draft:
+            raise ValueError('Multi-GPU DSpark requires separate qualification')
+        if self.context_capacity == 8192 and not self.draft and gpu_count == 1:
             model = super()._load_model()
         else:
             self.lib.ctt_pin_shared.argtypes = [C.c_void_p]
@@ -195,6 +203,11 @@ class InklingBackend(NativeBackend):
                 self.lib.ctt_draft_block.argtypes = [C.c_void_p, C.c_int, C.POINTER(C.c_int32), C.POINTER(C.c_int)]
                 self.lib.ctt_draft_block.restype = C.c_int
                 model = load(os.fsencode(self.profile['model_path']), self.context_capacity, True)
+            elif gpu_count > 1:
+                load = self.lib.ctt_load_devices
+                load.argtypes = [C.c_char_p, C.c_int, C.c_bool, C.c_int]
+                load.restype = C.c_void_p
+                model = load(os.fsencode(self.profile['model_path']), self.context_capacity, False, gpu_count)
             else:
                 model = load(os.fsencode(self.profile['model_path']), self.context_capacity)
         if model and self.adapter_sha256:
@@ -262,6 +275,9 @@ class InklingBackend(NativeBackend):
             raise IntegrityError('Inkling vision profile requires the pinned vision weights')
         if bool(profile.get('adapter_path')) != bool(self.adapter_sha256):
             raise IntegrityError('Inkling adapter path and identity must be provided together')
+        devices = execution.get('expert_parallel_devices', [0])
+        if devices not in ([0], [0, 1]) or any(type(i) is not int for i in devices):
+            raise IntegrityError('Invalid Inkling GPU placement')
         required = dict(EXECUTION)
         if self.draft:
             required.update(draft='dspark', state_format='inkling-cuda-fp16-dspark-v1')

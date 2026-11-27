@@ -306,6 +306,14 @@ python tools/inkling_pcc_serve.py /mnt/fast_cache/inkling
 
 Use `--pack SQ-10`, `--pack SQ-15`, or the default `--pack SQ-20` to select a fingerprinted checkpoint in the runtime directory. Each pack has its own model contract and default persistent store. On the r730, `CUDA_VISIBLE_DEVICES=2 STRATA_INK_EXACT=1` with SQ-10 reproduced a short chat after a process restart with FP16 KV and hybrid expert placement.
 
+For a single Cached worker spanning two P4s, rebuild the native bridge and run:
+
+```sh
+CUDA_VISIBLE_DEVICES=0,1 STRATA_INK_EXACT=1 python tools/inkling_pcc_serve.py RUNTIME --pack SQ-10 --gpus 2
+```
+
+At the default 8,192-token capacity, the r730 placed 1,320 experts on the first card and 1,752 on the second. The restarted HTTP worker reproduced the four generated token IDs and checkpoint SHA-256. The native counter recorded six forward tokens, including two chat framing tokens. The KV state resides on the primary card. This test used greedy chat with drafting off.
+
 For a single P4 with a 65,536-token capacity, the following configuration gives the GPU expert pool 768 MiB. The remaining experts live in host RAM. The budget is part of the execution profile. Rebuild the native bridge when upgrading to this option.
 
 ```bash

@@ -57,6 +57,7 @@ def main():
     parser.add_argument('--grammar-store', type=Path, help='enable BranchWrite inline grammar registration')
     parser.add_argument('--capacity', type=int, default=8192, help='total prompt and generation token budget')
     parser.add_argument('--pack', choices=('SQ-10', 'SQ-15', 'SQ-20'), default='SQ-20')
+    parser.add_argument('--gpus', type=int, choices=(1, 2), default=1)
     parser.add_argument('--dspark', action='store_true', help='experimental fused DSpark for greedy text requests')
     parser.add_argument('--vision', action='store_true')
     parser.add_argument('--port', type=int, default=18061)
@@ -75,7 +76,7 @@ def serve(args, temporary):
     runtime = args.runtime.resolve(strict=True)
     key = local_key(runtime / 'pcc-http.key')
     normalizer = CowImageNormalizer() if args.vision else None
-    profile = runtime_profile(runtime, vision=args.vision, capacity=args.capacity, draft=args.dspark, pack=args.pack, grammar=bool(args.grammar_store),
+    profile = runtime_profile(runtime, vision=args.vision, capacity=args.capacity, draft=args.dspark, gpus=args.gpus, pack=args.pack, grammar=bool(args.grammar_store),
                               normalizer_id=normalizer.identity if normalizer else None, adapter=args.adapter)
     store_name = 'pcc-vision-http-store' if args.vision else 'pcc-http-store'
     if args.pack != 'SQ-20':

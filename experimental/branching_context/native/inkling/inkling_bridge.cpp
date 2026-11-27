@@ -51,12 +51,17 @@ int ctt_supports_expert_vram_budget() { return 1; }
 
 const char* ctt_error() { return error.c_str(); }
 
-void* ctt_load_profile(const char* path, int capacity, bool dspark) try {
+void* ctt_load_devices(const char* path, int capacity, bool dspark, int gpus) try {
+    if (gpus < 1 || gpus > 2) { error = "Invalid Inkling GPU count"; return nullptr; }
     if (capacity < default_capacity || capacity > 133120) { error = "Invalid Inkling context capacity"; return nullptr; }
     auto model = std::make_unique<Model>();
     model->capacity = capacity;
     if (!model->file.open(path, error, false, "")) return nullptr;
     ink2::BackendOpts opts;
+    opts.gpus = gpus;
+    // Portable state is currently implemented for unsharded KV on the primary GPU.
+    if (gpus == 2) opts.layer_split = "ep2";
+    for (int i = 0; i < gpus; ++i) opts.gpu_ids.push_back(i);
     if (const char* value = std::getenv("INKLING_EXPERT_VRAM_MIB")) {
         unsigned int mib = 0;
         const char* end = value + std::strlen(value);
@@ -76,6 +81,10 @@ void* ctt_load_profile(const char* path, int capacity, bool dspark) try {
     opts.kv_offload = "off";
     model->backend = ink2::make_cuda_backend();
     if (!model->backend->init(model->file, opts, error)) return nullptr;
+    if (gpus == 2 && std::string_view(model->backend->backend_name()) != "cuda-ep2") {
+        error = "Inkling could not activate two-GPU expert placement";
+        return nullptr;
+    }
     if (model->backend->effective_max_ctx() != capacity ||
         model->backend->effective_chunk() != chunk) {
         error = "Inkling CUDA runtime did not honor the pinned capacity or chunk";
@@ -85,6 +94,10 @@ void* ctt_load_profile(const char* path, int capacity, bool dspark) try {
 } catch (const std::exception& e) {
     error = e.what();
     return nullptr;
+}
+
+void* ctt_load_profile(const char* path, int capacity, bool dspark) {
+    return ctt_load_devices(path, capacity, dspark, 1);
 }
 
 void* ctt_load_capacity(const char* path, int capacity) { return ctt_load_profile(path, capacity, false); }
