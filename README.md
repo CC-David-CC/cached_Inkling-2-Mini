@@ -44,7 +44,7 @@ On one P4, each warm branch returned all 40 station labels from a 65,035-token r
 
 ![Generation, state save, checkpoint capture and wall time across six single-P4 requests](docs/benchmarks/inkling/p4-65k-state-save.png)
 
-With one 65,035-token parent resident on each P4, three simultaneous HTTP requests delivered 7.52 and 7.90 visible tokens/s combined in two trials. First visible text arrived in 9.79–10.72 seconds. All six responses returned all 40 labels in order with zero checkpoint-import bytes. [Individual timings](docs/benchmarks/inkling/p4-three-warm-http.csv)
+With one 65,035-token parent resident on each P4, three simultaneous HTTP requests delivered 7.52 and 7.90 visible tokens/s combined in two trials. First visible text arrived in 9.79–10.72 seconds. All six responses returned all 40 labels in order with zero checkpoint-import bytes. Five-second sampling from late prefill through the warm requests found a minimum of 1,585 MiB free on GPU 0 and 1,687 MiB on GPUs 1 and 2. [Memory samples by card](docs/benchmarks/inkling/p4-three-http-vram.csv) · [Individual timings](docs/benchmarks/inkling/p4-three-warm-http.csv)
 
 ![Three simultaneous warm HTTP requests on independent P4 workers](docs/benchmarks/inkling/p4-three-warm-http.png)
 
