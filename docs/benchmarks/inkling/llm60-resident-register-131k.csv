@@ -1,0 +1,4 @@
+lookup,parent_tokens,parent_bytes,parent_prefill_s,parent_export_s,expected,answer,suffix_tokens,output_tokens,forward_tokens,import_bytes,resident_restores,restore_s,lookup_s
+1,131024,4465000448,24.8458,3.3137,73,73 degrees,17,4,21,0,1,1.6571,1.8946
+2,131024,4465000448,24.8458,3.3137,34,34,17,3,20,0,1,1.6574,1.8738
+3,131024,4465000448,24.8458,3.3137,73,73 degrees,17,4,21,0,1,1.6567,1.886
