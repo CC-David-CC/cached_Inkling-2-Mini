@@ -14,6 +14,12 @@ Each bar measures one cold request on one RTX PRO 6000 Blackwell, with SQ-20 wei
 
 [Download the underlying long-context measurements](docs/benchmarks/inkling/long-context.csv)
 
+The client also timestamped first text, last text and the complete receipt. At 128K with DSpark the last text arrived 16.3 seconds before the receipt. The server separately measured 3.8 seconds inside its capture timer. The rest of that interval needs profiling.
+
+![Elapsed time before, during and after visible output in cold Cached requests](docs/benchmarks/inkling/cached-request-phases.png)
+
+[Download the phase and capture timings](docs/benchmarks/inkling/cached-request-phases.csv)
+
 Stock Strata reported prompt processing speed and the number of DSpark draft tokens offered and accepted. Cached repeated the same workload after accepted-node accounting was added. Both engines produced identical output text at each length.
 
 ![Stock Strata prefill speed and DSpark acceptance for 64K and 128K inputs](docs/benchmarks/inkling/stock-dspark.png)
