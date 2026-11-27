@@ -1,2 +1,2 @@
 case,consumed,logits,logit_values_differing_bitwise,max_abs_logit_difference,same_argmax,native_state_bytes,different_state_bytes,first_different_state_offset,last_different_state_offset
-left-blue,72,200058,0,0.0,1,17989632,336796,2846232,17989628
+left-blue,72,200058,198966,0.001201629638671875,1,17989632,76339,3646464,17989622
