@@ -95,6 +95,17 @@ def save_training_checkpoint(path, state):
         staged.unlink(missing_ok=True)
 
 
+def restore_parameters(parameters, checkpoint):
+    for name, target in zip(('a', 'b'), parameters[:2]):
+        value = checkpoint[name]
+        if not isinstance(value, torch.Tensor) or value.shape != target.shape or value.dtype != target.dtype:
+            raise ValueError(f'Checkpoint factor {name} must have shape {tuple(target.shape)} and dtype {target.dtype}')
+    with torch.no_grad():
+        parameters[0].copy_(checkpoint['a'])
+        parameters[1].copy_(checkpoint['b'])
+    parameters[2].load_state_dict(checkpoint['optimizer'])
+
+
 def export_adapter(output, parameters):
     final = output / 'adapter.iklora'
     with final.open('xb') as stream:
@@ -131,10 +142,7 @@ def main():
                         torch_version=str(torch.__version__), examples=repr(EXAMPLES))
         if any(saved.get(k) != v for k, v in expected.items()):
             raise ValueError('Training checkpoint identity differs from this run')
-        with torch.no_grad():
-            initial[0].copy_(restored['a'])
-            initial[1].copy_(restored['b'])
-        initial[2].load_state_dict(restored['optimizer'])
+        restore_parameters(initial, restored)
         losses = [train_step(initial, features, raw, targets, cap) for _ in range(args.additional_steps)]
         steps = saved['steps'] + args.additional_steps
         metadata = dict(saved, steps=steps)
@@ -159,10 +167,7 @@ def main():
     restored = torch.load(checkpoint, weights_only=True)
     assert restored['metadata'] == metadata
     resumed = initialize(raw.shape[1], args.optimizer)
-    with torch.no_grad():
-        resumed[0].copy_(restored['a'])
-        resumed[1].copy_(restored['b'])
-    resumed[2].load_state_dict(restored['optimizer'])
+    restore_parameters(resumed, restored)
     losses.append(train_step(initial, features, raw, targets, cap))
     resume_loss = train_step(resumed, features, raw, targets, cap)
     assert resume_loss == losses[-1]
