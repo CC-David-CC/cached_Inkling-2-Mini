@@ -18,27 +18,32 @@ def _validate_context(context, prompt_tokens, saved_tokens):
         raise ValueError("Invalid checkpoint prompt or saved length")
 
 
-def _write_rows(stream, rows):
+def _write_rows(stream, rows, digest):
     # Bound transient contiguous GPU and host copies for long prompts.
     values_per_row = math.prod(rows.shape[1:])
     rows_per_chunk = (16 << 20) // (values_per_row * rows.element_size())
     for chunk in rows.split(rows_per_chunk):
-        chunk.contiguous().cpu().view(torch.uint16).numpy().tofile(stream)
+        data = memoryview(chunk.contiguous().cpu().view(torch.uint16).numpy()).cast("B")
+        stream.write(data)
+        digest.update(data)
 
 
 def save_hidden_context(path, context, *, prompt_tokens, saved_tokens):
-    """Atomically publish prefill and continuation taps in the restore layout."""
+    """Publish the compact checkpoint and return its SHA-256 for the caller’s manifest."""
     _validate_context(context, prompt_tokens, saved_tokens)
     path = Path(path)
     layers = context.detach()[0].view(-1, 4, 2304)
+    digest = hashlib.sha256()
     stream = NamedTemporaryFile(dir=path.parent, delete=False)
     temporary = Path(stream.name)
     try:
         with stream:
             for layer in range(4):
-                _write_rows(stream, layers[:prompt_tokens, layer])
-            _write_rows(stream, layers[prompt_tokens:saved_tokens])
+                _write_rows(stream, layers[:prompt_tokens, layer], digest)
+            if saved_tokens > prompt_tokens:
+                _write_rows(stream, layers[prompt_tokens:saved_tokens], digest)
         os.replace(temporary, path)
+        return digest.hexdigest()
     finally:
         temporary.unlink(missing_ok=True)
 

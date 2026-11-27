@@ -22,13 +22,15 @@ class HiddenContextTest(unittest.TestCase):
     def test_layout_and_restore_preserve_unused_capacity(self):
         for prompt in (1, 3):
             with self.subTest(prompt=prompt):
-                save_hidden_context(self.path, self.context, prompt_tokens=prompt, saved_tokens=3)
+                digest = save_hidden_context(self.path, self.context, prompt_tokens=prompt, saved_tokens=3)
+                self.assertEqual(digest, hashlib.sha256(self.path.read_bytes()).hexdigest())
                 taps = self.context[0].reshape(4, 4, 2304)
                 expected = torch.cat((taps[:prompt].transpose(0, 1).reshape(-1),
                                       taps[prompt:3].reshape(-1)))
                 self.assertEqual(self.path.read_bytes(), expected.view(torch.uint16).numpy().tobytes())
                 destination = torch.full_like(self.context, -1)
-                restore_hidden_context(self.path, destination, prompt_tokens=prompt, saved_tokens=3)
+                restore_hidden_context(self.path, destination, prompt_tokens=prompt, saved_tokens=3,
+                                       expected_sha256=digest)
                 self.assertTrue(torch.equal(destination[:, :3], self.context[:, :3]))
                 self.assertTrue((destination[:, 3:] == -1).all())
 
