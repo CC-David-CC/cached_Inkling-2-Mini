@@ -659,6 +659,10 @@ def make_server(adapter,host='127.0.0.1',port=0,api_key=None,*,text_adapter=None
                 }
                 if path.startswith('/cow/text/') and text_adapter is None:
                     return self.json(404,{'error':'Text adapter not configured'})
+                prompt_adapter = text_adapter
+                if (path in ('/cow/text/create', '/cow/text/generate') and
+                        'reasoning_effort' in data and hasattr(text_adapter, 'with_reasoning_effort')):
+                    prompt_adapter = text_adapter.with_reasoning_effort(data.pop('reasoning_effort'))
                 if path in fields and set(data)-fields[path]:
                     raise ValueError('Unsupported request fields: '+', '.join(sorted(set(data)-fields[path])))
                 if path=='/cow/grammars':
@@ -760,7 +764,7 @@ def make_server(adapter,host='127.0.0.1',port=0,api_key=None,*,text_adapter=None
                     text_stop_options={'text_stops':data['text_stops']} if 'text_stops' in data else {}
                     if type(stream) is not bool: raise ValueError('stream must be boolean')
                     stop=threading.Event()
-                    if path=='/cow/text/create': request=text_adapter.create(data['branch'],data['messages'],data['operation_id'],
+                    if path=='/cow/text/create': request=prompt_adapter.create(data['branch'],data['messages'],data['operation_id'],
                         cancelled=lambda:stop.is_set() or self.client_disconnected())
                     elif path in ('/cow/text/context','/cow/text/prepare'):
                         prepare=text_adapter.create if path=='/cow/text/context' else text_adapter.prepare
@@ -792,7 +796,7 @@ def make_server(adapter,host='127.0.0.1',port=0,api_key=None,*,text_adapter=None
                             **({'grammar_state':data['grammar_state']} if 'grammar_state' in data else {}),
                             **text_stop_options)
                     elif path=='/cow/text/generate':
-                        request=text_adapter.generate(data['branch'],data['messages'],data['revision'],
+                        request=prompt_adapter.generate(data['branch'],data['messages'],data['revision'],
                             data['operation_id'],data['max_tokens'],settings=data.get('settings'),cancelled=stop.is_set,
                             **seed_options,
                             **({'grammar_state':data['grammar_state']} if 'grammar_state' in data else {}),
@@ -856,7 +860,9 @@ def make_server(adapter,host='127.0.0.1',port=0,api_key=None,*,text_adapter=None
                         result_snapshot=receipt.get('snapshot') if isinstance(receipt,dict) else None)
                 final=dict(event='complete',answer=request.snapshot.result(),receipt=receipt)
                 if text_view is not None:
-                    final['answer']=dict(final['answer'],text=text_view.text_result())
+                    presentation = (text_view.channel_result() if hasattr(text_view, 'channel_result')
+                                    else {'text': text_view.text_result()})
+                    final['answer']=dict(final['answer'], **presentation)
                     thinking_reader = getattr(text_adapter, 'thinking_result', None)
                     if callable(thinking_reader):
                         thinking = thinking_reader(receipt['snapshot'])

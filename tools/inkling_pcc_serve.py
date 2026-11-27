@@ -22,7 +22,7 @@ from context_time_travel.store import Store
 from serve.cow_adapter import CowAdapter
 from serve.cow_http import make_server
 from serve.cow_inkling_prompt import text_components
-from serve.cow_text_adapter import CowTextAdapter
+from serve.cow_inkling_effort import InklingTextAdapter
 from serve.cow_vision import CowImageNormalizer
 from serve.cow_inkling_vision import InklingVisionPreparer
 
@@ -118,7 +118,7 @@ def serve(args, temporary):
     try:
         coordinator.ready()
         adapter = CowAdapter(coordinator)
-        text = CowTextAdapter(adapter, **components, vision_preparer=preparer)
+        text = InklingTextAdapter(adapter, **components, vision_preparer=preparer)
         with make_server(adapter, '127.0.0.1', args.port, key, text_adapter=text,
                          grammar_catalog=catalog, connection_info={name: profile[name] for name in
                                           ('model_contract_id', 'execution_profile_id')}

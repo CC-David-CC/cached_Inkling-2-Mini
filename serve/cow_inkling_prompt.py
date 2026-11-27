@@ -18,7 +18,7 @@ TEMPLATE_SHA256 = '53a9035f3255945704b5857657cfb00c1165090c0641c4f782a0cbf268cc1
 class InklingPromptEncoder(CowPromptEncoder):
     def render_prompt(self, messages, tools, kwargs):
         rendered = super().render_prompt(messages, tools, kwargs)
-        if kwargs.get('add_generation_prompt'):
+        if kwargs.get('add_generation_prompt') and kwargs.get('reasoning_effort') == 0:
             rendered += '<|message_model|><|content_text|>'
         return rendered
 
@@ -79,7 +79,7 @@ def text_components(runtime, *, vision=False):
     spec.loader.exec_module(module)
     tokenizer = module.Tokenizer.from_hf(tokenizer_path, pre='o200k',
                                          special_ids={'bos': 200028, 'eos': 200006, 'pad': 199999})
-    encoder = InklingPromptEncoder(tokenizer, ChatTemplate(template_path), {'reasoning_effort': 'none'})
+    encoder = InklingPromptEncoder(tokenizer, ChatTemplate(template_path), {'reasoning_effort': 0})
     components = dict(tokenizer=InklingTextDecoder(tokenizer), render=encoder.render,
                       encode_rendered=encoder.encode_rendered)
     renderer_id = hashlib.sha256(Path(__file__).read_bytes()

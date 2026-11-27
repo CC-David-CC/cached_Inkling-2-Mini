@@ -318,7 +318,7 @@ The launcher creates a private `pcc-http.key` in the runtime directory.
 The service listens on port 18061 by default. It offers `/cow/create` and
 `/cow/generate` for token IDs, and `/cow/text/create` and
 `/cow/text/generate` for chat messages. Chat uses the pinned Inkling
-tokenizer and template, with greedy decoding and thinking disabled. Install
+tokenizer and template. The default reasoning effort is zero. For a text branch, send the same numeric `reasoning_effort` in [0, 0.99] on both `/cow/text/create` and `/cow/text/generate`. Positive effort allows a reasoning channel. Streaming clients receive separate `reasoning` and `text` events, and the final answer exposes `reasoning_content` alongside visible `text`. The tested path uses greedy text generation without grammar or text stops. Install
 `jinja2` and `regex` in the runtime environment. The separate Strata baseline
 serves OpenAI-compatible text and vision requests on port 18060.
 
