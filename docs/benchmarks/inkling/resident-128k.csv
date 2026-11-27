@@ -1,0 +1,5 @@
+operation,elapsed_s,output_tokens,correct,resident_parent_restores,checkpoint_import_bytes
+Load parent,38.80150464500002,0,,,
+Question 1,16.833282208000128,3,True,1,0
+Question 2,17.05039740400025,3,True,1,0
+Question 3,17.710016412000186,3,False,1,0

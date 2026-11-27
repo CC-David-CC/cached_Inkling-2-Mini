@@ -14,6 +14,14 @@ Each bar measures one cold request on one RTX PRO 6000 Blackwell, with SQ-20 wei
 
 [Download the underlying long-context measurements](docs/benchmarks/inkling/long-context.csv)
 
+### Three questions on one 128K document
+
+BranchWrite loaded one station register, forked three siblings from the same parent and asked each a different lookup question. All three asks restored the resident parent and imported zero checkpoint bytes. Two answers were correct. The bars time parent loading and each ask through answer and receipt verification. Fork creation is outside the ask timer. Each bar is one observation.
+
+![Parent loading and subsequent lookup times on one resident 128K document](docs/benchmarks/inkling/resident-128k.png)
+
+[Download the shared-parent measurements](docs/benchmarks/inkling/resident-128k.csv)
+
 ### 3K and 6K single requests
 
 One NVIDIA RTX PRO 6000 Blackwell, SQ-20 weights resident on the GPU, FP16 KV.
