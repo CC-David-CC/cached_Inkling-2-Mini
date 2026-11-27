@@ -471,6 +471,17 @@ Include draft acceptance, verifier cost, memory overhead, and post-restore
 continuation. Qualify the drafter's state and rejection rollback before
 enabling it with PCC checkpoints.
 
+The chart measures seven-token DFlash2 proposals using the resident output head
+and hidden states captured during SQ-10 prefill on llm-60. Each bar is the
+median of three synchronized warm trials. Target verification and HTTP serving
+add work beyond these timings. The 256 MiB run also released duplicate model
+construction weights and used 512-token prefill calls. The 1,024 MiB run
+exhausted VRAM while growing its KV cache to 126,976 positions.
+
+![DFlash2 proposal time by context length](docs/benchmarks/inkling/dflash2-context-proposal.png)
+
+[Per-trial latencies and proposed token IDs](docs/benchmarks/inkling/dflash2-context-proposal.csv)
+
 ### Experimental Cached DSpark text serving
 
 For the single-GPU unadapted greedy text profile, apply
