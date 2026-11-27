@@ -34,7 +34,10 @@ def main():
         try:
             create(invalid)
         except HTTPError as error:
-            assert error.code == 400, error
+            detail = json.load(error).get('error')
+            assert error.code == 400 and detail == (
+                'reasoning_effort must be a JSON number in [0, 0.99]'
+            ), (error.code, detail)
         else:
             raise AssertionError(f'Accepted invalid effort {invalid!r}')
 
