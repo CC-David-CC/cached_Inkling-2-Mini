@@ -1,0 +1,6 @@
+placement,gpus_per_process,prefill_tok_s,decode_tok_s
+independent-0,1,126.7,9.8
+independent-1,1,124.5,9.9
+independent-2,1,126.5,10.1
+combined-2,2,133.6,11.0
+combined-3,3,132.2,10.8
