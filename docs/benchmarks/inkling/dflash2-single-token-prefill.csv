@@ -1,0 +1,4 @@
+case,frontiers,plain_repeat_exact,capture_exact,same_greedy_as_bulk
+python,9,9,9,True
+linux,9,9,9,True
+json,9,9,9,True
