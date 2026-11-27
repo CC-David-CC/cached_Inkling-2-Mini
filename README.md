@@ -347,6 +347,8 @@ python tools/inkling_train_head.py "$runtime" "$runtime/lora-resumed" \
     --resume "$runtime/lora-muon/step-2.pt" --additional-steps 1
 ```
 
+Use `--parent-adapter PATH` to train a fresh rank-4 output-head update over a frozen parent. Pass the same parent on resume. The checkpoint records its SHA-256, and the exported adapter combines both updates up to the native serving limit of rank 16.
+
 Launch PCC with `--adapter /path/to/adapter.iklora` to attach the adapter.
 Each adapter gets a distinct model contract and default store. Omitting the
 option selects the base model. Keep training outputs and optimizer checkpoints
