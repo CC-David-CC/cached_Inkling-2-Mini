@@ -8,6 +8,12 @@ context. GPU count is a runtime setting for later trials.
 
 ## Measured performance
 
+### Repeated questions on one 130K-token document
+
+![Elapsed client time for three sequential warm BranchWrite questions on r730 and llm-60](docs/benchmarks/inkling/warm-130k-pooled-client.png)
+
+BranchWrite loaded the same register once per host and prepared three forks. Each dot measures one complete `ask` call, including its child checkpoint save. Preparing the forks and independently rereading the receipts happened outside the timer. On SQ-10, llm-60 answered the three questions in 21.74 seconds total. The worker spanning all three P4s took 133.76 seconds. All six requests reused the resident parent, retrieved the expected temperature, and appended units despite the number-only instruction. [Pooled P4 results](docs/benchmarks/inkling/warm-130k-combined-sequential.csv) · [llm-60 results](docs/benchmarks/inkling/warm-130k-llm60-traced-sequential.csv)
+
 ### Tesla P4 independent streams and layer splitting
 
 ![Per-stream prefill and generation on three Tesla P4s](docs/benchmarks/inkling/p4-topology.png)
