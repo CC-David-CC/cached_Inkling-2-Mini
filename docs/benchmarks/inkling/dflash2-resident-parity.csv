@@ -1,0 +1,4 @@
+reference,candidate,rows_bit_equal,rows,common_token_prefix,tokens,initial_logits_bit_different,initial_max_abs_delta
+resident-off,resident-on,0,41,40,40,200058,0.21995234489440918
+resident-off,resident-repeat,0,41,40,40,200058,0.21995234489440918
+resident-on,resident-repeat,41,41,40,40,0,0.0
