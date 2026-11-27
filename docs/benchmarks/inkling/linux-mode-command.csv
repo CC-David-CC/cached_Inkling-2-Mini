@@ -1,0 +1,9 @@
+case,pass_all,observed_modes,stat_output,completion_tokens,answer
+clear-setuid,False,6754,,32,"chmod 6754 fixture
+chmod -g+w -o+x fixture
+chmod -s fixture
+stat -c '%a' fixture"
+clear-setgid,False,6751 6775 6000,6000,31,"chmod 6751 fixture
+chmod g+w,o+r fixture
+chmod -g fixture
+stat -c '%a' fixture"
