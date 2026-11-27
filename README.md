@@ -197,6 +197,43 @@ currently use a new prepared prompt.
 Run `tools/test_inkling_pcc_vision_http.py RUNTIME FIXTURE write`, restart the
 vision service with the same store, then run the test in `read` mode.
 
+### Output-head LoRA
+
+The SQ-20 CUDA bridge can capture the frozen model's final normalized
+hidden rows and pre-softcap logits. Train rank-4 LoRA factors on these actual
+model features with AdamW or factorwise Muon. The same bridge applies the
+exported low-rank delta before softcapping logits during serving.
+
+Use CUDA PyTorch and NumPy in a separate training environment. The
+qualification run used PyTorch 2.14.1+cu130 and NumPy 2.5.5 on llm-60.
+
+```bash
+runtime=/mnt/fast_cache/inkling
+python tools/inkling_train_head.py "$runtime" "$runtime/lora-adamw" --optimizer adamw
+python tools/inkling_train_head.py "$runtime" "$runtime/lora-muon" --optimizer muon
+export PYTHONPATH="$PWD/experimental/branching_context/src"
+store=$(mktemp -d "$runtime/pcc-lora-test.XXXXXXXX")
+python tools/test_inkling_head_lora.py "$runtime" "$store" \
+    "$runtime/lora-adamw/adapter.iklora" "$runtime/lora-muon/adapter.iklora"
+```
+
+Launch PCC with `--adapter /path/to/adapter.iklora` to attach the adapter.
+Each adapter gets a distinct model contract and default store. Omitting the
+option selects the base model. Keep training outputs and optimizer checkpoints
+in local runtime storage.
+
+Both optimizers updated the real model's output-head adapter and matched
+the uninterrupted third step bit for bit after reading the two-step
+checkpoint into a new optimizer. Training loss across three updates went
+from 8.749 to 6.415 for AdamW and from 8.749 to 0.325 for Muon on the two
+synthetic examples. These numbers measure the training fixture. Broader
+QLoRA targets, fixed-rank consolidation between rounds, and skill evaluation
+are separate qualification work.
+Both adapters passed the authenticated PCC HTTP launch, root creation and
+greedy generation test on llm-60. The endpoint receipts carried the expected
+adapter-specific model identity. The native regression also verified exact
+base logits after disabling the adapter and refused cross-adapter restores.
+
 ### DFlash2 and Splash
 
 [Splash](https://github.com/incoai/splash) is an Apple Silicon engine with

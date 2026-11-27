@@ -14,7 +14,14 @@ def main():
     parser.add_argument('mode', choices=('write', 'read'))
     parser.add_argument('--port', type=int, default=18061)
     parser.add_argument('--chat', action='store_true')
+    parser.add_argument('--adapter', type=Path)
     args = parser.parse_args()
+    expected_contract = None
+    if args.adapter:
+        import hashlib
+        from context_time_travel.inkling_backend import model_contract_id
+        expected_contract = model_contract_id(
+            adapter_sha256=hashlib.sha256(args.adapter.read_bytes()).hexdigest())
     key = (args.runtime / 'pcc-http.key').read_text().strip()
 
     def call(path, payload):
@@ -27,6 +34,8 @@ def main():
         except HTTPError as error:
             raise AssertionError(f'{path}: {error.code}: {error.read().decode()}') from error
         assert result['event'] == 'complete', result
+        if expected_contract is not None:
+            assert result['receipt']['model_contract_id'] == expected_contract, result
         return result
 
     messages = [{'role': 'user', 'content': 'What is 2 + 2? Reply with just the number.'}]

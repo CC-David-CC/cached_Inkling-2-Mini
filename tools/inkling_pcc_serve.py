@@ -49,15 +49,19 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('runtime', type=Path)
     parser.add_argument('--store', type=Path)
+    parser.add_argument('--adapter', type=Path, help='trained Inkling head LoRA artifact')
     parser.add_argument('--vision', action='store_true')
     parser.add_argument('--port', type=int, default=18061)
     args = parser.parse_args()
     runtime = args.runtime.resolve(strict=True)
-    directory = args.store or runtime / ('pcc-vision-http-store' if args.vision else 'pcc-http-store')
     key = local_key(runtime / 'pcc-http.key')
     normalizer = CowImageNormalizer() if args.vision else None
     profile = runtime_profile(runtime, vision=args.vision,
-                              normalizer_id=normalizer.identity if normalizer else None)
+                              normalizer_id=normalizer.identity if normalizer else None, adapter=args.adapter)
+    store_name = 'pcc-vision-http-store' if args.vision else 'pcc-http-store'
+    if args.adapter is not None:
+        store_name += '-' + profile['adapter_sha256']
+    directory = args.store or runtime / store_name
     components = text_components(runtime, vision=args.vision)
     preparer = (InklingVisionPreparer(Store(directory), normalizer, components['mixed_renderer'], profile)
                 if args.vision else None)

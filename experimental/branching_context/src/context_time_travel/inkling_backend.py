@@ -18,6 +18,9 @@ from .store import IntegrityError, InvalidOperation
 MODEL_SHA256 = '0bbfd52344f0dd4779a7807b5f73554a812f24c035e6877b63cd0d499f7e1b97'
 TOKENIZER_SHA256 = '7f332727f9a3f093dd452a39cc978e6757627e5dad1b0673aa4e75174f236dd6'
 VISION_SHA256 = '6589eff47f9c20bc3a032faa3d449f10bf4f04a84cc6b2ee8a44d51d2b6fc677'
+HEAD_WIDTH = 2304
+HEAD_ADAPTER_HEADER = struct.Struct('<8sI32s')
+HEAD_ADAPTER_MAGIC = b'IKLORA1\0'
 VISION_EXECUTION = dict(input_projection='inkling-absolute-image-rows-v1',
                         embedding_width=2304, vision_weights_sha256=VISION_SHA256)
 EXECUTION = dict(capacity=8192, prefill_chunk=512, kv='fp16', draft='off',
@@ -27,15 +30,16 @@ EXECUTION = dict(capacity=8192, prefill_chunk=512, kv='fp16', draft='off',
                  eos_tokens=[199999, 200006], GPU=[0])
 
 
-def model_contract_id(vision=False):
+def model_contract_id(vision=False, adapter_sha256=None):
     identity = dict(architecture='inkling2_loop', weights_sha256=MODEL_SHA256,
-                    input_kind='mixed' if vision else 'token_ids', adapters=[],
+                    input_kind='mixed' if vision else 'token_ids',
+                    adapters=[adapter_sha256] if adapter_sha256 else [],
                     vision=VISION_SHA256 if vision else False,
                     tokenizer_sha256=TOKENIZER_SHA256)
     return hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
 
 
-def runtime_profile(runtime, *, vision=False, normalizer_id=None):
+def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None):
     bridge = str(runtime / 'native-build/libinkling_pcc_bridge.so')
     build = {'sha256': {bridge: digest_file(bridge)}}
     execution = dict(EXECUTION,
@@ -50,11 +54,15 @@ def runtime_profile(runtime, *, vision=False, normalizer_id=None):
         if normalizer_id is not None:
             execution['vision_normalizer_id'] = normalizer_id
         extra['vision_path'] = str(runtime / 'Inkling-2-Mini-Vision.strata')
+    if adapter is not None:
+        adapter = adapter.resolve(strict=True)
+        extra['adapter_path'] = str(adapter)
+        extra['adapter_sha256'] = digest_file(adapter)
     identity = dict(build=build, execution=execution, hardware=hardware)
     return dict(backend='inkling-cuda', bridge_library=bridge, native_build=build,
                 model_path=str(runtime / 'Inkling-2-Mini-SQ-20.strata'),
                 tokenizer_path=str(runtime / 'tokenizer-source.json'),
-                model_weights_sha256=MODEL_SHA256, model_contract_id=model_contract_id(vision),
+                model_weights_sha256=MODEL_SHA256, model_contract_id=model_contract_id(vision, extra.get('adapter_sha256')),
                 execution=execution, hardware=hardware,
                 execution_profile_id=hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest(),
                 **extra)
@@ -68,6 +76,7 @@ class InklingBackend(NativeBackend):
         self._leased = False
         self._close_pending = False
         self.vision_path = profile.get('vision_path')
+        self.adapter_sha256 = profile.get('adapter_sha256')
         tokenizer_path = Path(profile['tokenizer_path'])
         if digest_file(tokenizer_path) != TOKENIZER_SHA256:
             raise IntegrityError('Inkling tokenizer fingerprint mismatch')
@@ -115,7 +124,55 @@ class InklingBackend(NativeBackend):
             C.c_void_p, C.c_int, C.c_int,
         ]
         self.lib.ctt_consume_mixed.restype = C.c_int
-        return super()._load_model()
+        self.lib.ctt_head_features.argtypes = [
+            C.c_void_p, C.POINTER(C.c_int32), C.c_int,
+            C.POINTER(C.c_float), C.POINTER(C.c_float),
+        ]
+        self.lib.ctt_head_features.restype = C.c_int
+        self.lib.ctt_logit_softcap.argtypes = [C.c_void_p]
+        self.lib.ctt_logit_softcap.restype = C.c_float
+        self.lib.ctt_attach_head_lora.argtypes = [C.c_void_p, C.c_int, C.c_void_p, C.c_void_p]
+        self.lib.ctt_attach_head_lora.restype = C.c_int
+        model = super()._load_model()
+        if model and self.adapter_sha256:
+            try:
+                self._attach_adapter(model)
+            except BaseException:
+                self.lib.ctt_unload(model)
+                raise
+        return model
+
+    def _attach_adapter(self, model):
+        vocab = self.lib.ctt_vocab(model)
+        maximum = HEAD_ADAPTER_HEADER.size + 16 * (HEAD_WIDTH + vocab) * 4
+        with open(self.profile['adapter_path'], 'rb') as stream:
+            data = stream.read(maximum + 1)
+        if len(data) < HEAD_ADAPTER_HEADER.size or hashlib.sha256(data).hexdigest() != self.adapter_sha256:
+            raise IntegrityError('Inkling adapter fingerprint mismatch')
+        magic, rank, base = HEAD_ADAPTER_HEADER.unpack_from(data)
+        split = HEAD_ADAPTER_HEADER.size + rank * HEAD_WIDTH * 4
+        if (magic != HEAD_ADAPTER_MAGIC or base.hex() != MODEL_SHA256 or not 1 <= rank <= 16
+                or len(data) != split + rank * vocab * 4):
+            raise IntegrityError('Invalid Inkling head LoRA geometry or base identity')
+        if self.lib.ctt_attach_head_lora(model, rank, C.c_char_p(data[HEAD_ADAPTER_HEADER.size:split]),
+                                         C.c_char_p(data[split:])):
+            raise IntegrityError('Inkling native LoRA attach failed')
+
+    def head_features(self, lease, tokens):
+        if self.adapter_sha256:
+            raise InvalidOperation('Head training requires the unadapted Inkling profile')
+        if not tokens or len(tokens) > self.context_capacity - self.position(lease) - 1:
+            raise InvalidOperation('Invalid Inkling head training context')
+        ids = (C.c_int32 * len(tokens))(*tokens)
+        features = (C.c_float * HEAD_WIDTH)()
+        logits = (C.c_float * self.vocab_size)()
+        if self.lib.ctt_head_features(lease, ids, len(ids), features, logits):
+            raise RuntimeError(self.lib.ctt_error().decode())
+        return features, logits
+
+    @property
+    def logit_softcap(self):
+        return self.lib.ctt_logit_softcap(self.model)
 
     def validate_execution_profile(self):
         profile = self.profile
@@ -126,8 +183,10 @@ class InklingBackend(NativeBackend):
                 raise IntegrityError('Inkling vision profile or weight fingerprint mismatch')
         elif any(key in execution for key in VISION_EXECUTION):
             raise IntegrityError('Inkling vision profile requires the pinned vision weights')
+        if bool(profile.get('adapter_path')) != bool(self.adapter_sha256):
+            raise IntegrityError('Inkling adapter path and identity must be provided together')
         if (profile['model_weights_sha256'] != MODEL_SHA256
-                or profile['model_contract_id'] != model_contract_id(bool(self.vision_path))
+                or profile['model_contract_id'] != model_contract_id(bool(self.vision_path), self.adapter_sha256)
                 or any(profile['execution'].get(key) != value for key, value in EXECUTION.items())
                 or profile['bridge_library'] not in profile['native_build']['sha256']
                 or not Path(profile['bridge_library']).is_absolute()):
@@ -140,7 +199,8 @@ class InklingBackend(NativeBackend):
     def contract_fields(self):
         return dict(attention='full-and-sliding', state_kind='looped-kv-shortconv',
                     tokenizer_identity=TOKENIZER_SHA256,
-                    input_kind='mixed' if self.vision_path else 'token_ids')
+                    input_kind='mixed' if self.vision_path else 'token_ids',
+                    adapters=(self.adapter_sha256,) if self.adapter_sha256 else ())
 
     @property
     def image_pad(self):

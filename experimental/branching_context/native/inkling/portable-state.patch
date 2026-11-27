@@ -20,7 +20,7 @@ index 1e7d168..88979d0 100644
 +  target_link_libraries(inkling_pcc_bridge PRIVATE strata_inkling_core strata_inkling_cuda strata_inkling_core)
 +endif()
 diff --git a/engine/src/inkling2/cuda/ink_cuda_backend.cu b/engine/src/inkling2/cuda/ink_cuda_backend.cu
-index d43d90a..92835f3 100644
+index d43d90a..9cc074d 100644
 --- a/engine/src/inkling2/cuda/ink_cuda_backend.cu
 +++ b/engine/src/inkling2/cuda/ink_cuda_backend.cu
 @@ -403,4 +403,26 @@ public:
@@ -50,7 +50,38 @@ index d43d90a..92835f3 100644
 +
      // #6627: Save/restore slot's ShortConv (3.83 MB) + 40 SWA KV ring windows (<=160 MiB in host RAM) + DSpark SWA KV
      // so multi-turn chats and exact repeats reuse the full prior prompt even if hidden thinking or trailing tokens diverged!
-@@ -1165,4 +1187,62 @@ public:
+@@ -679,4 +701,13 @@ public:
+     }
+
++    bool forward_head_features(const StepBatch& batch, float* raw_logits,
++                               float* hidden, std::string& err) override {
++        if (!raw_logits || !hidden || batch.count_logits() != 1 || model_.ls_active || dspark_) {
++            err = "Head capture requires one frontier on the single-GPU draft-off profile";
++            return false;
++        }
++        return forward_batch_impl(batch, raw_logits, nullptr, nullptr, err, hidden);
++    }
++
+     bool supports_candidates() const noexcept override { return initialized_; }
+
+@@ -700,5 +731,5 @@ public:
+         CandRows* cand_out,
+         TapCapture* taps_out,
+-        std::string& err) {
++        std::string& err, float* hidden_out = nullptr) {
+         if (!initialized_) {
+             err = "CUDA backend not initialized";
+@@ -802,5 +833,8 @@ public:
+             auto hms = [](std::chrono::steady_clock::time_point a, std::chrono::steady_clock::time_point b) { return std::chrono::duration<double, std::milli>(b - a).count(); };
+             auto hq0 = hnow();
+-            runner_->head_logits_from(h_src, nw);
++            runner_->head_logits_from(h_src, nw, hidden_out == nullptr);
++            if (hidden_out)
++                INK_CK(cudaMemcpyAsync(hidden_out, h_src, strata::ink::kInkHidden * sizeof(float),
++                                       cudaMemcpyDeviceToHost, runner_->st));
+             if (hp) INK_CK(cudaStreamSynchronize(runner_->st));
+             auto hq1 = hnow();
+@@ -1165,4 +1199,62 @@ public:
 
  private:
 +    static constexpr size_t portable_sconv_bytes() {
@@ -113,11 +144,26 @@ index d43d90a..92835f3 100644
 +
      void ensure_pinned_logits(int nw, int V) {
          if (nw <= h_logits_cap_ && h_logits_pin_) return;
+diff --git a/engine/src/inkling2/cuda/ink_runner.cuh b/engine/src/inkling2/cuda/ink_runner.cuh
+index e42fca3..e5c510e 100644
+--- a/engine/src/inkling2/cuda/ink_runner.cuh
++++ b/engine/src/inkling2/cuda/ink_runner.cuh
+@@ -4048,8 +4048,9 @@ struct InkCudaRunner {
+
+     // Full exact softcapped logits [n_want, 200058] for selected hidden rows in d_h_src -> d_logits
+-    void head_logits_from(const float* d_h_src, int n_want) {
++    void head_logits_from(const float* d_h_src, int n_want, bool softcap = true) {
+         ensure_logits(n_want);
+         const int V = m.man.c.vocab_unpadded;
+         linear("model.llm.unembed.weight", d_h_src, d_logits, n_want, V);
++        if (!softcap) return;
+         const size_t n = (size_t)n_want * V;
+         k_ink_softcap<<<(n + 255) / 256, 256, 0, st>>>(d_logits, n, m.man.c.logit_softcap);
 diff --git a/engine/src/inkling2/ink_backend.h b/engine/src/inkling2/ink_backend.h
-index 4cdc6ec..b3ab1c0 100644
+index 4cdc6ec..4e2c5fa 100644
 --- a/engine/src/inkling2/ink_backend.h
 +++ b/engine/src/inkling2/ink_backend.h
-@@ -113,4 +113,10 @@ public:
+@@ -113,4 +113,16 @@ public:
      }
 
 +    // Native state payload only. The caller binds the token history, frontier,
@@ -125,6 +171,12 @@ index 4cdc6ec..b3ab1c0 100644
 +    virtual size_t portable_state_size(int, int) const { return 0; }
 +    virtual bool export_portable_state(int, int, void*, size_t) { return false; }
 +    virtual bool import_portable_state(int, int, const void*, size_t) { return false; }
++
++    // Optional capture of the final normalized hidden row and pre-softcap logits.
++    virtual bool forward_head_features(const StepBatch&, float*, float*, std::string& err) {
++        err = "Inkling head feature capture is unavailable on this backend";
++        return false;
++    }
 +
      // Returns true when the on-device DSpark drafter is initialized and ready to serve drafts (#6633).
      virtual bool dspark_ready() const { return false; }

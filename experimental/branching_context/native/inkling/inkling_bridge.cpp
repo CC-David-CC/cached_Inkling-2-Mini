@@ -19,6 +19,8 @@ struct Model {
     ink2::InkModelFile file;
     std::unique_ptr<ink2::InkBackend> backend;
     ink2::CpuVisionEncoder vision;
+    std::vector<float> lora_a, lora_b;
+    int lora_rank = 0;
     uint64_t work = 0;
     bool leased = false;
 };
@@ -108,8 +110,9 @@ void ctt_free(void* raw) {
 int ctt_position(void* raw) { return static_cast<Lease*>(raw)->length - 1; }
 uint64_t ctt_work(void* raw) { return static_cast<Lease*>(raw)->model.work; }
 
-int ctt_consume_mixed(void* raw, const int32_t* ids, const int32_t* image_rows,
-                      const float* embeddings, int rows, int count) try {
+static int consume(void* raw, const int32_t* ids, const int32_t* image_rows,
+                      const float* embeddings, int rows, int count,
+                      float* training_hidden = nullptr) try {
     auto& lease = *static_cast<Lease*>(raw);
     if (!ids || count < 1 || count > capacity - lease.length ||
         rows < 0 || rows > count || (rows && (!embeddings || !image_rows)) ||
@@ -146,12 +149,65 @@ int ctt_consume_mixed(void* raw, const int32_t* ids, const int32_t* image_rows,
                        image_rows ? image_rows[index] : -1);
         }
         float* frontier = offset + take == count ? lease.logits.data() : nullptr;
-        if (!lease.model.backend->forward_batch(batch, frontier, nullptr, error)) return 1;
+        const auto& model = lease.model;
+        if (frontier && (training_hidden || model.lora_rank)) {
+            const int width = model.file.m.c.hidden;
+            std::vector<float> scratch(training_hidden ? 0 : width);
+            float* hidden = training_hidden ? training_hidden : scratch.data();
+            if (!model.backend->forward_head_features(batch, frontier, hidden, error)) return 1;
+            if (!training_hidden) {
+                std::vector<float> projected(model.lora_rank, 0.0f);
+                for (int r = 0; r < model.lora_rank; ++r)
+                    for (int i = 0; i < width; ++i)
+                        projected[r] += model.lora_a[size_t(r) * width + i] * hidden[i];
+                const float cap = model.file.m.c.logit_softcap;
+                for (size_t token = 0; token < lease.logits.size(); ++token) {
+                    float delta = 0.0f;
+                    for (int r = 0; r < model.lora_rank; ++r)
+                        delta += model.lora_b[token * model.lora_rank + r] * projected[r];
+                    frontier[token] = cap * std::tanh((frontier[token] + delta) / cap);
+                }
+            }
+        } else if (!model.backend->forward_batch(batch, frontier, nullptr, error)) return 1;
         lease.length += take;
         lease.model.work += take;
         offset += take;
     }
-    lease.frontier = true;
+    lease.frontier = training_hidden == nullptr;
+    return 0;
+} catch (const std::exception& e) {
+    error = e.what();
+    return 1;
+}
+
+int ctt_consume_mixed(void* raw, const int32_t* ids, const int32_t* image_rows,
+                      const float* embeddings, int rows, int count) {
+    return consume(raw, ids, image_rows, embeddings, rows, count);
+}
+
+int ctt_head_features(void* raw, const int32_t* ids, int count,
+                      float* hidden, float* logits) {
+    auto& lease = *static_cast<Lease*>(raw);
+    if (!hidden || !logits || lease.model.lora_rank) return 1;
+    if (consume(raw, ids, nullptr, nullptr, 0, count, hidden)) return 1;
+    std::copy(lease.logits.begin(), lease.logits.end(), logits);
+    return 0;
+}
+
+float ctt_logit_softcap(void* raw) {
+    return static_cast<Model*>(raw)->file.m.c.logit_softcap;
+}
+
+int ctt_attach_head_lora(void* raw, int rank, const float* a, const float* b) try {
+    auto& model = *static_cast<Model*>(raw);
+    if (model.leased || model.work || model.lora_rank || rank < 1 || rank > 16 || !a || !b) return 1;
+    const size_t a_count = size_t(rank) * model.file.m.c.hidden;
+    const size_t b_count = size_t(rank) * model.file.m.c.vocab_unpadded;
+    const auto finite = [](float value) { return std::isfinite(value); };
+    if (!std::all_of(a, a + a_count, finite) || !std::all_of(b, b + b_count, finite)) return 1;
+    model.lora_a.assign(a, a + a_count);
+    model.lora_b.assign(b, b + b_count);
+    model.lora_rank = rank;
     return 0;
 } catch (const std::exception& e) {
     error = e.what();
