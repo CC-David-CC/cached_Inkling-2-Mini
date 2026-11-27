@@ -16,6 +16,10 @@ Each process used SQ-10, greedy native decoding, FP16 device KV and drafting off
 
 At 64K, three SQ-10 workers with all experts in host RAM decoded 32 steps each after a synchronized start from synthetic 65,504-token FP16 KV states. Across the common wall-clock interval the three cards produced **15.21 output tok/s combined**. The interval includes native decode, finite-logit checks and greedy selection. Real prompt prefill is outside this measurement. [Per-stream timing](docs/benchmarks/inkling/p4-64k-decode.csv)
 
+Giving each worker a 1 GiB GPU expert budget raised synchronized throughput to **18.85 output tok/s combined** over 32 steps per card. Each worker kept 374 experts in VRAM and 2,698 in host RAM. The chart shows one trial per configuration. The all-host free-memory readings come from the separate capacity check at the final position. [1 GiB per-worker results](docs/benchmarks/inkling/p4-64k-expert-budget.csv)
+
+![Per-card decode speed and free VRAM with all-host and hybrid expert placement](docs/benchmarks/inkling/p4-64k-expert-budget.png)
+
 A single Cached HTTP worker reading a 65,000-token document on SQ-10 with a 768 MiB GPU expert budget had 1,953 MiB free at 57,344 allocated KV slots and 1,697 MiB free at 65,536 slots. These are device-wide prefill samples from P4 index 2 on r730. [VRAM samples](docs/benchmarks/inkling/p4-prefill-vram-by-capacity.csv)
 
 Cached loaded a 65,000-token register through BranchWrite HTTP in 17m 55s on a single P4. The first question took 48.9s. After restarting the server, repeating it took 58.2s and imported 2.30 GB from tmpfs. A different question then took 43.4s and imported zero bytes. Both answers were correct, and each request forwarded 18 tokens. These measurements include checkpoint handling. [Per-request results](docs/benchmarks/inkling/p4-shared-document.csv)

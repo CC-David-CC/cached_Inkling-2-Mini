@@ -1,0 +1,4 @@
+pack,capacity,output_tokens,gpu,expert_budget_gib,gpu_experts,host_experts,decode_tok_s,final_free_mib
+SQ-10,65536,32,0,1,374,2698,6.41470,1328
+SQ-10,65536,32,1,1,374,2698,6.28994,1430
+SQ-10,65536,32,2,1,374,2698,6.49319,1430
