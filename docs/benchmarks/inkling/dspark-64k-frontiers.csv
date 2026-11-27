@@ -1,0 +1,13 @@
+stage,left,right,logits,unequal_float_bits,max_abs_diff,same_argmax,same_generated_tokens
+prefill,off1,off2,200058,0,0.0,True,True
+prefill,off1,dspark1,200058,0,0.0,True,True
+prefill,off1,dspark2,200058,0,0.0,True,True
+prefill,off2,dspark1,200058,0,0.0,True,True
+prefill,off2,dspark2,200058,0,0.0,True,True
+prefill,dspark1,dspark2,200058,0,0.0,True,True
+final,off1,off2,200058,0,0.0,True,True
+final,off1,dspark1,200058,200057,0.620387077331543,True,True
+final,off1,dspark2,200058,200057,0.8175411224365234,True,True
+final,off2,dspark1,200058,200057,0.620387077331543,True,True
+final,off2,dspark2,200058,200057,0.8175411224365234,True,True
+final,dspark1,dspark2,200058,200058,0.6508126258850098,True,True
