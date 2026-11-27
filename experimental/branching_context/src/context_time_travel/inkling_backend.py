@@ -106,6 +106,7 @@ def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None, 
 
 
 class InklingBackend(NativeBackend):
+    exports_portable_bytes = True
     context_capacity = EXECUTION['capacity']
 
     def __init__(self, profile):

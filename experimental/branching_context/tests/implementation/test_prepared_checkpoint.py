@@ -33,6 +33,16 @@ class PreparedCheckpointTests(unittest.TestCase):
             digest.assert_called_once()
             self.assertEqual(copied.envelope, same.envelope)
 
+    def test_portable_cached_bytes_can_be_prepared_without_native_restore(self):
+        reference = self.prepared()
+        self.backend.exports_portable_bytes = True
+        def forbidden():
+            self.fail('Preparing portable bytes acquired a native lease')
+        self.backend.lease = forbidden
+        result = self.model.prepare_checkpoint(self.sid)
+        self.assertEqual(result, reference)
+        self.assertIs(result.checkpoint, self.model.cache[self.sid])
+
     def test_publish_in_foreign_thread_never_enters_native_lease(self):
         ready = self.prepared()
         self.model.store.fork('main',self.sid)

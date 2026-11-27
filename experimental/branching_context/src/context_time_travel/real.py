@@ -1223,6 +1223,18 @@ class BranchingModel:
     def prepare_checkpoint(self, snapshot):
         """Owner-only native capture. Callers reserve RAM before entering here."""
         self.store.authorize(snapshot,'checkpoint')
+        if getattr(self.backend, 'exports_portable_bytes', False):
+            self.store.authorize(snapshot, 'materialize')
+            with self.store.read_lease(snapshot):
+                saved = self.cache.get(snapshot)
+                if saved is not None and type(saved.blob) is bytes:
+                    record = self.store.get_snapshot(snapshot)
+                    if record['model_contract_id'] != self.profile['model_contract_id']:
+                        raise IntegrityError('Snapshot model contract mismatch')
+                    history = self.history(snapshot)
+                    if saved.input_identity == self._input_identity(history):
+                        envelope = self._prepared_envelope(snapshot, saved, history)
+                        return PreparedCheckpoint(snapshot, saved, envelope)
         with self.materialize(snapshot) as (lease,_):
             saved = self.cache[snapshot]
             before = self.backend.work_counters()
