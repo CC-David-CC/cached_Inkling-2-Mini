@@ -53,6 +53,14 @@ during one request per configuration. Host checkpoint RAM is excluded.
 
 ![Sampled peak GPU memory on 3K and 6K transcription requests](docs/benchmarks/inkling/http-vram.png)
 
+### Fresh-process checkpoint restore
+
+Four fresh engine processes restored the same 4,097-token checkpoint with the OS filesystem cache retained. Median restore time was 475 ms. Reading the next-token frontier afterward took a median 155 ms. All 200,058 FP32 logits matched the saved reference byte for byte on every trial, with zero forward tokens. Timers exclude model loading. This measurement used SQ-20, FP16 KV and drafting off.
+
+![Restore and frontier read times for four fresh processes](docs/benchmarks/inkling/checkpoint-restore.png)
+
+[Download the four restore trials](docs/benchmarks/inkling/checkpoint-restore.csv)
+
 ### Concurrent requests
 
 The native concurrency sweep used independent 4,097-token prompts and 256
