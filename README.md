@@ -6,8 +6,18 @@ context. GPU count is a runtime setting for later trials.
 
 ## Measured performance
 
+### 64K and 128K single requests
+
+Each bar measures one cold request on one RTX PRO 6000 Blackwell, with SQ-20 weights, FP16 KV, a 512-token prefill chunk and a 1,024-token output. Each configuration starts a fresh server. Time to first visible token includes prompt processing. Peak GPU memory is sampled across the serving process and its children. The Cached client also times root creation and branch completion in the complete operation. All eight runs returned the same output text. Repeated questions on a shared parent require a separate warm-cache measurement.
+
+![64K and 128K single-request GPU memory, time to first token, generation speed and complete request speed](docs/benchmarks/inkling/long-context.png)
+
+[Download the underlying long-context measurements](docs/benchmarks/inkling/long-context.csv)
+
+### 3K and 6K single requests
+
 One NVIDIA RTX PRO 6000 Blackwell, SQ-20 weights resident on the GPU, FP16 KV.
-Each HTTP throughput bar summarizes four single-request transcription trials
+Each short-context HTTP throughput bar summarizes four single-request transcription trials
 with 1,024 output tokens. The complete Cached request includes root creation
 and the branch receipt. The generation panel uses each engine’s reported
 generation time. Stock used a 2,048-token prefill chunk and Cached used 512.
@@ -18,6 +28,8 @@ The following memory measurements sample the serving process and its children
 during one request per configuration. Host checkpoint RAM is excluded.
 
 ![Sampled peak GPU memory on 3K and 6K transcription requests](docs/benchmarks/inkling/http-vram.png)
+
+### Concurrent requests
 
 The native concurrency sweep used independent 4,097-token prompts and 256
 output tokens per slot. Each point is one run. At 54 slots the engine reached
