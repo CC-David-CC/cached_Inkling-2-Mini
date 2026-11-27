@@ -1,0 +1,4 @@
+{"rank": 4, "phase": "write", "forward_tokens": 0, "root": "e1e299b3ee6223a14bce51dae32fdd8c00d45760e497d636933c92264de78a18", "frontier": "b31c1ac834dd5ef271e23ae1fddb96ab2fabdf8f5d50989a55b751752893d7a6", "foreign_checkpoint": "none yet"}
+{"rank": 8, "phase": "write", "forward_tokens": 0, "root": "caad3bd3773f63ac63e3edb053768f527c5c6d2e7dab05251dc2f0fd581a8433", "frontier": "2359458118555471324d47b075b0d855b1139495a2a276f4dc5aebd07a9c65ca", "foreign_checkpoint": "rejected"}
+{"rank": 4, "phase": "read", "forward_tokens": 0, "root": "e1e299b3ee6223a14bce51dae32fdd8c00d45760e497d636933c92264de78a18", "frontier": "b31c1ac834dd5ef271e23ae1fddb96ab2fabdf8f5d50989a55b751752893d7a6", "foreign_checkpoint": "rejected"}
+{"rank": 8, "phase": "read", "forward_tokens": 0, "root": "caad3bd3773f63ac63e3edb053768f527c5c6d2e7dab05251dc2f0fd581a8433", "frontier": "2359458118555471324d47b075b0d855b1139495a2a276f4dc5aebd07a9c65ca", "foreign_checkpoint": "rejected"}
