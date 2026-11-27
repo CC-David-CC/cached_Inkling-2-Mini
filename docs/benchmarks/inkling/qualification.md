@@ -121,3 +121,9 @@ The model API also passed a disk restart using a 131,072-token SQ-10 parent and 
 ![Decode, output capture and remaining model request time for 512 generated tokens](suffix-128k-generation.png)
 
 On llm-60, two fresh-process SQ-10 restores reproduced all 512 greedy output tokens and the final checkpoint hash from the uninterrupted control. The synthetic parent held 131,072 tokens and the child added two fixed tokens. The timed request ran after a one-token logit check had loaded the parent on the GPU. Its duration includes output-state capture. Model startup, initial parent loading and HTTP publication were outside the timing interval. [Timed receipt](suffix-128k-generation.json)
+
+### Opt-in HTTP suffix checkpoints
+
+Start the single-GPU text server with `--suffix-checkpoints` and capacity above 8192 to capture eligible children of a resident, durable full checkpoint. The parent must still be pinned by the backend. A missing candidate uses full capture. Children of a suffix currently use full capture as well.
+
+On llm-60, the SQ-10 HTTP server created a 128-token parent, generated two tokens, and saved 4,227,072 bytes of native suffix state plus the logits. An HTTP fork at that child produced 64 tokens after a server restart, matching the uninterrupted sibling's tokens and final payload hash. The cold restore imported 33,226,752 bytes and ran 64 forward tokens. This check used the token HTTP client.

@@ -53,6 +53,7 @@ def main():
     storage = parser.add_mutually_exclusive_group()
     storage.add_argument('--store', type=Path, help='persistent checkpoint and branch directory')
     storage.add_argument('--persistent', action='store_true', help='use the profile’s runtime checkpoint directory')
+    parser.add_argument('--suffix-checkpoints', action='store_true', help='Save eligible text branches as parent-bound suffixes')
     parser.add_argument('--ram-cache-gib', type=int, help='resident checkpoint pool capacity in GiB')
     parser.add_argument('--adapter', type=Path, help='trained Inkling head LoRA artifact')
     parser.add_argument('--grammar-store', type=Path, help='enable BranchWrite inline grammar registration')
@@ -72,6 +73,8 @@ def main():
         parser.error('--port must be between 0 and 65535')
     if args.ram_cache_gib is not None and args.ram_cache_gib <= 0:
         parser.error('--ram-cache-gib must be positive')
+    if args.suffix_checkpoints and (args.dspark or args.dflash2 or args.vision or args.capacity <= 8192 or args.gpus != 1):
+        parser.error('Suffix checkpoints require undrafted single-GPU text with capacity above 8192')
     if args.store is not None or args.persistent:
         serve(args, None)
     else:
@@ -103,6 +106,7 @@ def serve(args, temporary):
     ram_bytes = (args.ram_cache_gib * 1024**3 if args.ram_cache_gib is not None
                  else max(8 * 1024**3, args.capacity * 262144))
     profile['ram_cache_bytes'] = ram_bytes
+    profile['suffix_checkpoints'] = args.suffix_checkpoints
     store_bytes = max(16 * 1024**3, args.capacity * 524288)
     if temporary is not None:
         fs = os.statvfs(temporary)

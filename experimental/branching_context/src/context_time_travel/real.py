@@ -1670,18 +1670,20 @@ class BranchingModel:
             base = self.checkpoint_manifest(parent)
             return sum(item['state_bytes'] + 4 * item['logits_count'] for item in (base, child))
 
-    def prepare_suffix_checkpoint(self, snapshot):
+    def prepare_suffix_checkpoint(self, snapshot, *, parent_owner=None, optional=False):
         """Capture a portable child delta while its durable parent is pinned."""
         from .digest_attestation import restore_payload_digest
 
         self.store.authorize(snapshot, 'checkpoint')
         with self._suffix_binding(snapshot) as (parent, required):
-            owner = self.cache.get(parent)
+            owner = self.cache.get(parent) if parent_owner is None else parent_owner
             if owner is None or verified_checkpoint_digest(owner) != required['parent_payload_sha256']:
                 raise InvalidOperation('Suffix capture requires the matching resident parent')
             with self._materialize(snapshot) as (lease, row):
                 suffix = self.backend.export_pinned_suffix(lease, owner.consumed, restore_payload_digest(owner.blob))
                 if not suffix:
+                    if optional:
+                        return None
                     raise InvalidOperation('Native suffix capture unavailable')
                 if len(row) != self.backend.vocab_size or not all(map(math.isfinite, row)):
                     raise IntegrityError('Invalid suffix frontier')

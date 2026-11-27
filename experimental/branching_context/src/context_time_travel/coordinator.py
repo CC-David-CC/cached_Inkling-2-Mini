@@ -20,7 +20,7 @@ import time
 
 from .pools import SharedCheckpointPool, DiskCheckpointPool, PoolFull, PoolTransitionTrace, checkpoint_bytes, normalize_gpu_selection, worker_key
 from .real import PreparedCheckpoint, supports_consumed_selection
-from .checkpoint_cache import CheckpointCache
+from .checkpoint_cache import CheckpointCache, validate_manifest
 from .store import Store, BranchHead, Conflict, IntegrityError, InvalidOperation, NotFound, _id, _json_bytes, _name, _stage, _sync_dir, _private_directory
 from .presentation_request import detach_request, request_digest, binding_for_snapshot
 from .strata_backend import StrataImage
@@ -2579,8 +2579,7 @@ class ContextCoordinator:
                     capture_started=time.monotonic()
                     estimate = 3*len(model.cache[sid].blob)+8*len(model.cache[sid].frontier)
                     with self.pool.reserve(estimate,timeout=self._admission_timeout) as reservation:
-                        prepared = bound.prepare_checkpoint(sid)
-                        key = self._key(model,sid)
+                        prepared, key = self._prepare_publication(bound, sid)
                         reservation.admit(key,prepared.checkpoint,durable=False)
                     # The immutable bytes are now admitted and can be restored
                     # by another independent slot while this branch publishes.
@@ -2701,6 +2700,33 @@ class ContextCoordinator:
             with self._condition:
                 if w['health'] != 'unavailable': w['health']='closed'
                 self._condition.notify_all()
+
+    def _prepare_publication(self, model, snapshot):
+        key = self._key(model, snapshot)
+        if model.profile.get('suffix_checkpoints'):
+            path = model.checkpoint_directory / (snapshot + '.json')
+            if path.exists():
+                envelope = model._checkpoint_envelope(snapshot)
+                if envelope['manifest'].get('schema') == 5:
+                    with model._suffix_binding(snapshot) as (_, required):
+                        manifest = validate_manifest(envelope, required)
+                        cold = model._read_checkpoint_payload(manifest)
+                        return PreparedCheckpoint(snapshot, cold, _json_bytes(envelope)), key + ('suffix',)
+            parent = model.store.get_snapshot(snapshot)['parent']
+            if parent and not path.exists():
+                parent_key = self._key(model, parent)
+                with ExitStack() as held:
+                    try:
+                        owner = held.enter_context(self.pool.pin(parent_key))
+                    except KeyError:
+                        owner = None
+                    if owner is not None:
+                        held.enter_context(model.store.read_lease(parent))
+                        if (model.checkpoint_directory / (parent + '.json')).exists() and not model.suffix_restore_bytes(parent):
+                            suffix = model.prepare_suffix_checkpoint(snapshot, parent_owner=owner, optional=True)
+                            if suffix is not None:
+                                return suffix, key + ('suffix',)
+        return model.prepare_checkpoint(snapshot), key
 
     def _submit_publication(self,model,job,prepared,key,pin,lease):
         # ThreadPoolExecutor retains its last work item on the worker thread.
