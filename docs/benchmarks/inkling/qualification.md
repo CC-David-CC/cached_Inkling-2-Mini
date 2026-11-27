@@ -115,3 +115,9 @@ With 512 fixed continuation tokens per child, each switch transferred 104,497,15
 On llm-60, both sequential SQ-10 requests used the resident parent and ran two forward tokens. Each returned tokens 172 and 173 with the same checkpoint hash. The NVMe store held two distinct payload files. The identical sibling reused the first child's file. A separate HTTP process-restart run using tmpfs reproduced that child hash from the saved parent. Suffix-only HTTP publication remains open. [Request counters and file sizes](http-128k-siblings.json)
 
 The model API also passed a disk restart using a 131,072-token SQ-10 parent and a two-token suffix on llm-60. The parent payload occupied 4,467,373,544 bytes. The child occupied 5,027,304 bytes including 200,058 FP32 logits. A fresh process read those logits with zero GPU checkpoint import and no resident parent or child cache entry. It then restored the child by snapshot ID and matched the uninterrupted run on every logit after one more token, with zero saved tokens replayed. Reproduce with the two phases of `tools/test_inkling_suffix_restart.py` and `--parent-tokens 131072`. HTTP coordinator publication still uses the full-child layout measured above.
+
+### Greedy generation after suffix restore
+
+![Decode, output capture and remaining model request time for 512 generated tokens](suffix-128k-generation.png)
+
+On llm-60, two fresh-process SQ-10 restores reproduced all 512 greedy output tokens and the final checkpoint hash from the uninterrupted control. The synthetic parent held 131,072 tokens and the child added two fixed tokens. The timed request ran after a one-token logit check had loaded the parent on the GPU. Its duration includes output-state capture. Model startup, initial parent loading and HTTP publication were outside the timing interval. [Timed receipt](suffix-128k-generation.json)

@@ -17,10 +17,12 @@ def main():
     parser.add_argument('store', type=Path)
     parser.add_argument('phase', choices=('write', 'read'))
     parser.add_argument('--parent-tokens', type=int, default=128)
+    parser.add_argument('--output-tokens', type=int, default=1)
     args = parser.parse_args()
-    if not 1 <= args.parent_tokens <= 133117:
-        parser.error('The parent must leave space for two child tokens and one continuation')
-    profile = runtime_profile(args.runtime.resolve(), pack='SQ-10', capacity=max(16384, args.parent_tokens + 3))
+    capacity = args.parent_tokens + 2 + args.output_tokens
+    if min(args.parent_tokens, args.output_tokens) < 1 or capacity > 133120:
+        parser.error('Positive parent and output lengths plus the two-token child must fit in 133120 tokens')
+    profile = runtime_profile(args.runtime.resolve(), pack='SQ-10', capacity=max(16384, capacity))
     backend = load_backend(profile)
     try:
         model = BranchingModel(args.store, backend, profile)
@@ -43,7 +45,7 @@ def main():
                 backend.consume(lease, (501,))
                 expected = hashlib.sha256(struct.pack(row_format, *backend.logits(lease))).hexdigest()
             frontier_hash = hashlib.sha256(struct.pack(row_format, *prepared.checkpoint.frontier)).hexdigest()
-            answer = model.run_greedy_request(child, (), 1, stream='suffix-restart')
+            answer = model.run_greedy_request(child, (), args.output_tokens, stream='suffix-restart')
             result_hash = model.cache[answer['snapshot']].checksum
             fixture.write_text(json.dumps(dict(child=child, expected=expected, frontier_hash=frontier_hash,
                                                greedy_tokens=answer['tokens'], result_hash=result_hash)))
@@ -71,13 +73,18 @@ def main():
         assert backend.work_counters()['consumed_tokens'] == 1
         del model.cache[child]
         before_generate = backend.work_counters()
-        answer = model.run_greedy_request(child, (), 1, stream='suffix-restart')
+        answer = model.run_greedy_request(child, (), args.output_tokens, stream='suffix-restart')
         assert child not in model.cache
         assert answer['tokens'] == saved['greedy_tokens']
         assert model.cache[answer['snapshot']].checksum == saved['result_hash']
-        assert backend.work_counters()['consumed_tokens'] - before_generate['consumed_tokens'] == 1
+        assert 0 < len(answer['tokens']) <= args.output_tokens
+        assert backend.work_counters()['consumed_tokens'] - before_generate['consumed_tokens'] == len(answer['tokens'])
         print(json.dumps(dict(parent_tokens=len(parent_history), suffix_bytes=suffix_bytes,
                               exact_continuation_logits=backend.vocab_size, saved_tokens_replayed=0,
+                              requested_tokens=args.output_tokens, generated_tokens=len(answer['tokens']),
+                              final_payload_sha256=saved['result_hash'],
+                              generation_seconds=answer['generation_seconds'],
+                              state_save_seconds=answer['state_save_seconds'], request_seconds=answer['request_seconds'],
                               wrong_parent_rejected=True, frontier_lookup_import_bytes=0, greedy_source_cached=False)))
     finally:
         backend.close()

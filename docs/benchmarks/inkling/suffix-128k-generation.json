@@ -1,0 +1,15 @@
+{
+    "parent_tokens": 131072,
+    "suffix_bytes": 4227072,
+    "exact_continuation_logits": 200058,
+    "saved_tokens_replayed": 0,
+    "requested_tokens": 512,
+    "generated_tokens": 512,
+    "final_payload_sha256": "55454bf10eb23c338d2b47b59afaee5cc3dbe23ed5ef7e54febfe790f57e92df",
+    "generation_seconds": 6.7679607179015875,
+    "state_save_seconds": 3.1968430099077523,
+    "request_seconds": 13.36144567397423,
+    "wrong_parent_rejected": true,
+    "frontier_lookup_import_bytes": 0,
+    "greedy_source_cached": false
+}
