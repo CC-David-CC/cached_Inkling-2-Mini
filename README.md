@@ -492,6 +492,14 @@ including the first proposal at 1.524 seconds. These timings exclude prefill,
 anchor selection, instrumentation between blocks, and HTTP overhead.
 [Block timings, generated IDs and target hashes](docs/benchmarks/inkling/dflash2-128k-verify.jsonl)
 
+A 31-token SQ-10 chat prompt on llm-60 exercised RAM restore in a new target
+lease in the same process. The test saved 9,928,704 target bytes and 571,392
+drafter bytes together, and retained the target frontier and token history
+separately. After clearing the hidden buffer and restoring both states,
+all seven proposed IDs, the three committed IDs, and the final full-logit
+hash matched uninterrupted generation. The native forward counter stayed at
+34 throughout restore. [Run record](docs/benchmarks/inkling/dflash2-paired-ram.jsonl)
+
 ### Experimental Cached DSpark text serving
 
 For the single-GPU unadapted greedy text profile, apply
