@@ -1,0 +1,3 @@
+trial,prompt_parent_tokens,cold_load_s,exact_ordered_answer,correct_labels,expected_labels,returned_lines,correct_positions,visible_tokens,completion_tokens,generation_s,wall_s,state_save_s,other_model_s,tokens_match_prior,visible_generation_tps,visible_wall_tps,capture_s,consumed_tokens,forward_tokens,resident_parent_restores,resident_child_restores,checkpoint_import_bytes
+1,65035,1066.232818233315,True,40,40,40,40,159,161,25.669786799699068,56.29915358312428,13.29042444191873,9.159159607253969,True,6.194052223365719,2.8241987646446676,0.08262171735987067,198,198,1,0,0
+2,65035,1066.232818233315,True,40,40,40,40,159,161,24.15250994404778,54.17209547571838,12.8771314881742,8.881030553020537,True,6.583166733740833,2.935090448389037,0.08309557009488344,198,198,1,0,0
