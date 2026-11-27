@@ -1,0 +1,4 @@
+case,frontiers,plain_repeat_matches,capture_matches_plain,greedy_ids_equal
+python,9,0,0,True
+linux,9,0,0,True
+json,9,9,9,True
