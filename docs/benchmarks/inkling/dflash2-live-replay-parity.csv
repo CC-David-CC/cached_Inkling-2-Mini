@@ -1,0 +1,2 @@
+prompt_tokens,blocks,output_tokens,matching_token_ids,logit_rows,bit_equal_rows,prefill_bit_equal,first_different_row
+3072,33,259,259,260,260,1,
