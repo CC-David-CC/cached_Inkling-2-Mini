@@ -1,0 +1,175 @@
+{
+  "host": "llm-60",
+  "pack": "SQ-10",
+  "drafting": false,
+  "client": "BranchWrite CowClient",
+  "register_seed": 88911,
+  "document_tokens": 131072,
+  "layout": [
+    {
+      "schema": 1,
+      "consumed": 131119,
+      "snapshot": "b9c7c022bdfb2b3f5d98a5ecf60818c9819764faee49f968fbe96c9bf9649052",
+      "state_bytes": 4468113408,
+      "payload_bytes": 4468913640
+    },
+    {
+      "schema": 5,
+      "consumed": 131137,
+      "snapshot": "fe98b25ef83024b6453dde2052f2ffbb3174f4a43bd19fa02bcd86f03ba011d9",
+      "state_bytes": 7372800,
+      "payload_bytes": 8173032
+    }
+  ],
+  "root": {
+    "event": "root",
+    "root": "bw-4304769c6bce4213bb2651336cea4549",
+    "tip": "b9c7c022bdfb2b3f5d98a5ecf60818c9819764faee49f968fbe96c9bf9649052",
+    "wall_s": 31.540084734006086
+  },
+  "first_lookup": {
+    "event": "answer",
+    "question": 37,
+    "correct": true,
+    "text": "orange",
+    "expected": "orange",
+    "wall_s": 5.645442327004275,
+    "counters": {
+      "consumed_tokens": 18,
+      "forward_tokens": 18,
+      "resident_parent_restores": 1,
+      "resident_child_restores": 0,
+      "checkpoint_import_bytes": 0
+    },
+    "tokens": [
+      30943,
+      200010,
+      200006
+    ],
+    "durable_snapshot": "fe98b25ef83024b6453dde2052f2ffbb3174f4a43bd19fa02bcd86f03ba011d9"
+  },
+  "followup_control": {
+    "phase": "control",
+    "tokens": [
+      33544,
+      200010,
+      200001,
+      200008,
+      371,
+      150409,
+      171960,
+      149887,
+      152275,
+      220,
+      87123,
+      68706,
+      13,
+      149904,
+      150261,
+      149882,
+      150367,
+      149921,
+      149881,
+      149876,
+      153953,
+      13,
+      68014,
+      144665
+    ],
+    "text": "pink",
+    "expected": "pink",
+    "correct": true,
+    "seconds": 6.552410263000638,
+    "payload": "89300e28647002880aea1def5f27fb9cb0ea753bfead2ea7a4499b096f25863d",
+    "counters": {
+      "consumed_tokens": 39,
+      "forward_tokens": 39,
+      "resident_parent_restores": 0,
+      "resident_child_restores": 1,
+      "checkpoint_import_bytes": 0
+    }
+  },
+  "followup_restart": {
+    "phase": "restart",
+    "tokens": [
+      33544,
+      200010,
+      200001,
+      200008,
+      371,
+      150409,
+      171960,
+      149887,
+      152275,
+      220,
+      87123,
+      68706,
+      13,
+      149904,
+      150261,
+      149882,
+      150367,
+      149921,
+      149881,
+      149876,
+      153953,
+      13,
+      68014,
+      144665
+    ],
+    "text": "pink",
+    "expected": "pink",
+    "correct": true,
+    "seconds": 16.729121363998274,
+    "payload": "89300e28647002880aea1def5f27fb9cb0ea753bfead2ea7a4499b096f25863d",
+    "counters": {
+      "consumed_tokens": 39,
+      "forward_tokens": 39,
+      "resident_parent_restores": 0,
+      "resident_child_restores": 0,
+      "checkpoint_import_bytes": 4475486208
+    }
+  },
+  "followup_restart_published_source": {
+    "phase": "restart",
+    "tokens": [
+      33544,
+      200010,
+      200001,
+      200008,
+      371,
+      150409,
+      171960,
+      149887,
+      152275,
+      220,
+      87123,
+      68706,
+      13,
+      149904,
+      150261,
+      149882,
+      150367,
+      149921,
+      149881,
+      149876,
+      153953,
+      13,
+      68014,
+      144665
+    ],
+    "text": "pink",
+    "expected": "pink",
+    "correct": true,
+    "seconds": 16.306943417002913,
+    "payload": "89300e28647002880aea1def5f27fb9cb0ea753bfead2ea7a4499b096f25863d",
+    "counters": {
+      "consumed_tokens": 39,
+      "forward_tokens": 39,
+      "resident_parent_restores": 0,
+      "resident_child_restores": 0,
+      "checkpoint_import_bytes": 4475486208
+    }
+  },
+  "published_source": "982a9624eb5af532568061e3443352f721e29b98"
+}
