@@ -20,6 +20,15 @@ Giving each worker a 1 GiB GPU expert budget raised synchronized throughput to *
 
 ![Per-card decode speed and free VRAM with all-host and hybrid expert placement](docs/benchmarks/inkling/p4-64k-expert-budget.png)
 
+During concurrent prefill of a real 65,504-token register with the GPU expert
+budget set to zero, the three P4 processes accounted for 24.64 GiB of host
+RAM combined by proportional set size (PSS). Each worker had its own roughly
+8 GiB mapping with a distinct inode and zero proportional swap. The earlier
+768 MiB GPU-budget trial sampled 24.64 GiB combined. These snapshots cover
+the worker processes during prefill and exclude other host allocations.
+[Zero-budget process mappings](docs/benchmarks/inkling/p4-allhost-prefill-pss.csv)
+· [768 MiB budget comparison](docs/benchmarks/inkling/p4-prefill-host-memory.csv)
+
 A single Cached HTTP worker reading a 65,000-token document on SQ-10 with a 768 MiB GPU expert budget had 1,953 MiB free at 57,344 allocated KV slots and 1,697 MiB free at 65,536 slots. These are device-wide prefill samples from P4 index 2 on r730. [VRAM samples](docs/benchmarks/inkling/p4-prefill-vram-by-capacity.csv)
 
 Cached loaded a 65,000-token register through BranchWrite HTTP in 17m 55s on a single P4. The first question took 48.9s. After restarting the server, repeating it took 58.2s and imported 2.30 GB from tmpfs. A different question then took 43.4s and imported zero bytes. Both answers were correct, and each request forwarded 18 tokens. These measurements include checkpoint handling. [Per-request results](docs/benchmarks/inkling/p4-shared-document.csv)
