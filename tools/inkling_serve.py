@@ -17,6 +17,8 @@ def main():
     parser.add_argument("--draft", choices=("off", "dspark"), default="off",
                         help="select the native Inkling drafter (default: off)")
     args = parser.parse_args()
+    if not 1 <= args.port <= 65535:
+        parser.error("--port must be between 1 and 65535")
     root = args.directory.resolve()
     terminal = root / "strata-source" / "terminal"
 
