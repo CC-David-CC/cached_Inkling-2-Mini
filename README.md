@@ -30,6 +30,10 @@ Three independent P4 workers also read the same 65,504-token register from scrat
 
 [Download the per-worker results](docs/benchmarks/inkling/p4-register.csv)
 
+At 1 GiB of GPU experts per card, all three P4 workers again answered the final-station question correctly. Each read 65,504 tokens in 17.9–18.6 minutes and decoded 32 steps at 7.34–7.68 tok/s. With one run per placement and card, the timings are close to the 768 MiB results. The larger placement used another 256 MiB per card. [Per-worker comparison](docs/benchmarks/inkling/p4-register-placement.csv)
+
+![Real-register prefill, decode, and final free VRAM at two expert budgets](docs/benchmarks/inkling/p4-register-placement.png)
+
 ### RTX 4090 and RTX PRO 6000 Blackwell
 
 ![Cached single-request prefill, generation, full HTTP throughput and first-text latency on the RTX 4090 and RTX PRO 6000](docs/benchmarks/inkling/gpu-comparison.png)
