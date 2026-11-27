@@ -1,0 +1,7 @@
+profile,task,fixture_1,fixture_2,fixture_3,passed,completion_tokens
+base,latest,True,False,False,1,56
+base,permissions,False,False,False,0,14
+adamw,latest,True,False,False,1,51
+adamw,permissions,False,False,False,0,512
+muon,latest,False,False,False,0,512
+muon,permissions,False,False,False,0,512
