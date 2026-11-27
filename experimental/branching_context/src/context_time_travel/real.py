@@ -570,7 +570,7 @@ class BranchingModel:
             yield lease, frontier, schedule
 
     def run_greedy_request(self, snapshot, ids, max_steps, *, stream, on_token=None, cancelled=None,
-                           artifacts=None,reencode=None):
+                           artifacts=None,reencode=None,capture_suffix=False):
         """One owned native request; progress is provisional until boundary publication.
 
         The returned snapshot is canonical consumed state, not a disk-save
@@ -665,18 +665,16 @@ class BranchingModel:
                     raise InvalidOperation('Native output extends beyond the stopped controller')
                 self._lease_fault('after_token_consume')
                 save_started = time.monotonic()
-                saved = self._save(lease,consumed_history,schedule)
+                sid, compact = self._capture_request(lease, snapshot, ids+tuple(outputs), decoder,
+                                                     consumed_history, schedule, capture_suffix)
                 state_save_seconds = time.monotonic() - save_started
-                if saved.consumed != len(consumed_history):
-                    raise IntegrityError('Resident request capture omitted consumed inputs')
-            sid = self._publish_feed(snapshot,ids+tuple(outputs),decoder,saved)
-        return dict(snapshot=sid,tokens=outputs,generation_seconds=generation_seconds,
+        return dict(**compact, snapshot=sid,tokens=outputs,generation_seconds=generation_seconds,
                     state_save_seconds=state_save_seconds,
                     request_seconds=time.monotonic()-started)
 
     def run_state_request(self, snapshot, ids, max_steps, *, engine, state, stream,
                           resume=False, on_token=None, cancelled=None, sampling=None,
-                          reseed_seed=None, text_stops=None,artifacts=None,reencode=None,paused=None):
+                          reseed_seed=None, text_stops=None,artifacts=None,reencode=None,paused=None,capture_suffix=False):
         """Host-selected grammar, legal-token greedy selection, one owned lease.
 
         The grammar controls output syntax only. The caller validates semantics,
@@ -922,22 +920,20 @@ class BranchingModel:
                         raise IntegrityError('Mixed request publication schedule is invalid') from error
                 self._lease_fault('after_token_consume')
                 save_started = time.monotonic()
-                saved = self._save(lease, consumed_history, schedule)
+                sid, compact = self._capture_request(lease, snapshot, ids + tuple(outputs), decoder,
+                                                     consumed_history, schedule, capture_suffix)
                 state_save_seconds = time.monotonic() - save_started
-                if saved.consumed != len(consumed_history):
-                    raise IntegrityError('Grammar request capture omitted consumed inputs')
-            sid = self._publish_feed(snapshot, ids + tuple(outputs), decoder, saved)
-        return dict(snapshot=sid, tokens=outputs, grammar_complete=session.is_complete(),
+        return dict(**compact, snapshot=sid, tokens=outputs, grammar_complete=session.is_complete(),
                     stopped=session.is_stopped(), generation_seconds=generation_seconds,
                     state_save_seconds=state_save_seconds,
                     request_seconds=time.monotonic() - started)
 
     def run_sampled_request(self,snapshot,ids,max_steps,*,sampling,stream,resume=False,
-                            on_token=None,cancelled=None,reseed_seed=None,text_stops=None,artifacts=None,reencode=None,paused=None):
+                            on_token=None,cancelled=None,reseed_seed=None,text_stops=None,artifacts=None,reencode=None,paused=None,capture_suffix=False):
         """Plain Min-P under the same consumed-state and branch-owned contract."""
         return self.run_state_request(snapshot,ids,max_steps,engine=None,state=None,
             stream=stream,sampling=sampling,resume=resume,on_token=on_token,cancelled=cancelled,paused=paused,
-            reseed_seed=reseed_seed,text_stops=text_stops,artifacts=artifacts,reencode=reencode)
+            reseed_seed=reseed_seed,text_stops=text_stops,artifacts=artifacts,reencode=reencode,capture_suffix=capture_suffix)
 
     def _feed(self, snapshot, ids, decoder, *, generated=False):
         self.store.authorize(snapshot, 'append')
@@ -966,13 +962,38 @@ class BranchingModel:
         self._lease_fault('after_token_consume')
         return self._save(lease,history,self._completed_schedule(previous_schedule,history))
 
+    def _capture_request(self, lease, parent, delta, decoder, history, schedule, capture_suffix):
+        if capture_suffix and not schedule:
+            from .digest_attestation import restore_payload_digest
+            owner = self.cache.get(parent)
+            if owner is not None and (self.checkpoint_directory / (parent + '.json')).exists():
+                manifest = self.checkpoint_manifest(parent)
+                if manifest['schema'] != 5 and verified_checkpoint_digest(owner) == manifest['payload_sha256']:
+                    suffix = self.backend.export_pinned_suffix(lease, owner.consumed, restore_payload_digest(owner.blob))
+                    if suffix:
+                        if self.backend.position(lease) + 1 != len(history):
+                            raise IntegrityError('Suffix capture omitted consumed inputs')
+                        sid = self._append_feed(parent, delta, decoder)
+                        with self._suffix_binding(sid) as (_, required):
+                            prepared = self._suffix_from_export(sid, required, owner, suffix, self.backend.logits(lease))
+                            path = self.checkpoint_directory / (sid + '.json')
+                            if not path.exists() or path.read_bytes() == prepared.envelope:
+                                return sid, dict(_prepared_suffix=prepared)
+        saved = self._save(lease, history, schedule)
+        if saved.consumed != len(history):
+            raise IntegrityError('Request capture omitted consumed inputs')
+        return self._publish_feed(parent, delta, decoder, saved), {}
+
     def _publish_feed(self, snapshot, ids, next_decoder, saved):
-        spans=ids.spans if isinstance(ids,InputHistory) else [dict(kind='text',tokens=list(ids))]
-        sid = (self.store.append_inputs(snapshot,spans,next_decoder)
-               if self.store.get_snapshot(snapshot)['schema']==2
-               else self.store.append(snapshot,ids,next_decoder))
+        sid = self._append_feed(snapshot, ids, next_decoder)
         self.cache[sid] = saved
         return sid
+
+    def _append_feed(self, snapshot, ids, next_decoder):
+        spans=ids.spans if isinstance(ids,InputHistory) else [dict(kind='text',tokens=list(ids))]
+        return (self.store.append_inputs(snapshot,spans,next_decoder)
+               if self.store.get_snapshot(snapshot)['schema']==2
+               else self.store.append(snapshot,ids,next_decoder))
 
     def controller(self, snapshot):
         return self.store.get_snapshot(snapshot)['controller']
@@ -1692,13 +1713,16 @@ class BranchingModel:
                     if optional:
                         return None
                     raise InvalidOperation('Native suffix capture unavailable')
-                if len(row) != self.backend.vocab_size or not all(map(math.isfinite, row)):
-                    raise IntegrityError('Invalid suffix frontier')
-                child = Checkpoint.create(owner.model_contract_id, owner.execution_profile_id,
-                    required['consumed'], suffix, row, required['input_identity'])
-                manifest = dict(required, state_bytes=len(suffix), payload_sha256=child.checksum)
-                envelope = dict(manifest=manifest, checksum=hashlib.sha256(_json_bytes(manifest)).hexdigest())
-                return PreparedCheckpoint(snapshot, child, _json_bytes(envelope))
+                return self._suffix_from_export(snapshot, required, owner, suffix, row)
+
+    def _suffix_from_export(self, snapshot, required, owner, suffix, row):
+        if len(row) != self.backend.vocab_size or not all(map(math.isfinite, row)):
+            raise IntegrityError('Invalid suffix frontier')
+        child = Checkpoint.create(owner.model_contract_id, owner.execution_profile_id,
+            required['consumed'], suffix, row, required['input_identity'])
+        manifest = dict(required, state_bytes=len(suffix), payload_sha256=child.checksum)
+        envelope = dict(manifest=manifest, checksum=hashlib.sha256(_json_bytes(manifest)).hexdigest())
+        return PreparedCheckpoint(snapshot, child, _json_bytes(envelope))
 
     def publish_suffix_checkpoint(self, prepared):
         """Publish the checked suffix payload and its snapshot-addressed manifest."""

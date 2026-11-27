@@ -2323,6 +2323,8 @@ class ContextCoordinator:
             stream=(seed_stream(job.seed) if job.seed is not None and not job.resume
                     else job.generation_stream or job.request.operation)
             options=dict(stream=stream,on_token=token_ready)
+            if model.profile.get('suffix_checkpoints') and model.profile.get('backend') == 'inkling-cuda':
+                options['capture_suffix'] = True
             if job.request.pause_supported:
                 if not getattr(model,'supports_consumed_pause',False):
                     raise InvalidOperation('Worker pause capability changed before execution')
@@ -2577,9 +2579,16 @@ class ContextCoordinator:
                     sid = answer['snapshot']
                     self._headroom()
                     capture_started=time.monotonic()
-                    estimate = 3*len(model.cache[sid].blob)+8*len(model.cache[sid].frontier)
+                    direct = answer.pop('_prepared_suffix', None)
+                    image = direct.checkpoint if direct is not None else model.cache[sid]
+                    estimate = 3*len(image.blob)+8*len(image.frontier)
+                    del image
                     with self.pool.reserve(estimate,timeout=self._admission_timeout) as reservation:
-                        prepared, key = self._prepare_publication(bound, sid)
+                        if direct is None:
+                            prepared, key = self._prepare_publication(bound, sid)
+                        else:
+                            prepared, key = direct, self._key(bound, sid) + ('suffix',)
+                            direct = None
                         reservation.admit(key,prepared.checkpoint,durable=False)
                     if key[-1] == 'suffix':
                         # The publication pool owns the compact image, including retries.
@@ -2795,10 +2804,6 @@ class ContextCoordinator:
                             **retry_source_options)
                     self.disk.touch(prepared.snapshot)
             self.pool.mark_durable(key)
-            job.request.state = 'durable'
-            job.request.emit('durable',gpu=model.gpu_id,receipt=receipt)
-            job.request.durable.set_result(receipt)
-            with self._condition: self._completed += 1
         except BaseException as exc:
             failed = True
             snapshot=prepared.snapshot
@@ -2825,6 +2830,13 @@ class ContextCoordinator:
                     self._release_source(job)
                     with self._condition:
                         self._branches.discard(job.branch);self._condition.notify_all()
+
+            # A durable receipt lets the caller immediately mutate this branch.
+            if not failed:
+                with self._condition: self._completed += 1
+                job.request.state = 'durable'
+                job.request.emit('durable',gpu=model.gpu_id,receipt=receipt)
+                job.request.durable.set_result(receipt)
 
     def _fail(self,job,exc,*,release_branch=True):
         stopped = isinstance(exc,CancelledError) and not job.request.snapshot.done()

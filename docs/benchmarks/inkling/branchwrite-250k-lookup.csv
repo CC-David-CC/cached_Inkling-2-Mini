@@ -1,0 +1,4 @@
+process,lookup_position,wall_s,correct,output_tokens,checkpoint_import_bytes,consumed_tokens,suffix_bytes,payload_sha256
+1,early,21.095,True,3,8365703168,18,7372800,876c25763768b499b8c7eb9daec0fdc219f5ae9c6c0557b9fff7d40c95013ccc
+1,middle,11.172,True,12,0,27,9142272,9d7f47d0204670fe50ba42ff1f37fecd13c2aa82c5b6d90872c71e0f19de74ce
+1,late,11.363,True,3,0,18,7372800,c645210cbeed41f8a5c7906c4bcc9d9f76b37fe3c6823dcd6958257c2015edc6
