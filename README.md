@@ -54,6 +54,12 @@ generation time. Stock used a 2,048-token prefill chunk and Cached used 512.
 
 ![Stock and Cached HTTP throughput with and without DSpark on 3K and 6K prompts](docs/benchmarks/inkling/http-throughput.png)
 
+The latency chart shows each observed request, the median and an interpolated p95. Its TPOT measure is engine generation time divided by 1,024 output tokens. Each group contains four trials, including the first. With four observations, the p95 is descriptive only and gives little evidence about production tail latency.
+
+![Individual trials, median and sample p95 for first text, generation milliseconds per token and branch completion](docs/benchmarks/inkling/http-latencies.png)
+
+[Download the latency summaries](docs/benchmarks/inkling/http-latencies.csv)
+
 The following memory measurements sample the serving process and its children
 during one request per configuration. Host checkpoint RAM is excluded.
 
