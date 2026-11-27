@@ -569,9 +569,10 @@ class BranchingModel:
             schedule = self.cache[snapshot].execution_schedule if needs_schedule else ()
             yield lease, frontier, schedule
 
-    def _consume_request_text(self, lease, ids):
+    def _consume_request_text(self, lease, ids, check_cancelled):
         if self.profile['execution'].get('followup_prefill') == 'single-token':
             for token in ids:
+                check_cancelled()
                 self.backend.consume(lease, (token,))
         else:
             self.backend.consume(lease, ids)
@@ -645,7 +646,7 @@ class BranchingModel:
                 check_cancelled()
                 if ids:
                     if mixed_delta:self.backend.consume_inputs(lease,ids.spans,embeddings=payloads)
-                    else:self._consume_request_text(lease,ids)
+                    else:self._consume_request_text(lease, ids, check_cancelled)
                     schedule = self._completed_schedule(schedule,prompt_history)
                 generation_started = time.monotonic()
                 check_cancelled()
@@ -859,7 +860,7 @@ class BranchingModel:
             with self._generation_source(snapshot) as (lease, frontier, schedule):
                 if ids:
                     if mixed_delta:self.backend.consume_inputs(lease,ids.spans,embeddings=payloads)
-                    else:self._consume_request_text(lease, ids)
+                    else:self._consume_request_text(lease, ids, check_cancelled)
                     schedule = self._completed_schedule(schedule, prompt_history)
                     if not native_selection:
                         frontier = self.backend.logits(lease)
