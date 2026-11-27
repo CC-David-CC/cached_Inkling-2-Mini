@@ -6,7 +6,7 @@ from pathlib import Path
 import struct
 
 from context_time_travel.backend_registry import load_backend
-from context_time_travel.inkling_backend import runtime_profile
+from context_time_travel.inkling_backend import MAX_CONTEXT_TOKENS, runtime_profile
 from context_time_travel.real import BranchingModel
 from context_time_travel.store import IntegrityError, _json_bytes
 
@@ -20,8 +20,8 @@ def main():
     parser.add_argument('--output-tokens', type=int, default=1)
     args = parser.parse_args()
     capacity = args.parent_tokens + 2 + args.output_tokens
-    if min(args.parent_tokens, args.output_tokens) < 1 or capacity > 133120:
-        parser.error('Positive parent and output lengths plus the two-token child must fit in 133120 tokens')
+    if min(args.parent_tokens, args.output_tokens) < 1 or capacity > MAX_CONTEXT_TOKENS:
+        parser.error(f'Positive parent and output lengths plus the two-token child must fit in {MAX_CONTEXT_TOKENS} tokens')
     profile = runtime_profile(args.runtime.resolve(), pack='SQ-10', capacity=max(16384, capacity))
     backend = load_backend(profile)
     try:

@@ -6,7 +6,7 @@ from time import perf_counter
 
 from context_time_travel.backend_registry import load_backend
 from context_time_travel.digest_attestation import checkpoint_export_scope, restore_payload_digest
-from context_time_travel.inkling_backend import runtime_profile
+from context_time_travel.inkling_backend import MAX_CONTEXT_TOKENS, runtime_profile
 from context_time_travel.real import BranchingModel, Checkpoint
 from test_inkling_pcc import exact_row
 
@@ -18,7 +18,7 @@ def main():
     parser.add_argument('--child-tokens', type=int, default=2)
     args = parser.parse_args()
     capacity = args.parent_tokens + args.child_tokens + 1
-    if min(args.parent_tokens, args.child_tokens) < 1 or capacity > 133120:
+    if min(args.parent_tokens, args.child_tokens) < 1 or capacity > MAX_CONTEXT_TOKENS:
         parser.error('positive parent and child lengths must leave room for one continuation token')
     history = tuple(100 + pos % 1000 for pos in range(args.parent_tokens))
     profile = runtime_profile(args.runtime.resolve(), pack='SQ-10', capacity=max(16384, capacity))

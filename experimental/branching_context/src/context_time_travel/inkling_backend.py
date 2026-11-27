@@ -25,6 +25,7 @@ PACK_HASHES = {
     'SQ-15': '2ea32eed533afba257e2cbee7b073dc2c3da80fe55d1d2d794779b5498e30737',
     'SQ-20': MODEL_SHA256,
 }
+MAX_CONTEXT_TOKENS = 262144
 HEAD_WIDTH = 2304
 HEAD_ADAPTER_HEADER = struct.Struct('<8sI32s')
 HEAD_ADAPTER_MAGIC = b'IKLORA1\0'
@@ -52,8 +53,8 @@ def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None, 
     weights = PACK_HASHES[pack]
     bridge = str(runtime / 'native-build/libinkling_pcc_bridge.so')
     build = {'sha256': {bridge: digest_file(bridge)}}
-    if type(capacity) is not int or not 8192 <= capacity <= 133120:
-        raise ValueError('Inkling capacity must be between 8192 and 133120 tokens')
+    if type(capacity) is not int or not 8192 <= capacity <= MAX_CONTEXT_TOKENS:
+        raise ValueError(f'Inkling capacity must be between 8192 and {MAX_CONTEXT_TOKENS} tokens')
     execution = dict(EXECUTION, capacity=capacity,
                      cublas_workspace_config=os.getenv('CUBLAS_WORKSPACE_CONFIG'),
                      cuda_cublas_compute_type=os.getenv('GGML_CUDA_CUBLAS_COMPUTE_TYPE', 'auto'),
@@ -371,7 +372,7 @@ class InklingBackend(NativeBackend):
         weights = profile['model_weights_sha256']
         if (weights not in PACK_HASHES.values()
                 or profile['model_contract_id'] != model_contract_id(bool(self.vision_path), self.adapter_sha256, weights)
-                or type(self.context_capacity) is not int or not 8192 <= self.context_capacity <= 133120
+                or type(self.context_capacity) is not int or not 8192 <= self.context_capacity <= MAX_CONTEXT_TOKENS
                 or any(execution.get(key) != value for key, value in required.items() if key != 'capacity')
                 or profile['bridge_library'] not in profile['native_build']['sha256']
                 or not Path(profile['bridge_library']).is_absolute()):

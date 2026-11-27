@@ -53,7 +53,7 @@ const char* ctt_error() { return error.c_str(); }
 
 static void* load_devices(const char* path, int capacity, bool dspark, int gpus, const char* kv_offload) try {
     if (gpus < 1 || gpus > 3) { error = "Invalid Inkling GPU count"; return nullptr; }
-    if (capacity < default_capacity || capacity > 133120) { error = "Invalid Inkling context capacity"; return nullptr; }
+    if (capacity < default_capacity || capacity > 262144) { error = "Invalid Inkling context capacity"; return nullptr; }
     auto model = std::make_unique<Model>();
     model->capacity = capacity;
     if (!model->file.open(path, error, false, "")) return nullptr;

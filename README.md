@@ -8,6 +8,12 @@ context. GPU count is a runtime setting for later trials.
 
 ## Measured performance
 
+### Reading a 250,000-token document on llm-60
+
+![Prefill speed across a 250,000-token document](docs/benchmarks/inkling/llm60-250k-prefill.png)
+
+One SQ-10 worker processed 250,000 station-register tokens in **138.53 seconds** (1,805 input tokens/s). The native counter confirmed the full input length, and the backend returned 200,058 logits at the frontier. Timing starts after model load and tokenization. The run used a 262,144-token window, FP16 device KV, a 4 GiB GPU expert pool, forced GPU expert computation and drafting off. Answer quality, durable restore and generated-token speed at this length remain open. [Prefill timings](docs/benchmarks/inkling/llm60-250k-prefill.csv)
+
 ### Repeated questions on one 130K-token document
 
 ![Elapsed client time for three sequential warm BranchWrite questions on r730 and llm-60](docs/benchmarks/inkling/warm-130k-pooled-client.png)
