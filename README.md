@@ -12,7 +12,9 @@ context. GPU count is a runtime setting for later trials.
 
 ![Prefill speed across a 250,000-token document](docs/benchmarks/inkling/llm60-250k-prefill.png)
 
-One SQ-10 worker processed 250,000 station-register tokens in **138.53 seconds** (1,805 input tokens/s). The native counter confirmed the full input length, and the backend returned 200,058 logits at the frontier. Timing starts after model load and tokenization. The run used a 262,144-token window, FP16 device KV, a 4 GiB GPU expert pool, forced GPU expert computation and drafting off. Answer quality, durable restore and generated-token speed at this length remain open. [Prefill timings](docs/benchmarks/inkling/llm60-250k-prefill.csv)
+One SQ-10 worker processed 250,000 station-register tokens in **138.53 seconds** (1,805 input tokens/s). The native counter confirmed the full input length, and the backend returned 200,058 logits at the frontier. Timing starts after model load and tokenization. The run used a 262,144-token window, FP16 device KV, a 4 GiB GPU expert pool, forced GPU expert computation and drafting off. Answer quality and generated-token speed at this length remain open. [Prefill timings](docs/benchmarks/inkling/llm60-250k-prefill.csv)
+
+A separate native restart run saved an 8,363,606,016-byte parent and a 4,227,072-byte suffix for a two-token child. A fresh process imported both from disk and reproduced all 32 greedy continuation IDs and every full logit row after those steps. Its forward counter recorded exactly 32 tokens. This covers native checkpoint transfer. BranchWrite HTTP qualification at 250k remains open. [Restart measurements and logit hashes](docs/benchmarks/inkling/llm60-250k-native-restart.json)
 
 ### Repeated questions on one 130K-token document
 
