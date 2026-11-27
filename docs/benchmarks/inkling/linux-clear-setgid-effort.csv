@@ -1,0 +1,3 @@
+effort,expected,correct,completion_tokens,generation_s,visible_chars,visible_answer_prefix
+0.0,4775,False,4,0.21061697602272034,4,6751
+0.99,4775,False,2048,81.33319330494851,0,
