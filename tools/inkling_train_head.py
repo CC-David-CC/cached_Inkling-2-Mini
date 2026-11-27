@@ -116,11 +116,19 @@ def parent_factors(payload, vocab, device):
     return weights[:split].reshape(rank, HEAD_WIDTH), weights[split:].reshape(vocab, rank)
 
 
-def export_adapter(output, parameters, parent=None):
+@torch.no_grad()
+def export_adapter(output, parameters, parent=None, collapse=False):
     a, b = parameters[:2]
     if parent is not None:
         a = torch.cat((parent[0], a), dim=0)
         b = torch.cat((parent[1], b), dim=1)
+    if collapse:
+        # Factor the small core of B @ A without materializing the dense head.
+        left, lb = torch.linalg.qr(b.double())
+        right, ra = torch.linalg.qr(a.T.double())
+        u, singular, vh = torch.linalg.svd(lb @ ra.T)
+        b = ((left @ u[:, :RANK]) * singular[:RANK]).float()
+        a = (vh[:RANK] @ right.T).float()
     final = output / 'adapter.iklora'
     with final.open('xb') as stream:
         stream.write(HEAD_ADAPTER_HEADER.pack(HEAD_ADAPTER_MAGIC, a.shape[0], bytes.fromhex(MODEL_SHA256)))
@@ -137,7 +145,10 @@ def main():
     parser.add_argument('--resume', type=Path, help='continue a saved optimizer checkpoint')
     parser.add_argument('--additional-steps', type=int, default=1, help='updates after --resume')
     parser.add_argument('--parent-adapter', type=Path, help='train a fresh rank-4 residual over a frozen head adapter')
+    parser.add_argument('--collapse', action='store_true', help='export the parent plus residual at rank 4')
     args = parser.parse_args()
+    if args.collapse and args.parent_adapter is None:
+        parser.error('--collapse requires --parent-adapter')
     parent_payload = args.parent_adapter.read_bytes() if args.parent_adapter else None
     parent_hash = hashlib.sha256(parent_payload).hexdigest() if parent_payload is not None else None
     if args.additional_steps < 1 or (not args.resume and args.additional_steps != 1):
@@ -172,8 +183,8 @@ def main():
         save_training_checkpoint(args.output / f'step-{steps}.pt',
                                  dict(metadata=metadata, a=initial[0].detach(), b=initial[1].detach(),
                                       optimizer=initial[2].state_dict()))
-        report = dict(metadata, resumed_from_step=saved['steps'], losses=losses,
-                      adapter_sha256=export_adapter(args.output, initial, parent))
+        report = dict(metadata, collapsed=args.collapse, resumed_from_step=saved['steps'], losses=losses,
+                      adapter_sha256=export_adapter(args.output, initial, parent, args.collapse))
         (args.output / 'receipt.json').write_text(json.dumps(report, indent=2) + '\n')
         print(json.dumps(report))
         return
@@ -199,8 +210,8 @@ def main():
     assert all(torch.equal(initial[i], resumed[i]) for i in (0, 1))
     assert equal_state(initial[2].state_dict(), resumed[2].state_dict())
 
-    adapter_hash = export_adapter(args.output, resumed, parent)
-    report = dict(metadata, verified_steps=3, losses=losses,
+    adapter_hash = export_adapter(args.output, resumed, parent, args.collapse)
+    report = dict(metadata, collapsed=args.collapse, verified_steps=3, losses=losses,
                   exact_optimizer_resume=True, adapter_sha256=adapter_hash,
                   peak_cuda_allocated_bytes=torch.cuda.max_memory_allocated())
     (args.output / 'receipt.json').write_text(json.dumps(report, indent=2) + '\n')

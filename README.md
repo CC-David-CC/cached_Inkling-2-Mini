@@ -349,6 +349,8 @@ python tools/inkling_train_head.py "$runtime" "$runtime/lora-resumed" \
 
 Use `--parent-adapter PATH` to train a fresh rank-4 output-head update over a frozen parent. Pass the same parent on resume. The checkpoint records its SHA-256, and the exported adapter combines both updates up to the native serving limit of rank 16.
 
+Add `--collapse` to export the sum at rank 4 using truncated SVD. The step checkpoint retains the active optimizer and residual factors. Resume it with the same parent and `--collapse` to reproduce the compressed export. To start another round, use that export as the new parent with a fresh optimizer.
+
 Launch PCC with `--adapter /path/to/adapter.iklora` to attach the adapter.
 Each adapter gets a distinct model contract and default store. Omitting the
 option selects the base model. Keep training outputs and optimizer checkpoints
