@@ -6,16 +6,17 @@ import subprocess
 import sys
 import tempfile
 
-from inkling_train_head import equal_state, torch
+from inkling_train_head import PACK_HASHES, equal_state, torch
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('runtime', type=Path)
+    parser.add_argument('--pack', choices=tuple(PACK_HASHES), default='SQ-20')
     parser.add_argument('--optimizer', choices=('adamw', 'muon'), required=True)
     args = parser.parse_args()
     trainer = Path(__file__).with_name('inkling_train_head.py')
-    command = [sys.executable, str(trainer), str(args.runtime.resolve())]
+    command = [sys.executable, str(trainer), str(args.runtime.resolve()), '--pack', args.pack]
 
     with tempfile.TemporaryDirectory() as workspace:
         root = Path(workspace)

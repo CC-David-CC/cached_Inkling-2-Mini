@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Train and verify rank-4 output-head LoRA against the pinned SQ-20 engine."""
+"""Train and verify rank-4 output-head LoRA against a pinned Inkling SQ pack."""
 import argparse
 import hashlib
 import json
@@ -16,15 +16,15 @@ sys.path.insert(0, str(ROOT / 'experimental/branching_context/src'))
 
 from context_time_travel.backend_registry import load_backend
 from context_time_travel.inkling_backend import (
-    HEAD_ADAPTER_HEADER, HEAD_ADAPTER_MAGIC, HEAD_WIDTH, MODEL_SHA256, runtime_profile,
+    HEAD_ADAPTER_HEADER, HEAD_ADAPTER_MAGIC, HEAD_WIDTH, MODEL_SHA256, PACK_HASHES, runtime_profile,
 )
 
 RANK = 4
 EXAMPLES = (((100, 101, 102, 103), 19), ((201, 202, 203, 204, 205), 20))
 
 
-def capture(runtime):
-    profile = runtime_profile(runtime)
+def capture(runtime, pack="SQ-20"):
+    profile = runtime_profile(runtime, pack=pack)
     backend = load_backend(profile)
     try:
         features, logits = [], []
@@ -106,9 +106,9 @@ def restore_parameters(parameters, checkpoint):
     parameters[2].load_state_dict(checkpoint['optimizer'])
 
 
-def parent_factors(payload, vocab, device):
+def parent_factors(payload, vocab, device, base_sha256=MODEL_SHA256):
     magic, rank, base = HEAD_ADAPTER_HEADER.unpack_from(payload)
-    if (magic != HEAD_ADAPTER_MAGIC or base.hex() != MODEL_SHA256 or not 1 <= rank <= 16 - RANK
+    if (magic != HEAD_ADAPTER_MAGIC or base.hex() != base_sha256 or not 1 <= rank <= 16 - RANK
             or len(payload) != HEAD_ADAPTER_HEADER.size + rank * (HEAD_WIDTH + vocab) * 4):
         raise ValueError('Invalid parent adapter or combined rank exceeds the serving limit')
     weights = torch.frombuffer(bytearray(payload[HEAD_ADAPTER_HEADER.size:]), dtype=torch.float32).to(device)
@@ -117,7 +117,7 @@ def parent_factors(payload, vocab, device):
 
 
 @torch.no_grad()
-def export_adapter(output, parameters, parent=None, collapse=False):
+def export_adapter(output, parameters, parent=None, collapse=False, base_sha256=MODEL_SHA256):
     a, b = parameters[:2]
     if parent is not None:
         a = torch.cat((parent[0], a), dim=0)
@@ -131,7 +131,7 @@ def export_adapter(output, parameters, parent=None, collapse=False):
         a = (vh[:RANK] @ right.T).float()
     final = output / 'adapter.iklora'
     with final.open('xb') as stream:
-        stream.write(HEAD_ADAPTER_HEADER.pack(HEAD_ADAPTER_MAGIC, a.shape[0], bytes.fromhex(MODEL_SHA256)))
+        stream.write(HEAD_ADAPTER_HEADER.pack(HEAD_ADAPTER_MAGIC, a.shape[0], bytes.fromhex(base_sha256)))
         for factor in (a, b):
             stream.write(factor.detach().cpu().contiguous().numpy().tobytes())
     return hashlib.sha256(final.read_bytes()).hexdigest()
@@ -141,12 +141,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('runtime', type=Path)
     parser.add_argument('output', type=Path, help='new private output directory')
+    parser.add_argument('--pack', choices=tuple(PACK_HASHES), default='SQ-20')
     parser.add_argument('--optimizer', choices=('adamw', 'muon'), default=None)
     parser.add_argument('--resume', type=Path, help='continue a saved optimizer checkpoint')
     parser.add_argument('--additional-steps', type=int, default=1, help='updates after --resume')
     parser.add_argument('--parent-adapter', type=Path, help='train a fresh rank-4 residual over a frozen head adapter')
     parser.add_argument('--collapse', action='store_true', help='export the parent plus residual at rank 4')
     args = parser.parse_args()
+    base_sha256 = PACK_HASHES[args.pack]
     if args.collapse and args.parent_adapter is None:
         parser.error('--collapse requires --parent-adapter')
     parent_payload = args.parent_adapter.read_bytes() if args.parent_adapter else None
@@ -156,6 +158,8 @@ def main():
     restored = torch.load(args.resume, weights_only=True) if args.resume else None
     if restored is not None:
         saved = restored['metadata']
+        if saved['base_sha256'] != base_sha256:
+            parser.error('resume requires the original base pack')
         if saved['optimizer'] not in ('adamw', 'muon') or args.optimizer not in (None, saved['optimizer']):
             parser.error('checkpoint optimizer mismatch')
         if saved.get('parent_sha256') != parent_hash:
@@ -165,14 +169,14 @@ def main():
         args.optimizer = args.optimizer or 'adamw'
     args.output.mkdir(mode=0o700)
     torch.use_deterministic_algorithms(True)
-    features, raw, targets, cap, profile_id = capture(args.runtime.resolve(strict=True))
+    features, raw, targets, cap, profile_id = capture(args.runtime.resolve(strict=True), args.pack)
     parent = None
     if parent_payload is not None:
-        parent = parent_factors(parent_payload, raw.shape[1], raw.device)
+        parent = parent_factors(parent_payload, raw.shape[1], raw.device, base_sha256)
         raw = raw + (features @ parent[0].T) @ parent[1].T
     initial = initialize(raw.shape[1], args.optimizer)
     if args.resume:
-        expected = dict(profile_id=profile_id, rank=RANK, base_sha256=MODEL_SHA256,
+        expected = dict(profile_id=profile_id, rank=RANK, base_sha256=base_sha256,
                         torch_version=str(torch.__version__), examples=repr(EXAMPLES))
         if any(saved.get(k) != v for k, v in expected.items()):
             raise ValueError('Training checkpoint identity differs from this run')
@@ -184,7 +188,7 @@ def main():
                                  dict(metadata=metadata, a=initial[0].detach(), b=initial[1].detach(),
                                       optimizer=initial[2].state_dict()))
         report = dict(metadata, collapsed=args.collapse, resumed_from_step=saved['steps'], losses=losses,
-                      adapter_sha256=export_adapter(args.output, initial, parent, args.collapse))
+                      adapter_sha256=export_adapter(args.output, initial, parent, args.collapse, base_sha256))
         (args.output / 'receipt.json').write_text(json.dumps(report, indent=2) + '\n')
         print(json.dumps(report))
         return
@@ -193,7 +197,7 @@ def main():
     assert not torch.equal(initial[1], previous_b), 'LoRA update left B unchanged'
     a, b, optimizer = initial
     metadata = dict(optimizer=args.optimizer, steps=2, profile_id=profile_id,
-                    base_sha256=MODEL_SHA256, torch_version=str(torch.__version__),
+                    base_sha256=base_sha256, torch_version=str(torch.__version__),
                     rank=RANK, examples=repr(EXAMPLES))
     if parent is not None:
         metadata['parent_sha256'] = parent_hash
@@ -214,7 +218,7 @@ def main():
     save_training_checkpoint(args.output / 'step-3.pt',
                              dict(metadata=metadata, a=resumed[0].detach(), b=resumed[1].detach(),
                                   optimizer=resumed[2].state_dict()))
-    adapter_hash = export_adapter(args.output, resumed, parent, args.collapse)
+    adapter_hash = export_adapter(args.output, resumed, parent, args.collapse, base_sha256)
     report = dict(metadata, collapsed=args.collapse, verified_steps=3, losses=losses,
                   exact_optimizer_resume=True, adapter_sha256=adapter_hash,
                   peak_cuda_allocated_bytes=torch.cuda.max_memory_allocated())

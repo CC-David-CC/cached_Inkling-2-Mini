@@ -388,7 +388,7 @@ vision service with the same store, then run the test in `read` mode.
 
 ### Output-head LoRA
 
-The SQ-20 CUDA bridge can capture the frozen model's final normalized
+The Inkling CUDA bridge can capture the frozen model's final normalized
 hidden rows and pre-softcap logits. Train rank-4 LoRA factors on these actual
 model features with AdamW or factorwise Muon. The same bridge applies the
 exported low-rank delta before softcapping logits during serving.
@@ -405,6 +405,8 @@ store=$(mktemp -d "$runtime/pcc-lora-test.XXXXXXXX")
 python tools/test_inkling_head_lora.py "$runtime" "$store" \
     "$runtime/lora-adamw/adapter.iklora" "$runtime/lora-muon/adapter.iklora"
 ```
+
+For SQ-10 or SQ-15, pass the same `--pack SQ-10` or `--pack SQ-15` to the trainer, restart test, serving test and PCC launcher. SQ-20 is the default. The training checkpoint and adapter header bind the exact base pack by SHA-256.
 
 Resume a saved output-head optimizer checkpoint into a new output directory. Each resumed run writes the updated optimizer checkpoint, serving adapter and receipt. The optimizer is inferred from the checkpoint.
 

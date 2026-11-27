@@ -4,7 +4,7 @@ import hashlib
 from pathlib import Path
 
 from context_time_travel.backend_registry import load_backend
-from context_time_travel.inkling_backend import runtime_profile
+from context_time_travel.inkling_backend import PACK_HASHES, runtime_profile
 from context_time_travel.real import BranchingModel
 from test_inkling_pcc import assert_rejected, exact_row
 
@@ -15,6 +15,7 @@ def main():
     parser.add_argument('workspace', type=Path)
     parser.add_argument('adamw', type=Path)
     parser.add_argument('muon', type=Path)
+    parser.add_argument('--pack', choices=tuple(PACK_HASHES), default='SQ-20')
     args = parser.parse_args()
     runtime = args.runtime.resolve()
     ids = (100, 101, 102, 103)
@@ -22,7 +23,7 @@ def main():
     snapshots = {}
 
     def capture(name, adapter=None):
-        profile = runtime_profile(runtime, adapter=adapter)
+        profile = runtime_profile(runtime, adapter=adapter, pack=args.pack)
         backend = load_backend(profile)
         try:
             model = BranchingModel(args.workspace, backend, profile)

@@ -15,6 +15,7 @@ def main():
     parser.add_argument('--port', type=int, default=18061)
     parser.add_argument('--chat', action='store_true')
     parser.add_argument('--adapter', type=Path)
+    parser.add_argument('--pack', choices=('SQ-10', 'SQ-15', 'SQ-20'), default='SQ-20')
     parser.add_argument('--dspark-long', action='store_true', help='test 1024-token greedy chat with the draft engine')
     args = parser.parse_args()
     if args.dspark_long:
@@ -23,9 +24,9 @@ def main():
     expected_contract = None
     if args.adapter:
         import hashlib
-        from context_time_travel.inkling_backend import model_contract_id
+        from context_time_travel.inkling_backend import PACK_HASHES, model_contract_id
         expected_contract = model_contract_id(
-            adapter_sha256=hashlib.sha256(args.adapter.read_bytes()).hexdigest())
+            adapter_sha256=hashlib.sha256(args.adapter.read_bytes()).hexdigest(), weights_sha256=PACK_HASHES[args.pack])
     key = (args.runtime / 'pcc-http.key').read_text().strip()
 
     def call(path, payload):

@@ -48,8 +48,6 @@ def model_contract_id(vision=False, adapter_sha256=None, weights_sha256=MODEL_SH
 def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None, capacity=8192, grammar=False, draft=False, gpus=1, pack="SQ-20"):
     if pack not in PACK_HASHES:
         raise ValueError('Unknown Inkling pack')
-    if adapter and pack != 'SQ-20':
-        raise ValueError('This head adapter format is pinned to SQ-20 weights')
     weights = PACK_HASHES[pack]
     bridge = str(runtime / 'native-build/libinkling_pcc_bridge.so')
     build = {'sha256': {bridge: digest_file(bridge)}}
@@ -230,7 +228,7 @@ class InklingBackend(NativeBackend):
             raise IntegrityError('Inkling adapter fingerprint mismatch')
         magic, rank, base = HEAD_ADAPTER_HEADER.unpack_from(data)
         split = HEAD_ADAPTER_HEADER.size + rank * HEAD_WIDTH * 4
-        if (magic != HEAD_ADAPTER_MAGIC or base.hex() != MODEL_SHA256 or not 1 <= rank <= 16
+        if (magic != HEAD_ADAPTER_MAGIC or base.hex() != self.profile['model_weights_sha256'] or not 1 <= rank <= 16
                 or len(data) != split + rank * vocab * 4):
             raise IntegrityError('Invalid Inkling head LoRA geometry or base identity')
         if self.lib.ctt_attach_head_lora(model, rank, C.c_char_p(data[HEAD_ADAPTER_HEADER.size:split]),
@@ -292,7 +290,7 @@ class InklingBackend(NativeBackend):
             if self.adapter_sha256 or self.vision_path:
                 raise IntegrityError('Unsupported DSpark model configuration')
         weights = profile['model_weights_sha256']
-        if (weights not in PACK_HASHES.values() or (self.adapter_sha256 and weights != MODEL_SHA256)
+        if (weights not in PACK_HASHES.values()
                 or profile['model_contract_id'] != model_contract_id(bool(self.vision_path), self.adapter_sha256, weights)
                 or type(self.context_capacity) is not int or not 8192 <= self.context_capacity <= 133120
                 or any(execution.get(key) != value for key, value in required.items() if key != 'capacity')
