@@ -1,0 +1,4 @@
+topology,worker,station,document_tokens,root_load_s,lookup_s,expected,answer,exact,save_s,forward_tokens,checkpoint_import_bytes,resident_parent_restores,completed_group_wall_s,completed_requests_overlap_s,error
+llm60-18gib-disk-repeat,0,17,130000,31.548,7.314,34,34 degrees.,False,3.115,35,0,1,21.537,7.314,
+llm60-18gib-disk-repeat,0,5712,130000,31.548,21.537,63,63 degrees.,False,3.135,35,0,1,21.537,7.314,
+llm60-18gib-disk-repeat,0,11182,130000,31.548,14.683,49,49 degrees.,False,3.19,35,0,1,21.537,7.314,
