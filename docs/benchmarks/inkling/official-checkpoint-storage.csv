@@ -1,0 +1,6 @@
+file,storage_dtype,tensor_count,tensor_bytes
+model-00001-of-00001.safetensors,BF16,994,3854435328
+model-00001-of-00001.safetensors,F32,154,991392
+model-00001-of-00001.safetensors,F8_E4M3,48,5350883328
+model-00001-of-00001.safetensors,U8,48,10319560704
+mtp.safetensors,BF16,54,635795744
