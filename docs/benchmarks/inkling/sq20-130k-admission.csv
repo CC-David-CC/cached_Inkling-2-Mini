@@ -1,0 +1,3 @@
+operation,phase,host_available_kib,worker_rss_kib,minimum_available_bytes,admitted
+load_parent,after execution before checkpoint preparation,11140132,20759000,8589934592,True
+ask_first_child,after execution before checkpoint preparation,6847328,25139580,8589934592,False
