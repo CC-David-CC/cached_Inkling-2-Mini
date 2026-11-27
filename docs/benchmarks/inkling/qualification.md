@@ -131,3 +131,9 @@ On llm-60, the SQ-10 HTTP server created a 128-token parent, generated two token
 ### BranchWrite document lookup and restart at 128K
 
 BranchWrite loaded a deterministic 131,072-token station register on llm-60 using SQ-10. The rendered parent contained 131,119 tokens. Station 00037 returned “orange” using the resident parent with zero checkpoint bytes imported. The 18-token child checkpoint occupied 8,173,032 payload bytes including logits. BranchWrite forked that child and asked for station 02478. The warm branch and two fresh server processes returned “pink” and matched on all 24 generated tokens and the final payload hash. Each cold request imported 4,475,486,208 bytes and processed only the 39 new input and output tokens. The last restart used the published Python source at 982a962. These are two distinct lookup questions on one document. [BranchWrite receipts, layout and elapsed times](branchwrite-128k-suffix-restart.json)
+
+### Two simultaneous BranchWrite lookups
+
+![Durable response latency for sequential and concurrent lookups](branchwrite-128k-pair.png)
+
+Two clients' requests were issued together from sibling branches of the 131,119-token rendered register on llm-60. Both matched their sequential controls on visible label, generated token IDs and checkpoint payload hash. All four warm requests reused the resident parent with zero checkpoint bytes imported. This run used a single GPU worker, a cold warm-up followed by sequential controls, and one simultaneously submitted pair. The RAM pool held the compact child after capture, allowing the worker to release its full host image. [Per-request counters and timings](branchwrite-128k-pair.jsonl)

@@ -2581,6 +2581,10 @@ class ContextCoordinator:
                     with self.pool.reserve(estimate,timeout=self._admission_timeout) as reservation:
                         prepared, key = self._prepare_publication(bound, sid)
                         reservation.admit(key,prepared.checkpoint,durable=False)
+                    if key[-1] == 'suffix':
+                        # The publication pool owns the compact image, including retries.
+                        # Keeping its full exported sibling here costs a prompt-sized RAM allocation.
+                        model.cache.pop(sid, None)
                     # The immutable bytes are now admitted and can be restored
                     # by another independent slot while this branch publishes.
                     self._release_prefill(job)
