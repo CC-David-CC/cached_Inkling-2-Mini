@@ -1,0 +1,4 @@
+profile,existing query,optional terminator,recursive query,one column empty,three columns empty,multiple statements,write,fenced query,progress limit
+historical,True,True,False,False,False,True,True,True,True
+fixed,True,True,True,True,True,True,True,True,True
+official-NVFP4-MXFP8,False,False,False,False,False,False,False,False,False
