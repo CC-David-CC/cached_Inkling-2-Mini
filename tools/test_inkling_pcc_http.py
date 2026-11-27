@@ -68,7 +68,8 @@ def main():
         assert 1 <= len(answer['answer']['tokens']) <= limit, answer
         if args.dspark_long:
             assert len(answer['answer']['tokens']) == limit
-            assert answer['answer']['counter_deltas']['draft_nodes'] > 0
+            counters = answer['answer']['counter_deltas']
+            assert 0 < counters['drafts_accepted'] <= counters['draft_nodes']
         elif args.chat:
             assert answer['answer']['text'].strip() == '4', answer
         args.fixture.write_text(json.dumps(dict(branch=right, root=right_root, answer=answer)))
@@ -85,7 +86,8 @@ def main():
         assert forward == generated + (2 if args.chat else 0), answer
         if args.dspark_long:
             assert len(answer['answer']['tokens']) == limit
-            assert answer['answer']['counter_deltas']['draft_nodes'] > 0
+            counters = answer['answer']['counter_deltas']
+            assert 0 < counters['drafts_accepted'] <= counters['draft_nodes']
         elif args.chat:
             assert answer['answer']['text'].strip() == '4', answer
         print(json.dumps(dict(result='restart matched', generated=generated, forward=forward,

@@ -119,6 +119,10 @@ class InklingBackend(NativeBackend):
     def _load_model(self):
         self.lib.ctt_model_work.argtypes = [C.c_void_p]
         self.lib.ctt_model_work.restype = C.c_uint64
+        self._drafts_accepted = getattr(self.lib, "ctt_drafts_accepted", None)
+        if self._drafts_accepted is not None:
+            self._drafts_accepted.argtypes = [C.c_void_p]
+            self._drafts_accepted.restype = C.c_uint64
         self.lib.ctt_import_checkpoint.argtypes = [
             C.c_void_p, C.c_void_p, C.c_size_t, C.c_int,
             C.POINTER(C.c_float), C.c_size_t,
@@ -373,6 +377,8 @@ class InklingBackend(NativeBackend):
                                 resident_child_restores=self.stats.get('resident_child_restores', 0),
                                 checkpoint_import_bytes=self.stats['checkpoint_import_bytes'])
             if self.draft:
+                if self._drafts_accepted is not None:
+                    counters["drafts_accepted"] = self._drafts_accepted(self.model)
                 counters["draft_nodes"] = self.stats.get("draft_nodes", 0)
             return counters
 

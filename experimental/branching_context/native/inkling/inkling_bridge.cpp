@@ -24,6 +24,7 @@ struct Model {
     bool dspark = false;
     int lora_rank = 0;
     uint64_t work = 0;
+    uint64_t drafts_accepted = 0;
     bool leased = false;
     int pinned_length = 0;
     int exported_length = 0;
@@ -78,6 +79,7 @@ void* ctt_load(const char* path) { return ctt_load_capacity(path, default_capaci
 
 void ctt_unload(void* model) { delete static_cast<Model*>(model); }
 int ctt_vocab(void* model) { return static_cast<Model*>(model)->file.m.c.vocab_unpadded; }
+uint64_t ctt_drafts_accepted(void* model) { return static_cast<Model*>(model)->drafts_accepted; }
 uint64_t ctt_model_work(void* model) { return static_cast<Model*>(model)->work; }
 
 int ctt_meta(void*, const char* key, char* value, size_t size) {
@@ -316,6 +318,9 @@ int ctt_draft_block(void* raw, int remaining, int32_t* output, int* verified_nod
     lease.length += last;
     lease.model.work += last;
     if (ctt_consume(raw, output + last, 1)) return -1;
+    // The tree walk ends with a verifier token. An early EOG can truncate
+    // the committed path before that token, as in the stock greedy server.
+    if (n > 0) lease.model.drafts_accepted += std::min(last, n - 1);
     return last + 1;
 } catch (const std::exception& e) {
     error = e.what();

@@ -14,11 +14,15 @@ Each bar measures one cold request on one RTX PRO 6000 Blackwell, with SQ-20 wei
 
 [Download the underlying long-context measurements](docs/benchmarks/inkling/long-context.csv)
 
-Stock Strata reported prompt processing speed and the number of DSpark draft tokens offered and accepted. Cached recorded proposed tree nodes only in these runs, so its acceptance rate is unknown.
+Stock Strata reported prompt processing speed and the number of DSpark draft tokens offered and accepted. Cached repeated the same workload after accepted-node accounting was added. Both engines produced identical output text at each length.
 
 ![Stock Strata prefill speed and DSpark acceptance for 64K and 128K inputs](docs/benchmarks/inkling/stock-dspark.png)
 
 [Download the prefill and proposal counts](docs/benchmarks/inkling/stock-dspark.csv)
+
+![Accepted and proposed DSpark nodes by engine and context length](docs/benchmarks/inkling/dspark-acceptance.png)
+
+[Download the cross-engine proposal counts](docs/benchmarks/inkling/dspark-acceptance.csv)
 
 ### Three questions on one 128K document
 
@@ -300,6 +304,6 @@ For the single-GPU unadapted greedy text profile, apply
 Launch with `INKLING_EXACT_HEAD=1 python tools/inkling_pcc_serve.py RUNTIME --dspark`.
 The selected output projection and drafting mode participate in checkpoint identity.
 The server commits a full verifier frontier at the end of each speculative block.
-The `draft_nodes` counter reports proposed tree nodes. Use the complete HTTP
+The `draft_nodes` counter reports proposed tree nodes. Updated bridges also report `drafts_accepted` for committed proposals under the stock greedy tree-walk accounting rule. Use the complete HTTP
 operation, including root creation and branch acknowledgment, to measure
 end-to-end throughput.
