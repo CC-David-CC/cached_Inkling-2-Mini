@@ -1,0 +1,7 @@
+case,common_output_tokens,execution,first_token_id,first_logit,second_token_id,second_logit
+latest,20,cached_http_checkpoint,198557,27.516225814819336,158503,27.366600036621094
+latest,20,instrumented_native_9GiB,158503,27.5369625,198557,27.294672
+permissions,11,cached_http_checkpoint,200010,17.926227569580078,264,17.772323608398438
+permissions,11,instrumented_native_9GiB,200010,18.6771374,264,18.5631657
+latest,20,instrumented_native_9GiB_opener_pin,198557,27.5187111,158503,27.3646164
+permissions,11,instrumented_native_9GiB_opener_pin,200010,17.9438076,264,17.7999077
