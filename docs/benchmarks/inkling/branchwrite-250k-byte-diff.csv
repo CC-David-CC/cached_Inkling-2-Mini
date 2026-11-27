@@ -1,0 +1,4 @@
+position,state_bytes_different,first_state_difference,last_state_difference,logits_different_bits,max_abs_logit_difference,argmax_equal
+early,4408444,451584,7372799,200057,1.4587669372558594,True
+middle,5274908,344064,9142270,200058,1.1360990703105927,True
+late,4809500,104448,7372798,200056,0.6906032562255859,True
