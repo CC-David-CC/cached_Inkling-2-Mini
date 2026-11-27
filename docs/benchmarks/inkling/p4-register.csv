@@ -1,0 +1,4 @@
+gpu,input_tokens,decode_steps,prefill_seconds,prefill_tok_s,decode_tok_s,free_mib,visible_answer,correct
+0,65504,32,1079.8,60.66,7.37993,1584,23,True
+1,65504,32,1126.95,58.13,7.5687,1686,23,True
+2,65504,32,1075.85,60.89,7.55774,1686,23,True
