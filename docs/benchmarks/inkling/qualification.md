@@ -99,3 +99,9 @@ With Qwen3.8-Flash-Next IQ3_XXS on the r730, pooling three cards gave one reques
 Three sequential SQ-10 lookups on llm-60 reused the same 130,000-token parent with zero imported checkpoint bytes. Saving each child took 3.11–3.25 seconds of its 7.30–7.44 second request. All three retrieved the expected temperature and added “degrees.”, failing the number-only scoring rule. [Lookup timings and answers](warm-130k-llm60-18gib-disk-sequential.csv)
 
 ![Child checkpoint time within three warm document lookups](warm-130k-checkpoint-cost.png)
+
+### Resident parent selection and child suffix transfer at 128K
+
+![Median parent selection, suffix import and suffix export time on llm-60](suffix-128k-phases.png)
+
+Two SQ-10 branches extended the same 131,072-token parent by two tokens each. Each switch in B → A → B order imported 4,227,072 bytes and reproduced 200,058 continuation logits. Reusing the verified immutable checkpoint owner reduced median parent selection from 1,660 ms to 22.2 ms. Suffix import took another 11.2 ms. Measurements cover the Python backend after prefill. HTTP publication and durable restart remain open. [Per-observation measurements](suffix-128k-phases.csv)
