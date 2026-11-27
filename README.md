@@ -500,6 +500,13 @@ all seven proposed IDs, the three committed IDs, and the final full-logit
 hash matched uninterrupted generation. The native forward counter stayed at
 34 throughout restore. [Run record](docs/benchmarks/inkling/dflash2-paired-ram.jsonl)
 
+A fresh-process test then saved after the first generated token and exited.
+A second process loaded both models independently, restored the target and
+drafter from tmpfs, and generated the remaining chat framing tokens.
+The proposed path and final full-logit hash matched uninterrupted generation.
+The new target had processed zero tokens before and immediately after restore.
+[Fresh-process run record](docs/benchmarks/inkling/dflash2-paired-restart.jsonl)
+
 ### Experimental Cached DSpark text serving
 
 For the single-GPU unadapted greedy text profile, apply
