@@ -44,6 +44,10 @@ On one P4, each warm branch returned all 40 station labels from a 65,035-token r
 
 ![Generation, state save, checkpoint capture and wall time across six single-P4 requests](docs/benchmarks/inkling/p4-65k-state-save.png)
 
+With one 65,035-token parent resident on each P4, three simultaneous HTTP requests delivered 7.52 and 7.90 visible tokens/s combined in two trials. First visible text arrived in 9.79–10.72 seconds. All six responses returned all 40 labels in order with zero checkpoint-import bytes. [Individual timings](docs/benchmarks/inkling/p4-three-warm-http.csv)
+
+![Three simultaneous warm HTTP requests on independent P4 workers](docs/benchmarks/inkling/p4-three-warm-http.png)
+
 ### RTX 4090 and RTX PRO 6000 Blackwell
 
 ![Cached single-request prefill, generation, full HTTP throughput and first-text latency on the RTX 4090 and RTX PRO 6000](docs/benchmarks/inkling/gpu-comparison.png)
