@@ -87,3 +87,9 @@ Results cover the RTX PRO 6000 Blackwell on llm-60 unless a row identifies anoth
 ![Median per-request and whole-machine output rates for Qwen on three P4s](flash-p4-topology.png)
 
 With Qwen3.8-Flash-Next IQ3_XXS on the r730, pooling three cards gave one request 21.65 decode tokens/s. Running one worker per card gave each request 10.40 decode tokens/s and produced 25.41 output tokens/s across the machine over wall time. Each configuration ran four groups. The three-worker trial repeated two tasks across 12 requests. All six Python answers passed their criterion. All six Linux answers reached the output limit and missed the single-filesystem requirement. These short prompts measure a different workload from the 64K Inkling document trials. [Topology measurements](flash-short-prompts-topologies.csv)
+
+### Checkpoint cost for repeated document questions
+
+Three sequential SQ-10 lookups on llm-60 reused the same 130,000-token parent with zero imported checkpoint bytes. Saving each child took 3.11–3.25 seconds of its 7.30–7.44 second request. All three retrieved the expected temperature and added “degrees.”, failing the number-only scoring rule. [Lookup timings and answers](warm-130k-llm60-18gib-disk-sequential.csv)
+
+![Child checkpoint time within three warm document lookups](warm-130k-checkpoint-cost.png)
