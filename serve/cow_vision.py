@@ -89,6 +89,8 @@ class CowVisionPromptEncoder:
     Literal special-looking text uses the existing Service prompt protections.
     Upload identities are references, never filesystem paths or fetched URLs.
     """
+    markers = ('<|vision_start|>', '<|image_pad|>', '<|vision_end|>')
+
     def __init__(self,encoder,*,renderer_id):
         if type(renderer_id) is not str or re.fullmatch('[0-9a-f]{64}',renderer_id) is None:
             raise ValueError('Mixed renderer requires a pinned identity')
@@ -159,7 +161,7 @@ class CowVisionPromptEncoder:
         if len(spans)!=len(refs) or any(span['kind']!='image' for span in spans):
             raise InvalidOperation('Image spans differ from requested placements')
         markers=[]
-        for literal in ('<|vision_start|>','<|image_pad|>','<|vision_end|>'):
+        for literal in self.markers:
             tokens=self.encoder.tok.encode(literal,parse_special=True)
             if len(tokens)!=1:raise InvalidOperation('Template requires single vision marker IDs')
             markers.append(tokens[0])

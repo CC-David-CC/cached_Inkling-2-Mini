@@ -178,6 +178,25 @@ visible answer `4` before and after restart with the same numerical payload
 SHA-256. The counter recorded three generated tokens and two appended
 assistant framing tokens.
 
+### PCC HTTP vision service
+
+Start a separate Inkling vision profile with Pillow installed and the pinned
+vision tower in the runtime directory.
+
+```bash
+python tools/inkling_pcc_serve.py /mnt/fast_cache/inkling --vision --port 18062
+```
+
+The default vision store is `pcc-vision-http-store`. Use `/cow/namespace`,
+`/cow/images`, `/cow/text/prepare`, and `/cow/text/answer` for a prepared
+image question. The service binds image inputs to the normalized bytes,
+encoder profile, and embedding digest. It accepts PNG and JPEG uploads and
+uses the same private bearer token as the text service. New image questions
+currently use a new prepared prompt.
+
+Run `tools/test_inkling_pcc_vision_http.py RUNTIME FIXTURE write`, restart the
+vision service with the same store, then run the test in `read` mode.
+
 ### DFlash2 and Splash
 
 [Splash](https://github.com/incoai/splash) is an Apple Silicon engine with

@@ -17,10 +17,13 @@ from context_time_travel.coordinator import ContextCoordinator
 from context_time_travel.inkling_backend import runtime_profile
 from context_time_travel.pools import PoolConfig
 from context_time_travel.real import BranchingModel
+from context_time_travel.store import Store
 from serve.cow_adapter import CowAdapter
 from serve.cow_http import make_server
 from serve.cow_inkling_prompt import text_components
 from serve.cow_text_adapter import CowTextAdapter
+from serve.cow_vision import CowImageNormalizer
+from serve.cow_inkling_vision import InklingVisionPreparer
 
 
 def local_key(path):
@@ -46,13 +49,18 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('runtime', type=Path)
     parser.add_argument('--store', type=Path)
+    parser.add_argument('--vision', action='store_true')
     parser.add_argument('--port', type=int, default=18061)
     args = parser.parse_args()
     runtime = args.runtime.resolve(strict=True)
-    directory = args.store or runtime / 'pcc-http-store'
+    directory = args.store or runtime / ('pcc-vision-http-store' if args.vision else 'pcc-http-store')
     key = local_key(runtime / 'pcc-http.key')
-    profile = runtime_profile(runtime)
-    components = text_components(runtime)
+    normalizer = CowImageNormalizer() if args.vision else None
+    profile = runtime_profile(runtime, vision=args.vision,
+                              normalizer_id=normalizer.identity if normalizer else None)
+    components = text_components(runtime, vision=args.vision)
+    preparer = (InklingVisionPreparer(Store(directory), normalizer, components['mixed_renderer'], profile)
+                if args.vision else None)
 
     def factory(gpu):
         backend = load_backend(profile, gpu_id=gpu)
@@ -64,11 +72,11 @@ def main():
 
     config = PoolConfig(gpus=(0,), ram_bytes=4 * 1024**3, disk_bytes=16 * 1024**3,
                         min_available_bytes=8 * 1024**3)
-    coordinator = ContextCoordinator(directory, config, factory)
+    coordinator = ContextCoordinator(directory, config, factory, input_preparer=preparer)
     try:
         coordinator.ready()
         adapter = CowAdapter(coordinator)
-        text = CowTextAdapter(adapter, **components)
+        text = CowTextAdapter(adapter, **components, vision_preparer=preparer)
         with make_server(adapter, '127.0.0.1', args.port, key, text_adapter=text,
                          connection_info={name: profile[name] for name in
                                           ('model_contract_id', 'execution_profile_id')}

@@ -1,4 +1,7 @@
 """Pinned Inkling byte-level tokenizer and greedy text prompt rendering."""
+from functools import partial
+import hashlib
+from pathlib import Path
 from importlib.util import module_from_spec, spec_from_file_location
 
 from context_time_travel.inkling_backend import TOKENIZER_SHA256
@@ -32,7 +35,7 @@ class InklingTextDecoder:
         return b'' if token in self._framing else self._tokenizer.token_bytes(token)
 
 
-def text_components(runtime):
+def text_components(runtime, *, vision=False):
     source = runtime / 'strata-source/terminal/tools/strata_tokenizer.py'
     tokenizer_path = runtime / 'tokenizer-source.json'
     template_path = runtime / 'tokenizer/chat_template.jinja'
@@ -47,5 +50,22 @@ def text_components(runtime):
     tokenizer = module.Tokenizer.from_hf(tokenizer_path, pre='o200k',
                                          special_ids={'bos': 200028, 'eos': 200006, 'pad': 199999})
     encoder = InklingPromptEncoder(tokenizer, ChatTemplate(template_path), {'reasoning_effort': 'none'})
-    return dict(tokenizer=InklingTextDecoder(tokenizer), render=encoder.render,
-                encode_rendered=encoder.encode_rendered)
+    components = dict(tokenizer=InklingTextDecoder(tokenizer), render=encoder.render,
+                      encode_rendered=encoder.encode_rendered)
+    if vision:
+        from .cow_inkling_vision import InklingVisionPromptEncoder
+        renderer_id = hashlib.sha256(Path(__file__).read_bytes()
+                                     + bytes.fromhex(TOKENIZER_IMPLEMENTATION_SHA256)
+                                     + bytes.fromhex(TOKENIZER_SHA256)
+                                     + bytes.fromhex(TEMPLATE_SHA256)).hexdigest()
+        opener = tuple(tokenizer.encode('<|message_model|><|content_text|>', parse_special=True))
+        components.update(renderer_id=renderer_id,
+                          mixed_renderer=InklingVisionPromptEncoder(encoder, renderer_id=renderer_id),
+                          initial_root_mode=partial(initial_root_mode, opener=opener))
+    return components
+
+
+def initial_root_mode(tokens, controller, *, opener):
+    if controller.get('status') == 'idle' and tuple(tokens[-len(opener):]) == opener:
+        return 'prepared_answer'
+    return 'unsupported'

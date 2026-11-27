@@ -126,16 +126,23 @@ class CowVisionPreparer:
             grants=tuple(held.enter_context(artifacts.lease_uploaded(request['namespace_id'],identity)) for identity in refs)
             yield _AdmittedImages(hashlib.sha256(_json_bytes(request)).hexdigest(),artifacts,grants)
 
+    def supports_worker(self, model):
+        execution = model.profile['execution']
+        return (execution.get('resume_contract') == 'identical-mixed-native-operators-v1'
+                and execution.get('embedding_width') == self.encoder.width
+                and type(getattr(model, 'gpu_id', None)) is int)
+
+    def encode_on_worker(self, model, raw, *, pool, disk, cancelled):
+        return self.encoder.encode(raw, store=model.store, pool=pool, disk=disk,
+                                   gpu_id=model.gpu_id, cancelled=cancelled)
+
     @contextmanager
     def prepare(self,model,request,*,pool,disk,cancelled=None,admission=None,source_snapshot=None):
         if (type(admission) is not _AdmittedImages
                 or admission.request_sha256!=hashlib.sha256(_json_bytes(request)).hexdigest()
                 or admission.artifacts.store.root.resolve()!=model.store.root.resolve()):
             raise InvalidOperation('Image preparation requires its admitted original leases')
-        execution=model.profile['execution']
-        if (execution.get('resume_contract')!='identical-mixed-native-operators-v1'
-                or execution.get('embedding_width')!=self.encoder.width
-                or type(getattr(model,'gpu_id',None)) is not int):
+        if not self.supports_worker(model):
             raise InvalidOperation('Worker does not support this image encoder profile')
         if request['schema']==2:
             from context_time_travel.input_spans import InputHistory,history_for_snapshot
@@ -148,7 +155,7 @@ class CowVisionPreparer:
         elif source_snapshot is not None:
             raise InvalidOperation('Root preparation cannot consume an existing source')
         artifacts=admission.artifacts;images=[];encodings=[];sources=[]
-        pad,=self.renderer.encoder.tok.encode('<|image_pad|>',parse_special=True)
+        pad,=self.renderer.encoder.tok.encode(getattr(self.renderer, 'markers', ('', '<|image_pad|>', ''))[1],parse_special=True)
         with ExitStack() as held:
             for grant in admission.grants:
                 if cancelled is not None and cancelled():raise CancelledError('Image preparation cancelled')
@@ -157,8 +164,7 @@ class CowVisionPreparer:
                     normalized=self.normalizer.normalize(original)
                     held.enter_context(pool.reserve(len(original)+len(normalized.payload)))
                 def encode(raw):
-                    result=self.encoder.encode(raw,store=model.store,pool=pool,disk=disk,
-                        gpu_id=model.gpu_id,cancelled=cancelled)
+                    result=self.encode_on_worker(model,raw,pool=pool,disk=disk,cancelled=cancelled)
                     encodings.append(result.receipt)
                     return result.embedding.payload
                 item=held.enter_context(artifacts.prepare(original=original,normalized=normalized.payload,
@@ -185,8 +191,7 @@ class CowVisionPreparer:
     def reconstruction(self,model,history,*,pool,disk,cancelled=None):
         """Supply retained inputs and verified regeneration on the model worker."""
         execution=model.profile['execution']
-        if (execution.get('resume_contract')!='identical-mixed-native-operators-v1'
-                or execution.get('embedding_width')!=self.encoder.width or type(model.gpu_id) is not int):
+        if not self.supports_worker(model):
             raise InvalidOperation('Worker does not support this image reconstruction profile')
         expected={}
         for span in history.spans:
@@ -209,8 +214,7 @@ class CowVisionPreparer:
                         raise IntegrityError('Re-encoding changed normalized image identity')
                     held.enter_context(pool.reserve(len(normalized.payload)+20+4*self.encoder.width*self.encoder.max_rows))
                 check_cancelled()
-                result=self.encoder.encode(normalized.payload,store=model.store,pool=pool,disk=disk,
-                    gpu_id=model.gpu_id,cancelled=cancelled)
+                result=self.encode_on_worker(model,normalized.payload,pool=pool,disk=disk,cancelled=cancelled)
                 receipt['encoder_calls']+=1;receipt['encodings'].append(result.receipt)
                 check_cancelled();return normalized.payload,result.embedding.payload
             check_cancelled()

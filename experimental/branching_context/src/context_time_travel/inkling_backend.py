@@ -35,7 +35,7 @@ def model_contract_id(vision=False):
     return hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
 
 
-def runtime_profile(runtime, *, vision=False):
+def runtime_profile(runtime, *, vision=False, normalizer_id=None):
     bridge = str(runtime / 'native-build/libinkling_pcc_bridge.so')
     build = {'sha256': {bridge: digest_file(bridge)}}
     execution = dict(EXECUTION,
@@ -47,6 +47,8 @@ def runtime_profile(runtime, *, vision=False):
     extra = {}
     if vision:
         execution.update(VISION_EXECUTION)
+        if normalizer_id is not None:
+            execution['vision_normalizer_id'] = normalizer_id
         extra['vision_path'] = str(runtime / 'Inkling-2-Mini-Vision.strata')
     identity = dict(build=build, execution=execution, hardware=hardware)
     return dict(backend='inkling-cuda', bridge_library=bridge, native_build=build,
