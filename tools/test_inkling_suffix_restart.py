@@ -6,7 +6,6 @@ from pathlib import Path
 import struct
 
 from context_time_travel.backend_registry import load_backend
-from context_time_travel.checkpoint_cache import validate_manifest
 from context_time_travel.digest_attestation import restore_payload_digest
 from context_time_travel.inkling_backend import runtime_profile
 from context_time_travel.real import BranchingModel
@@ -49,7 +48,7 @@ def main():
                 data = suffix + struct.pack(row_format, *row)
                 manifest = dict(required, state_bytes=len(suffix), payload_sha256=hashlib.sha256(data).hexdigest())
                 envelope = dict(manifest=manifest, checksum=hashlib.sha256(_json_bytes(manifest)).hexdigest())
-                (args.store / 'child.state').write_bytes(data)
+                model._publish_checkpoint_file(model.checkpoint_directory / (manifest['payload_sha256'] + '.state'), data)
                 backend.consume(lease, (501,))
                 expected = hashlib.sha256(struct.pack(row_format, *backend.logits(lease))).hexdigest()
             fixture.write_text(json.dumps(dict(child=child, envelope=envelope, expected=expected)))
@@ -59,20 +58,15 @@ def main():
         altered = dict(envelope['manifest'], parent_payload_sha256='0' * 64)
         before = backend.work_counters()
         try:
-            validate_manifest(dict(manifest=altered, checksum=hashlib.sha256(_json_bytes(altered)).hexdigest()), required)
+            with model.materialize_suffix(child, dict(manifest=altered, checksum=hashlib.sha256(_json_bytes(altered)).hexdigest())):
+                raise AssertionError('Invalid suffix reached a live lease')
         except IntegrityError:
             pass
         else:
             raise AssertionError('Rechecksummed child accepted the wrong parent payload')
         assert before == backend.work_counters()
-        manifest = validate_manifest(envelope, required)
-        data = (args.store / 'child.state').read_bytes()
-        assert hashlib.sha256(data).hexdigest() == manifest['payload_sha256']
-        suffix_bytes = manifest['state_bytes']
-        row = struct.unpack(row_format, data[suffix_bytes:])
-        with model.materialize(parent) as (lease, _):
-            digest = restore_payload_digest(model.cache[parent].blob)
-            assert backend.restore_pinned_suffix(lease, len(parent_history), digest, len(history), data[:suffix_bytes], row)
+        suffix_bytes = envelope['manifest']['state_bytes']
+        with model.materialize_suffix(child, envelope) as (lease, _):
             backend.consume(lease, (501,))
             assert hashlib.sha256(struct.pack(row_format, *backend.logits(lease))).hexdigest() == saved['expected']
         assert backend.work_counters()['consumed_tokens'] == 1

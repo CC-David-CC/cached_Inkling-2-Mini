@@ -1592,9 +1592,48 @@ class BranchingModel:
         except (OSError,ValueError,struct.error) as exc:
             raise IntegrityError('Invalid checkpoint payload') from exc
 
+    @contextmanager
+    def materialize_suffix(self, snapshot, envelope):
+        """Restore a stored Inkling suffix over its exact canonical parent."""
+        from .checkpoint_cache import validate_manifest
+        from .digest_attestation import restore_payload_digest
+
+        self.store.authorize(snapshot, 'materialize')
+        restore = getattr(self.backend, 'restore_pinned_suffix', None)
+        if self.profile.get('backend') != 'inkling-cuda' or not callable(restore):
+            raise InvalidOperation('Backend does not support Inkling suffix checkpoints')
+        with self.store.read_lease(snapshot):
+            record = self.store.get_snapshot(snapshot)
+            parent = record['parent']
+            if not parent or record['model_contract_id'] != self.profile['model_contract_id']:
+                raise IntegrityError('Invalid suffix snapshot or model contract')
+            self.store.authorize(parent, 'materialize')
+            with self.store.read_lease(parent):
+                history = self.history(snapshot)
+                parent_manifest = self.checkpoint_manifest(parent)
+                required = dict(schema=5, snapshot=snapshot, consumed=len(history),
+                    input_identity=self._input_identity(history), **self._checkpoint_position_binding(history),
+                    logits_count=self.backend.vocab_size, model_contract_id=self.profile['model_contract_id'],
+                    execution_profile_id=self.profile['execution_profile_id'], parent_snapshot=parent,
+                    parent_consumed=parent_manifest['consumed'], parent_payload_sha256=parent_manifest['payload_sha256'])
+                manifest = validate_manifest(envelope, required)
+                child = self._read_checkpoint_payload(manifest)
+                with self._materialize(parent) as (lease, _):
+                    owner = self.cache[parent]
+                    if owner.checksum != required['parent_payload_sha256']:
+                        raise IntegrityError('Resident parent differs from suffix binding')
+                    if not restore(lease, owner.consumed, restore_payload_digest(owner.blob),
+                                   child.consumed, child.blob, child.frontier):
+                        raise IntegrityError('Native suffix restore unavailable')
+                    if self.backend.position(lease) + 1 != child.consumed:
+                        raise IntegrityError('Restored suffix position mismatch')
+                    yield lease, child.frontier
+
     def _load_checkpoint(self, snapshot, history):
+        return self._read_checkpoint_payload(self.checkpoint_manifest(snapshot, history))
+
+    def _read_checkpoint_payload(self, manifest):
         try:
-            manifest = self.checkpoint_manifest(snapshot,history)
             schedule = tuple(manifest.get('execution_schedule',()))
             sha = manifest['payload_sha256']
             size = manifest['state_bytes']
@@ -1613,7 +1652,7 @@ class BranchingModel:
             logits = struct.unpack('<'+str(self.backend.vocab_size)+'f',frontier)
             if not all(map(math.isfinite, logits)):
                 raise IntegrityError('Nonfinite checkpoint frontier')
-            return Checkpoint(manifest['model_contract_id'],manifest['execution_profile_id'],len(history),
+            return Checkpoint(manifest['model_contract_id'],manifest['execution_profile_id'],manifest['consumed'],
                 state,logits,sha,manifest['input_identity'],schedule)
         except (OSError,KeyError,TypeError,ValueError) as error:
             raise IntegrityError('Invalid or incomplete checkpoint') from error
