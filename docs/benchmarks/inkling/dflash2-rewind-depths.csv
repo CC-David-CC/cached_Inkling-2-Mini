@@ -1,0 +1,13 @@
+test,prompt,accepted_draft_tokens,next_reference_token,exact_continuation_rows,logits_per_row
+original proposal,python,2,68019,4,200058
+original proposal,linux,3,1219,4,200058
+original proposal,repeat,7,150682,4,200058
+original proposal,json,7,18,4,200058
+depth sweep,repeat,0,152778,4,200058
+depth sweep,repeat,1,150682,4,200058
+depth sweep,repeat,2,152778,4,200058
+depth sweep,repeat,3,150682,4,200058
+depth sweep,repeat,4,152778,4,200058
+depth sweep,repeat,5,150682,4,200058
+depth sweep,repeat,6,152778,4,200058
+depth sweep,repeat,7,150682,4,200058
