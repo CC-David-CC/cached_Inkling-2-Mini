@@ -122,6 +122,25 @@ class CowWorkspaceTests(unittest.TestCase):
         self.assertTrue(answer["boundary_available"])
         self.assertFalse(answer["incomplete"])
 
+    def test_reopened_inkling_assistant_projects_only_visible_channel(self):
+        from serve.cow_inkling_effort import InklingWorkspaceDecoder
+
+        root = self._root()
+        self.tokenizer.special_tokens = {
+            "<|content_thinking|>": 31, "<|content_text|>": 32,
+            "<|message_model|>": 33, "<|end_message|>": 34,
+        }
+        self.tokenizer.mapping[31] = b"<|content_thinking|>"
+        tokens = (31, 5, 32, 6, 34)
+        self._answer(root, output=tokens, status="stopped")
+        reopened = CowWorkspace(Store(self.tmp.name), InklingWorkspaceDecoder(self.tokenizer))
+        answer = reopened.history("chat")["messages"][-1]
+        self.assertEqual((answer["text"], answer["content"]), ("B", "B"))
+        self.assertEqual(answer["token_count"], len(tokens))
+        previews = [n["preview"] for n in reopened.graph(self.ns)["nodes"]
+                    if n["role"] == "assistant"]
+        self.assertEqual(previews, ["B"])
+
     def test_pending_assistant_is_durable_incomplete_not_provisional(self):
         root = self._root()
         target, _head, _binding = self._answer(root, output=(3,), status="active",
