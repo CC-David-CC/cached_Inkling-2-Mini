@@ -14,6 +14,8 @@ context. GPU count is a runtime setting for later trials.
 
 Each process used SQ-10, greedy native decoding, FP16 device KV and drafting off. The three one-card workers started concurrently. Each combined run served a single stream and placed every expert on the selected GPUs. Each bar represents one 512-token prompt and 128 generated tokens. [Download the rates](docs/benchmarks/inkling/p4-topology.csv) and [see the separate 64K capacity check](docs/benchmarks/inkling/p4-capacity.csv).
 
+At 64K, three SQ-10 workers with all experts in host RAM decoded 32 steps each after a synchronized start from synthetic 65,504-token FP16 KV states. Across the common wall-clock interval the three cards produced **15.21 output tok/s combined**. The interval includes native decode, finite-logit checks and greedy selection. Real prompt prefill is outside this measurement. [Per-stream timing](docs/benchmarks/inkling/p4-64k-decode.csv)
+
 ### RTX 4090 and RTX PRO 6000 Blackwell
 
 ![Cached single-request prefill, generation, full HTTP throughput and first-text latency on the RTX 4090 and RTX PRO 6000](docs/benchmarks/inkling/gpu-comparison.png)
