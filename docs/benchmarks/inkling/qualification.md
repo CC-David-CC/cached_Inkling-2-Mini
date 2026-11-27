@@ -107,3 +107,9 @@ Three sequential SQ-10 lookups on llm-60 reused the same 130,000-token parent wi
 Two SQ-10 branches extended the same 131,072-token parent by two tokens each. Each switch in B → A → B order imported 4,227,072 bytes and reproduced 200,058 continuation logits. Reusing the verified immutable checkpoint owner reduced median parent selection from 1,660 ms to 22.2 ms. Suffix import took another 11.2 ms. Measurements cover the Python backend after prefill. HTTP publication and durable restart remain open. [Per-observation measurements](suffix-128k-phases.csv)
 
 With 512 fixed continuation tokens per child, each switch transferred 104,497,152 bytes. Median verified parent selection took 22.3 ms, suffix import 18.0 ms and suffix export 103.4 ms. All three switches reproduced the uninterrupted continuation logits. Reproduce this row with `--parent-tokens 131072 --child-tokens 512`.
+
+### HTTP checkpoint storage at 131,072 tokens
+
+![Two requests took 6.58 and 7.07 seconds. The parent and first child each occupied 4.16 GiB.](http-128k-siblings.png)
+
+On llm-60, both sequential SQ-10 requests used the resident parent and ran two forward tokens. Each returned tokens 172 and 173 with the same checkpoint hash. The NVMe store held two distinct payload files. The identical sibling reused the first child's file. A separate HTTP process-restart run using tmpfs reproduced that child hash from the saved parent. Suffix-only HTTP publication remains open. [Request counters and file sizes](http-128k-siblings.json)

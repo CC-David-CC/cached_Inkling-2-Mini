@@ -1,0 +1,49 @@
+{
+  "host": "llm-60",
+  "pack": "SQ-10",
+  "draft": false,
+  "parent_tokens": 131072,
+  "storage": "NVMe",
+  "source_commit": "f44265102df9c0caa2a6e7427217c828ba206c08",
+  "bridge_sha256": "2f617bb554a13a78022a249b448b1f4df838a864ba5398e49fa5fe0890ec27cb",
+  "requests": [
+    {
+      "seconds": 6.575201764004305,
+      "counters": {
+        "consumed_tokens": 2,
+        "forward_tokens": 2,
+        "resident_parent_restores": 1,
+        "resident_child_restores": 0,
+        "checkpoint_import_bytes": 0
+      },
+      "parent": "069e391a51c25daa6015212873394445c46af45717271bf8b7641f7a645ff6ab",
+      "branch": "recovery-3f8dcb3cb11347d7b38f76c7c19a07a8",
+      "tokens": [
+        172,
+        173
+      ],
+      "payload": "d6e5a5a8ff846d922fe323fe08de2245a5ea06d619063867426bf75d7e0794b9"
+    },
+    {
+      "seconds": 7.071035392116755,
+      "counters": {
+        "consumed_tokens": 2,
+        "forward_tokens": 2,
+        "resident_parent_restores": 1,
+        "resident_child_restores": 0,
+        "checkpoint_import_bytes": 0
+      },
+      "parent": "069e391a51c25daa6015212873394445c46af45717271bf8b7641f7a645ff6ab",
+      "branch": "fork-36c35fb481c64225a4bbe20089d49e03",
+      "tokens": [
+        172,
+        173
+      ],
+      "payload": "d6e5a5a8ff846d922fe323fe08de2245a5ea06d619063867426bf75d7e0794b9"
+    }
+  ],
+  "payload_bytes": {
+    "d6e5a5a8ff846d922fe323fe08de2245a5ea06d619063867426bf75d7e0794b9": 4467439080,
+    "dfeedc5cc3ddae9affc883e7648eacdef6d225fc25834033d3e3d89e05ffd59f": 4467373544
+  }
+}
