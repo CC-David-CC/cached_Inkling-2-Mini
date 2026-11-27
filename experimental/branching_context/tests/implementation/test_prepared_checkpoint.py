@@ -94,6 +94,32 @@ class PreparedCheckpointTests(unittest.TestCase):
         payload.write_bytes(b'corrupt')
         with self.assertRaises(IntegrityError): self.model.save_prepared_branch('main',0,ready,'save')
 
+    def test_suffix_branch_save_requires_intact_parent_payload(self):
+        import hashlib
+        from context_time_travel.real import PreparedCheckpoint
+        from context_time_travel.store import _json_bytes
+
+        parent = self.prepared()
+        self.model.profile.update(backend='inkling-cuda', execution=dict(draft='off', state_format='inkling-cuda-fp16-v1'))
+        files = self.model.publish_prepared_checkpoint(parent)
+        self.model.store.fork('main', self.sid)
+        child = self.model.store.append(self.sid, (3,), {'status': 'idle'})
+        with self.model._suffix_binding(child) as (_, binding):
+            cold = Checkpoint.create('model', 'execution', 3, b'suffix', (1., 2.), binding['input_identity'])
+            manifest = dict(binding, state_bytes=len(cold.blob), payload_sha256=cold.checksum)
+            envelope = _json_bytes(dict(manifest=manifest, checksum=hashlib.sha256(_json_bytes(manifest)).hexdigest()))
+        prepared = PreparedCheckpoint(child, cold, envelope)
+        payload = files['payload_path'].read_bytes()
+        files['payload_path'].write_bytes(bytes([payload[0] ^ 1]) + payload[1:])
+        with self.assertRaises(IntegrityError):
+            self.model.save_prepared_branch('main', 0, prepared, 'save-child')
+        self.assertEqual(self.model.store.head('main').revision, 0)
+        self.assertFalse((self.model.checkpoint_directory / (child + '.json')).exists())
+        files['payload_path'].write_bytes(payload)
+        receipt = self.model.save_prepared_branch('main', 0, prepared, 'save-child')
+        self.assertEqual(receipt, self.model.save_prepared_branch('main', 0, prepared, 'save-child'))
+        self.assertEqual(receipt['branch']['revision'], 1)
+
     def test_new_payload_corrupted_during_publication_cannot_move_branch(self):
         self.prepared();self.model.checkpoint(self.sid)
         self.model.store.fork('main',self.sid)

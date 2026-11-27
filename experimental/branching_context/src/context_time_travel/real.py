@@ -1286,6 +1286,11 @@ class BranchingModel:
         """CPU/filesystem-only writer; never acquires a native execution lease."""
         if not isinstance(prepared,PreparedCheckpoint): raise IntegrityError('Invalid prepared checkpoint')
         self.store.authorize(prepared.snapshot,'checkpoint')
+        if self.profile.get('backend') == 'inkling-cuda':
+            envelope = _decode(prepared.envelope)
+            manifest = envelope.get('manifest') if isinstance(envelope, dict) else None
+            if isinstance(manifest, dict) and manifest.get('schema') == 5:
+                return self.publish_suffix_checkpoint(prepared)
         cold = prepared.checkpoint
         history = self.history(prepared.snapshot)
         expected = PreparedCheckpoint(prepared.snapshot,cold,
@@ -1661,7 +1666,8 @@ class BranchingModel:
         if not isinstance(prepared, PreparedCheckpoint):
             raise IntegrityError('Invalid prepared suffix checkpoint')
         self.store.authorize(prepared.snapshot, 'checkpoint')
-        with self._suffix_binding(prepared.snapshot) as (_, required):
+        with self._suffix_binding(prepared.snapshot) as (parent, required):
+            self.validate_checkpoint(parent)
             child = prepared.checkpoint
             if (type(child.blob) is not bytes or len(child.frontier) != required['logits_count']
                     or not all(map(math.isfinite, child.frontier))

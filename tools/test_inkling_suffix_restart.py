@@ -39,8 +39,11 @@ def main():
         row_format = f'<{backend.vocab_size}f'
         if args.phase == 'write':
             prepared = model.prepare_suffix_checkpoint(child)
-            first = model.publish_suffix_checkpoint(prepared)
-            assert model.publish_suffix_checkpoint(prepared) == first
+            model.store.fork('restart-test', parent)
+            first = model.save_prepared_branch('restart-test', 0, prepared, 'save-child')
+            assert first['branch']['revision'] == 1 and first['branch']['tip'] == child
+            assert first['payload_sha256'] == prepared.checkpoint.checksum
+            assert model.save_prepared_branch('restart-test', 0, prepared, 'save-child') == first
             with model.materialize(child) as (lease, _):
                 backend.consume(lease, (501,))
                 expected = hashlib.sha256(struct.pack(row_format, *backend.logits(lease))).hexdigest()
@@ -51,6 +54,8 @@ def main():
                                                greedy_tokens=answer['tokens'], result_hash=result_hash)))
             return
 
+        head = model.store.head('restart-test')
+        assert head.tip == child and head.revision == 1
         envelope = json.loads((model.checkpoint_directory / (child + '.json')).read_bytes())
         altered = dict(envelope['manifest'], parent_payload_sha256='0' * 64)
         before = backend.work_counters()
@@ -85,7 +90,7 @@ def main():
                               final_payload_sha256=saved['result_hash'],
                               generation_seconds=answer['generation_seconds'],
                               state_save_seconds=answer['state_save_seconds'], request_seconds=answer['request_seconds'],
-                              wrong_parent_rejected=True, frontier_lookup_import_bytes=0, greedy_source_cached=False)))
+                              branch_revision=head.revision, wrong_parent_rejected=True, frontier_lookup_import_bytes=0, greedy_source_cached=False)))
     finally:
         backend.close()
 
