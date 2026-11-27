@@ -1,0 +1,3 @@
+effort,prefix_matches_512,correct,completion_tokens,visible_chars,reasoning_chars,generation_s,visible_answer_prefix
+0.5,True,False,822,4,2236,31.25365234306082,2754
+0.99,True,True,1603,4,4975,61.884217279963195,2755
