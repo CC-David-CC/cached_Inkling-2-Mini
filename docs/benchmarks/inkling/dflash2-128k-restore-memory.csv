@@ -1,0 +1,2 @@
+positions,preallocated_destination_bytes,tmpfs_source_bytes,restore_seconds,extra_peak_torch_cuda_allocated_bytes,all_bf16_bits_equal
+131072,2415919104,2415919104,0.4847102491185069,0,True
