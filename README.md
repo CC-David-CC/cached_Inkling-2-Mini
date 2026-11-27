@@ -482,6 +482,16 @@ exhausted VRAM while growing its KV cache to 126,976 positions.
 
 [Per-trial latencies and proposed token IDs](docs/benchmarks/inkling/dflash2-context-proposal.csv)
 
+At 131,072 prompt tokens, staging the target embedding and output head in host
+RAM allowed the direct verifier to commit 32 tokens on one repetitive log
+continuation. The four target anchors and all 28 accepted draft tokens matched
+an independent greedy decode. Hashes of all 200,058 logits matched at the
+prompt boundary and after each eight-token block. The four proposal and
+verification intervals totaled 3.487 seconds (9.18 committed tokens/s),
+including the first proposal at 1.524 seconds. These timings exclude prefill,
+anchor selection, instrumentation between blocks, and HTTP overhead.
+[Block timings, generated IDs and target hashes](docs/benchmarks/inkling/dflash2-128k-verify.jsonl)
+
 ### Experimental Cached DSpark text serving
 
 For the single-GPU unadapted greedy text profile, apply
