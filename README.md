@@ -215,22 +215,36 @@ uses the durable checkpoint format.
 
 ### PCC CUDA checkpoint regression
 
-With the CUDA state patch applied, configure the bridge from the local fork.
-Keep an original copy of the pinned Hugging Face `tokenizer.json` named
-`tokenizer-source.json` in the runtime directory. Strata's serving adapter
-writes its converted tokenizer files to a different directory.
+For a clean build on an RTX PRO 6000 Blackwell, run these commands from the Cached checkout. Set `assets` to the directory containing the SQ-20 model and the original pinned Hugging Face tokenizer saved as `tokenizer-source.json`. The commands create a new runtime and build directory, apply both patches in order and exercise restore in a second Python process.
 
 ```bash
-runtime=/mnt/fast_cache/inkling
+set -e
+assets=/mnt/fast_cache/inkling
+runtime=$(mktemp -d "$assets/inkling-clean.XXXXXXXX")
+bridge="$PWD/experimental/branching_context/native/inkling"
+git init -q "$runtime/strata-source"
+git -C "$runtime/strata-source" remote add origin https://github.com/Niko1221/Strata
+git -C "$runtime/strata-source" fetch --depth=1 origin b28ca95e3e6847f2d5e317994f253b66716deeaa
+git -C "$runtime/strata-source" checkout --detach FETCH_HEAD
+for patch in portable-state dspark-checkpoint; do
+    git -C "$runtime/strata-source" apply "$bridge/$patch.patch"
+done
+ln -s "$assets/Inkling-2-Mini-SQ-20.strata" "$runtime/"
+ln -s "$assets/tokenizer-source.json" "$runtime/"
 cmake -S "$runtime/strata-source/engine/src/inkling2" -B "$runtime/native-build" \
-    -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-    -DINKLING_PCC_BRIDGE_SOURCE="$PWD/experimental/branching_context/native/inkling/inkling_bridge.cpp"
-cmake --build "$runtime/native-build" --target inkling_pcc_bridge
+    -DCMAKE_BUILD_TYPE=Release -DSTRATA_ENABLE_CUDA=ON -DSTRATA_INK_CUDA_ARCHS=120 \
+    -DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+    -DINKLING_PCC_BRIDGE_SOURCE="$bridge/inkling_bridge.cpp"
+cmake --build "$runtime/native-build" --target inkling_pcc_bridge --parallel 6
+python3 -m venv "$runtime/.venv"
 export PYTHONPATH="$PWD/experimental/branching_context/src"
-test_dir=$(mktemp -d "$runtime/pcc-check.XXXXXXXX")
-python tools/test_inkling_pcc.py "$runtime" "$test_dir" write
-python tools/test_inkling_pcc.py "$runtime" "$test_dir" read
+export LD_LIBRARY_PATH="/usr/local/cuda/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+test_dir=$(mktemp -d /dev/shm/inkling-check.XXXXXXXX)
+"$runtime/.venv/bin/python" tools/test_inkling_pcc.py "$runtime" "$test_dir" write
+"$runtime/.venv/bin/python" tools/test_inkling_pcc.py "$runtime" "$test_dir" read
 ```
+
+The clean-checkout run at `0e77805` reused the host CUDA installation and model assets. Its fresh process restored the checkpoint in 0.518 seconds. The temporary test store is RAM-backed and can be removed after checking the results.
 
 The two-process regression passed on llm-60 with the pinned Strata source
 `b28ca95e3e6847f2d5e317994f253b66716deeaa` and CUDA 13.5. RAM and disk
