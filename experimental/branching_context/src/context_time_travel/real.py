@@ -348,9 +348,10 @@ class BranchingModel:
                 if self.profile.get('backend') == 'inkling-cuda':
                     envelope = _decode((self.checkpoint_directory / (snapshot + '.json')).read_bytes())
                     if isinstance(envelope, dict) and isinstance(envelope.get('manifest'), dict) and envelope['manifest'].get('schema') == 5:
-                        with self.materialize_suffix(snapshot, envelope) as (lease, row):
-                            self.cache[snapshot] = self._save(lease, history)
-                            yield (None if frontier_only else lease), row
+                        with self.materialize_suffix(snapshot, envelope, frontier_only=frontier_only) as (lease, row):
+                            if not frontier_only:
+                                self.cache[snapshot] = self._save(lease, history)
+                            yield lease, row
                         return
                 saved = self._load_checkpoint(snapshot,history)
                 self.cache[snapshot] = saved
@@ -1673,7 +1674,7 @@ class BranchingModel:
             return files
 
     @contextmanager
-    def materialize_suffix(self, snapshot, envelope=None):
+    def materialize_suffix(self, snapshot, envelope=None, *, frontier_only=False):
         """Restore a stored Inkling suffix over its exact canonical parent."""
         from .checkpoint_cache import validate_manifest
         from .digest_attestation import restore_payload_digest
@@ -1683,6 +1684,9 @@ class BranchingModel:
                 envelope = _decode((self.checkpoint_directory / (snapshot + '.json')).read_bytes())
             manifest = validate_manifest(envelope, required)
             child = self._read_checkpoint_payload(manifest)
+            if frontier_only:
+                yield None, child.frontier
+                return
             with self._materialize(parent) as (lease, _):
                 owner = self.cache[parent]
                 if owner.checksum != required['parent_payload_sha256']:

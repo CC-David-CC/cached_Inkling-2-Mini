@@ -16,14 +16,17 @@ def main():
     parser.add_argument('runtime', type=Path)
     parser.add_argument('store', type=Path)
     parser.add_argument('phase', choices=('write', 'read'))
+    parser.add_argument('--parent-tokens', type=int, default=128)
     args = parser.parse_args()
-    profile = runtime_profile(args.runtime.resolve(), pack='SQ-10', capacity=16384)
+    if not 1 <= args.parent_tokens <= 133117:
+        parser.error('The parent must leave space for two child tokens and one continuation')
+    profile = runtime_profile(args.runtime.resolve(), pack='SQ-10', capacity=max(16384, args.parent_tokens + 3))
     backend = load_backend(profile)
     try:
         model = BranchingModel(args.store, backend, profile)
         fixture = args.store / 'suffix-restart.json'
         if args.phase == 'write':
-            parent = model.create(tuple(range(100, 228)))
+            parent = model.create(tuple(100 + index % 1000 for index in range(args.parent_tokens)))
             model.publish_prepared_checkpoint(model.prepare_checkpoint(parent))
             child = model.feed(parent, (110, 111))
         else:
@@ -39,7 +42,8 @@ def main():
             with model.materialize(child) as (lease, _):
                 backend.consume(lease, (501,))
                 expected = hashlib.sha256(struct.pack(row_format, *backend.logits(lease))).hexdigest()
-            fixture.write_text(json.dumps(dict(child=child, expected=expected)))
+            frontier_hash = hashlib.sha256(struct.pack(row_format, *prepared.checkpoint.frontier)).hexdigest()
+            fixture.write_text(json.dumps(dict(child=child, expected=expected, frontier_hash=frontier_hash)))
             return
 
         envelope = json.loads((model.checkpoint_directory / (child + '.json')).read_bytes())
@@ -53,6 +57,10 @@ def main():
         else:
             raise AssertionError('Rechecksummed child accepted the wrong parent payload')
         assert before == backend.work_counters()
+        frontier = model.next_logits(child)
+        assert hashlib.sha256(struct.pack(row_format, *frontier)).hexdigest() == saved['frontier_hash']
+        assert backend.work_counters() == before
+        assert child not in model.cache and parent not in model.cache
         suffix_bytes = envelope['manifest']['state_bytes']
         with model.materialize(child) as (lease, _):
             backend.consume(lease, (501,))
@@ -60,7 +68,7 @@ def main():
         assert backend.work_counters()['consumed_tokens'] == 1
         print(json.dumps(dict(parent_tokens=len(parent_history), suffix_bytes=suffix_bytes,
                               exact_continuation_logits=backend.vocab_size, saved_tokens_replayed=0,
-                              wrong_parent_rejected=True)))
+                              wrong_parent_rejected=True, frontier_lookup_import_bytes=0)))
     finally:
         backend.close()
 
