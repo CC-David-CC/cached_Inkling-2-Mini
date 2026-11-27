@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import sys
+import tempfile
 
 os.environ.setdefault('CUBLAS_WORKSPACE_CONFIG', ':4096:8')
 import torch
@@ -72,6 +73,28 @@ def equal_state(left, right):
     return left == right
 
 
+def save_training_checkpoint(path, state):
+    """Publish only a complete optimizer checkpoint."""
+    with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as stream:
+        staged = Path(stream.name)
+        try:
+            torch.save(state, stream)
+            stream.flush()
+            os.fsync(stream.fileno())
+        except BaseException:
+            staged.unlink(missing_ok=True)
+            raise
+    try:
+        os.replace(staged, path)
+        directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+    finally:
+        staged.unlink(missing_ok=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('runtime', type=Path)
@@ -90,8 +113,8 @@ def main():
                     base_sha256=MODEL_SHA256, torch_version=str(torch.__version__),
                     rank=RANK, examples=repr(EXAMPLES))
     checkpoint = args.output / 'step-2.pt'
-    torch.save(dict(metadata=metadata, a=a.detach(), b=b.detach(),
-                    optimizer=optimizer.state_dict()), checkpoint)
+    save_training_checkpoint(checkpoint, dict(metadata=metadata, a=a.detach(), b=b.detach(),
+                                              optimizer=optimizer.state_dict()))
     restored = torch.load(checkpoint, weights_only=True)
     assert restored['metadata'] == metadata
     resumed = initialize(raw.shape[1], args.optimizer)
