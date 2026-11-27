@@ -1,0 +1,5 @@
+case,llm60_visible,llm49_visible,token_ids_match,payload_hash_match,model_contract_match,execution_profile_match,frontier_logits_differing_bitwise,max_abs_difference,same_next_argmax
+red,Red,Red,True,False,True,False,200058,1.9313735961914062,False
+left-red,Red,Red,True,False,True,False,200057,1.9578361511230469,True
+blue,blue,blue,True,False,True,False,200058,2.9694528579711914,False
+left-blue,Blue,Blue,True,False,True,False,200057,2.56182861328125,False
