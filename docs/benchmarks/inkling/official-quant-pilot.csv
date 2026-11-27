@@ -1,0 +1,7 @@
+prompt_mode,output_limit,domain,questions,visible_answers,exact_answers,total_completion_tokens
+chat,64,coding,4,0,0,256
+chat,64,linux,4,0,0,256
+chat,512,coding,4,4,4,701
+chat,512,linux,4,3,3,795
+visible_opener,64,coding,4,4,2,9
+visible_opener,64,linux,4,4,2,11
