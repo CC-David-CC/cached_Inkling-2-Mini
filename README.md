@@ -68,7 +68,10 @@ pinned profile consumes canonical text token IDs at 8K context with FP16 KV,
 512-token prefill chunks, and drafting disabled. The RAM cache retains up to
 2 GiB of native payloads and 32 entries. Disk checkpoints use PCC's existing
 checksummed envelope and bind the model, tokenizer, execution profile and
-token history. The current HTTP service still uses Strata serving directly.
+token history. An optional vision profile uses the pinned vision tower and
+absolute-position image embedding rows. Its histories also bind the original
+image, encoder profile, and exact embedding bytes. The current HTTP service
+still uses Strata serving directly.
 
 The [upstream README](README-PCC.md) records earlier PCC model results. Those
 results apply to their documented profiles.
@@ -133,6 +136,21 @@ identities with valid manifest checksums, and rejected a flipped payload byte.
 The 306,656,744-byte disk payload restored in 0.530 seconds in that run.
 PCC's G0 reference suite passed 58 tests. Coverage here is the single-GPU,
 text-token, draft-off profile with owned copies of the native state.
+
+For the image-aware profile, place the pinned vision tower alongside the
+text checkpoint and run the vision regression in a separate workspace:
+
+```bash
+test_dir=$(mktemp -d "$runtime/pcc-vision.XXXXXXXX")
+python tools/test_inkling_pcc_vision.py "$runtime" "$test_dir" write
+python tools/test_inkling_pcc_vision.py "$runtime" "$test_dir" read
+```
+
+On llm-60, the two images used identical text and placeholder token IDs and
+produced distinct history IDs and frontier logits. Each image matched all
+200,058 frontier and continuation logits through RAM restore after sibling
+writes and disk restore in a fresh process. The native work counter recorded
+zero replay. The fresh-process test had no image encoding step.
 
 ### DFlash2 and Splash
 

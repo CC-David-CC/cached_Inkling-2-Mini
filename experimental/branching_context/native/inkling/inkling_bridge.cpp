@@ -1,5 +1,7 @@
 // PCC bridge for the pinned CUDA FP16 Inkling profile.
 #include "ink_backend.h"
+#define INKLING_DEFINE_STBI
+#include "ink_vision.h"
 
 #include <algorithm>
 #include <cstring>
@@ -9,13 +11,21 @@
 namespace {
 constexpr int capacity = 8192;
 constexpr int chunk = 512;
+constexpr int max_image_rows = 1024;
 thread_local std::string error;
 
 struct Model {
     ink2::InkModelFile file;
     std::unique_ptr<ink2::InkBackend> backend;
+    ink2::CpuVisionEncoder vision;
     uint64_t work = 0;
     bool leased = false;
+};
+
+struct ImageEmbedding {
+    std::vector<float> values;
+    int width;
+    int height;
 };
 
 struct Lease {
@@ -97,21 +107,43 @@ void ctt_free(void* raw) {
 int ctt_position(void* raw) { return static_cast<Lease*>(raw)->length - 1; }
 uint64_t ctt_work(void* raw) { return static_cast<Lease*>(raw)->model.work; }
 
-int ctt_consume(void* raw, const int32_t* ids, int count) try {
+int ctt_consume_mixed(void* raw, const int32_t* ids, const int32_t* image_rows,
+                      const float* embeddings, int rows, int count) try {
     auto& lease = *static_cast<Lease*>(raw);
     if (!ids || count < 1 || count > capacity - lease.length ||
+        rows < 0 || rows > count || (rows && (!embeddings || !image_rows)) ||
         std::any_of(ids, ids + count, [&](int token) {
             return token < 0 || size_t(token) >= lease.logits.size();
         })) {
-        error = "Invalid Inkling token IDs or context length";
+        error = "Invalid Inkling tokens, image rows, or context length";
         return 1;
+    }
+    const int pad = lease.model.file.m.c.image_token_id;
+    int seen = 0;
+    if (image_rows) {
+        for (int i = 0; i < count; ++i) {
+            if (image_rows[i] == -1) continue;
+            if (image_rows[i] != seen || seen >= rows || ids[i] != pad) {
+                error = "Invalid ordered Inkling image embedding placement";
+                return 1;
+            }
+            ++seen;
+        }
+        if (seen != rows || image_rows[count - 1] != -1) {
+            error = "Image embeddings require a trailing text token";
+            return 1;
+        }
     }
     lease.frontier = false;
     for (int offset = 0; offset < count;) {
         ink2::StepBatch batch;
+        batch.img_embeds = embeddings;
         const int take = std::min(chunk, count - offset);
-        for (int i = 0; i < take; ++i)
-            batch.push(0, lease.length + i, ids[offset + i], i + offset + 1 == count);
+        for (int i = 0; i < take; ++i) {
+            const int index = offset + i;
+            batch.push(0, lease.length + i, ids[index], index + 1 == count,
+                       image_rows ? image_rows[index] : -1);
+        }
         float* frontier = offset + take == count ? lease.logits.data() : nullptr;
         if (!lease.model.backend->forward_batch(batch, frontier, nullptr, error)) return 1;
         lease.length += take;
@@ -124,6 +156,51 @@ int ctt_consume(void* raw, const int32_t* ids, int count) try {
     error = e.what();
     return 1;
 }
+
+int ctt_consume(void* raw, const int32_t* ids, int count) {
+    return ctt_consume_mixed(raw, ids, nullptr, nullptr, 0, count);
+}
+
+int ctt_image_pad(void* raw) {
+    return static_cast<Model*>(raw)->file.m.c.image_token_id;
+}
+
+void* ctt_encode_image(void* raw, const char* tower, const char* path) try {
+    auto& model = *static_cast<Model*>(raw);
+    ink2::VisionShardInfo metadata;
+    ink2::ImageRec picture;
+    if (!ink2::vision_probe(tower, metadata, error) ||
+        !ink2::prepare_picture(path, metadata.c, picture, error)) return nullptr;
+    if (picture.num_lm_tokens() < 1 || picture.num_lm_tokens() > max_image_rows) {
+        error = "Inkling vision row limit exceeded";
+        return nullptr;
+    }
+    auto image = std::make_unique<ImageEmbedding>();
+    image->width = picture.grid_w;
+    image->height = picture.grid_h;
+    if (!model.backend->encode_image(picture, image->values, error)) {
+        if (!model.vision.load(tower, error) ||
+            !model.vision.encode(picture, image->values, error)) return nullptr;
+    }
+    if (image->values.size() != size_t(picture.num_lm_tokens()) * model.file.m.c.hidden) {
+        error = "Unexpected Inkling vision embedding dimensions";
+        return nullptr;
+    }
+    return image.release();
+} catch (const std::exception& e) {
+    error = e.what();
+    return nullptr;
+}
+
+const float* ctt_image_data(void* raw, int* width, int* height, size_t* size) {
+    const auto& image = *static_cast<ImageEmbedding*>(raw);
+    *width = image.width;
+    *height = image.height;
+    *size = image.values.size() * sizeof(float);
+    return image.values.data();
+}
+
+void ctt_free_image(void* raw) { delete static_cast<ImageEmbedding*>(raw); }
 
 const float* ctt_logits(void* raw) {
     auto& lease = *static_cast<Lease*>(raw);

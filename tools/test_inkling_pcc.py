@@ -8,12 +8,12 @@ import struct
 import subprocess
 
 from context_time_travel.backend_registry import load_backend
-from context_time_travel.inkling_backend import EXECUTION, MODEL_SHA256, model_contract_id
+from context_time_travel.inkling_backend import EXECUTION, MODEL_SHA256, VISION_EXECUTION, model_contract_id
 from context_time_travel.real import BranchingModel, digest_file
 from context_time_travel.store import IntegrityError, _json_bytes
 
 
-def profile(runtime):
+def profile(runtime, *, vision=False):
     bridge = str(runtime / 'native-build/libinkling_pcc_bridge.so')
     build = {'sha256': {bridge: digest_file(bridge)}}
     execution = dict(EXECUTION,
@@ -22,13 +22,18 @@ def profile(runtime):
     hardware = subprocess.check_output([
         'nvidia-smi', '--query-gpu=name,uuid,driver_version', '--format=csv,noheader'
     ], text=True).strip()
+    extra = {}
+    if vision:
+        execution.update(VISION_EXECUTION)
+        extra['vision_path'] = str(runtime / 'Inkling-2-Mini-Vision.strata')
     identity = dict(build=build, execution=execution, hardware=hardware)
     return dict(backend='inkling-cuda', bridge_library=bridge, native_build=build,
                 model_path=str(runtime / 'Inkling-2-Mini-SQ-20.strata'),
                 tokenizer_path=str(runtime / 'tokenizer-source.json'),
-                model_weights_sha256=MODEL_SHA256, model_contract_id=model_contract_id(),
+                model_weights_sha256=MODEL_SHA256, model_contract_id=model_contract_id(vision),
                 execution=execution, hardware=hardware,
-                execution_profile_id=hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest())
+                execution_profile_id=hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest(),
+                **extra)
 
 
 def exact_row(logits):

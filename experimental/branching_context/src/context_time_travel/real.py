@@ -343,7 +343,7 @@ class BranchingModel:
                     raise IntegrityError('Checkpoint contract/profile mismatch')
                 if saved.consumed != len(history) or saved.checksum != verified_checkpoint_digest(saved):
                     raise IntegrityError('Checkpoint integrity failure')
-                if isinstance(history,InputHistory):
+                if isinstance(history,InputHistory) and self._schedule_contract() is not None:
                     from .execution_receipt import validate_input_schedule
                     try:
                         validate_input_schedule(saved.execution_schedule,history,
@@ -360,7 +360,7 @@ class BranchingModel:
                         resident,saved.frontier,saved.input_identity,saved.execution_schedule)
                     self.cache[snapshot] = saved
             else:
-                if self._schedule_contract() is not None:
+                if isinstance(history,InputHistory) or self._schedule_contract() is not None:
                     raise IntegrityError('Exact batched materialization requires a retained numerical checkpoint')
                 if not self.backend.restore_cached(lease,history):
                     self.backend.consume(lease,history)
@@ -395,6 +395,11 @@ class BranchingModel:
                         rows=item.embedding.rows,source=item.source))
             yield payloads
 
+    def _supports_mixed_inputs(self):
+        execution = self.profile.get('execution', {})
+        return (execution.get('resume_contract') == RESUME_CONTRACT
+                or execution.get('input_projection') == 'inkling-absolute-image-rows-v1')
+
     def create_with_reuse(self, ids, *, contract=None, materialization_loader=None,
                           artifacts=None, reencode=None):
         """Create an idle root, reusing only its validated exact materialization.
@@ -407,7 +412,7 @@ class BranchingModel:
             raise PermissionError('Only the local owner can create model histories')
         if contract is not None and dict(contract) != dict(self.contract):
             raise IntegrityError('Unsupported or incompatible model/input semantics')
-        mixed = self.profile.get('execution',{}).get('resume_contract') == RESUME_CONTRACT
+        mixed = self._supports_mixed_inputs()
         if mixed:
             if not isinstance(ids,InputHistory):
                 ids = InputHistory([dict(kind='text',tokens=list(ids))])
@@ -503,7 +508,7 @@ class BranchingModel:
     def feed_inputs(self,snapshot,spans,*,artifacts=None,reencode=None):
         """Append leased model inputs to one existing canonical mixed history."""
         self.store.authorize(snapshot,'append')
-        if (self.profile.get('execution',{}).get('resume_contract')!=RESUME_CONTRACT
+        if (not self._supports_mixed_inputs()
                 or not callable(getattr(self.backend,'consume_inputs',None))):
             raise InvalidOperation('Pinned backend does not support mixed input deltas')
         delta=InputHistory(spans)
@@ -1037,9 +1042,9 @@ class BranchingModel:
             return history.digest
         return hashlib.sha256(_json_bytes(list(history))).hexdigest()
 
-    @staticmethod
-    def _checkpoint_position_binding(history):
-        if isinstance(history,InputHistory):
+    def _checkpoint_position_binding(self, history):
+        if (isinstance(history,InputHistory)
+                and self.profile.get('execution',{}).get('resume_contract') == RESUME_CONTRACT):
             return dict(positions=POSITION_CONVENTION,**input_binding(history))
         return dict(positions='absolute-zero-based')
 

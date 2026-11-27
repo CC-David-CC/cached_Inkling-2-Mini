@@ -3,22 +3,30 @@ from contextlib import contextmanager
 import ctypes as C
 import hashlib
 import json
+import os
 from pathlib import Path
+import struct
+from tempfile import TemporaryDirectory
 from threading import RLock
 
 from .checkpoint_cache import CheckpointCache
+from .input_spans import InputHistory
 from .real import NativeBackend, digest_file
-from .store import IntegrityError
+from .store import IntegrityError, InvalidOperation
 
 MODEL_SHA256 = '0bbfd52344f0dd4779a7807b5f73554a812f24c035e6877b63cd0d499f7e1b97'
 TOKENIZER_SHA256 = '7f332727f9a3f093dd452a39cc978e6757627e5dad1b0673aa4e75174f236dd6'
+VISION_SHA256 = '6589eff47f9c20bc3a032faa3d449f10bf4f04a84cc6b2ee8a44d51d2b6fc677'
+VISION_EXECUTION = dict(input_projection='inkling-absolute-image-rows-v1',
+                        embedding_width=2304, vision_weights_sha256=VISION_SHA256)
 EXECUTION = dict(capacity=8192, prefill_chunk=512, kv='fp16', draft='off',
                  state_format='inkling-cuda-fp16-v1')
 
 
-def model_contract_id():
+def model_contract_id(vision=False):
     identity = dict(architecture='inkling2_loop', weights_sha256=MODEL_SHA256,
-                    input_kind='token_ids', adapters=[], vision=False,
+                    input_kind='mixed' if vision else 'token_ids', adapters=[],
+                    vision=VISION_SHA256 if vision else False,
                     tokenizer_sha256=TOKENIZER_SHA256)
     return hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
 
@@ -30,6 +38,7 @@ class InklingBackend(NativeBackend):
         self._lock = RLock()
         self._leased = False
         self._close_pending = False
+        self.vision_path = profile.get('vision_path')
         tokenizer_path = Path(profile['tokenizer_path'])
         if digest_file(tokenizer_path) != TOKENIZER_SHA256:
             raise IntegrityError('Inkling tokenizer fingerprint mismatch')
@@ -61,12 +70,33 @@ class InklingBackend(NativeBackend):
             C.POINTER(C.c_float), C.c_size_t,
         ]
         self.lib.ctt_import_checkpoint.restype = C.c_size_t
+        self.lib.ctt_image_pad.argtypes = [C.c_void_p]
+        self.lib.ctt_image_pad.restype = C.c_int
+        self.lib.ctt_encode_image.argtypes = [C.c_void_p, C.c_char_p, C.c_char_p]
+        self.lib.ctt_encode_image.restype = C.c_void_p
+        self.lib.ctt_image_data.argtypes = [C.c_void_p, C.POINTER(C.c_int),
+                                            C.POINTER(C.c_int), C.POINTER(C.c_size_t)]
+        self.lib.ctt_image_data.restype = C.c_void_p
+        self.lib.ctt_free_image.argtypes = [C.c_void_p]
+        self.lib.ctt_free_image.restype = None
+        self.lib.ctt_consume_mixed.argtypes = [
+            C.c_void_p, C.POINTER(C.c_int32), C.POINTER(C.c_int32),
+            C.c_void_p, C.c_int, C.c_int,
+        ]
+        self.lib.ctt_consume_mixed.restype = C.c_int
         return super()._load_model()
 
     def validate_execution_profile(self):
         profile = self.profile
+        execution = profile['execution']
+        if self.vision_path:
+            if (any(execution.get(key) != value for key, value in VISION_EXECUTION.items())
+                    or digest_file(self.vision_path) != VISION_SHA256):
+                raise IntegrityError('Inkling vision profile or weight fingerprint mismatch')
+        elif any(key in execution for key in VISION_EXECUTION):
+            raise IntegrityError('Inkling vision profile requires the pinned vision weights')
         if (profile['model_weights_sha256'] != MODEL_SHA256
-                or profile['model_contract_id'] != model_contract_id()
+                or profile['model_contract_id'] != model_contract_id(bool(self.vision_path))
                 or any(profile['execution'].get(key) != value for key, value in EXECUTION.items())
                 or profile['bridge_library'] not in profile['native_build']['sha256']
                 or not Path(profile['bridge_library']).is_absolute()):
@@ -78,7 +108,67 @@ class InklingBackend(NativeBackend):
 
     def contract_fields(self):
         return dict(attention='full-and-sliding', state_kind='looped-kv-shortconv',
-                    tokenizer_identity=TOKENIZER_SHA256)
+                    tokenizer_identity=TOKENIZER_SHA256,
+                    input_kind='mixed' if self.vision_path else 'token_ids')
+
+    @property
+    def image_pad(self):
+        return self.lib.ctt_image_pad(self.model)
+
+    @property
+    def encoder_profile_id(self):
+        return self.profile['execution_profile_id']
+
+    def encode_image(self, data):
+        if not self.vision_path or not 0 < len(data) <= 16 * 1024**2:
+            raise InvalidOperation('Inkling vision requires an enabled tower and bounded image bytes')
+        with self._lock, TemporaryDirectory(prefix='inkling-image-') as directory:
+            path = Path(directory) / 'input'
+            path.write_bytes(data)
+            image = self.lib.ctt_encode_image(self.model, os.fsencode(self.vision_path), os.fsencode(path))
+            if not image:
+                raise InvalidOperation(self.lib.ctt_error().decode())
+            try:
+                nx, ny, size = C.c_int(), C.c_int(), C.c_size_t()
+                payload = self.lib.ctt_image_data(image, C.byref(nx), C.byref(ny), C.byref(size))
+                width = VISION_EXECUTION['embedding_width']
+                header = struct.pack('<5i', 0x31455653, nx.value * ny.value, nx.value, ny.value, width)
+                return header + C.string_at(payload, size.value)
+            finally:
+                self.lib.ctt_free_image(image)
+
+    def consume_inputs(self, lease, spans, *, embeddings):
+        history = InputHistory(spans)
+        if not self.vision_path or not 0 < len(history) <= self.context_capacity - self.position(lease) - 1:
+            raise InvalidOperation('Invalid Inkling image input capacity or profile')
+        indices = []
+        chunks = []
+        row = 0
+        for span in history.spans:
+            if span['kind'] == 'text':
+                indices.extend([-1] * len(span['tokens']))
+                continue
+            digest = span['embedding_sha256']
+            embedding = embeddings.get(digest)
+            if (span['encoder_profile_id'] != self.encoder_profile_id
+                    or span['pad_token_id'] != self.image_pad
+                    or embedding is None or embedding.sha256 != digest
+                    or embedding.rows != span['rows']
+                    or embedding.width != VISION_EXECUTION['embedding_width']):
+                raise IntegrityError('Inkling image embedding identity or dimensions mismatch')
+            chunks.append(embedding.data)
+            indices.extend(range(row, row + embedding.rows))
+            row += embedding.rows
+        ids = (C.c_int32 * len(history))(*history.native_tokens)
+        placements = (C.c_int32 * len(history))(*indices)
+        data = b''.join(chunks)
+        before = self.lib.ctt_work(lease)
+        if self.lib.ctt_consume_mixed(lease, ids, placements, C.c_char_p(data), row, len(history)):
+            raise RuntimeError(self.lib.ctt_error().decode())
+        delta = self.lib.ctt_work(lease) - before
+        if delta != len(history):
+            raise IntegrityError('Inkling mixed native work counter mismatch')
+        self.stats['consumed_tokens'] += delta
 
     @contextmanager
     def lease(self):
