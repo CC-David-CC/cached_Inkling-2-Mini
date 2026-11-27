@@ -19,6 +19,11 @@ def validate_manifest(envelope, expected):
         fields |= {'execution_schedule','schedule_sha256'}
     if expected.get('schema') == 4:
         fields |= {'native_input_sha256','position_sha256','rotary_cursor'}
+    if expected.get('schema') == 5:
+        parent_fields = {'parent_snapshot', 'parent_payload_sha256', 'parent_consumed'}
+        if not parent_fields.issubset(expected):
+            raise IntegrityError('Suffix checkpoint requires an independently bound parent')
+        fields |= parent_fields
     if not isinstance(manifest, dict) or set(manifest) != fields:
         raise IntegrityError('Unknown checkpoint manifest layout')
     if envelope['checksum'] != hashlib.sha256(_json_bytes(manifest)).hexdigest():
@@ -33,9 +38,17 @@ def validate_manifest(envelope, expected):
         raise IntegrityError('Checkpoint manifest incompatible (execution profile differs)')
     if any(manifest.get(key) != value for key, value in expected.items()):
         raise IntegrityError('Checkpoint manifest incompatible')
-    digest = manifest['payload_sha256']
-    if not isinstance(digest, str) or len(digest) != 64 or any(ch not in '0123456789abcdef' for ch in digest):
-        raise IntegrityError('Invalid payload identity')
+    identities = ['payload_sha256']
+    if manifest['schema'] == 5:
+        identities.extend(('parent_snapshot', 'parent_payload_sha256'))
+        length = manifest['parent_consumed']
+        if (type(length) is not int or not 0 < length < manifest['consumed']
+                or manifest['parent_snapshot'] == manifest['snapshot']):
+            raise IntegrityError('Invalid suffix checkpoint parent boundary')
+    for key in identities:
+        digest = manifest[key]
+        if not isinstance(digest, str) or len(digest) != 64 or any(ch not in '0123456789abcdef' for ch in digest):
+            raise IntegrityError('Invalid checkpoint identity: ' + key)
     return manifest
 
 

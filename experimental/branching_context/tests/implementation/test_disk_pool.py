@@ -4,7 +4,8 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from context_time_travel.store import Store
+from context_time_travel.checkpoint_cache import validate_manifest
+from context_time_travel.store import IntegrityError, Store, _json_bytes
 from context_time_travel.pools import DiskCheckpointPool, PoolFull
 
 
@@ -38,6 +39,30 @@ class DiskPoolTests(unittest.TestCase):
             self.assertFalse(file.exists())
             self.assertEqual(self.pool.metrics()['reserved_bytes'],32)
         self.assertEqual(self.store.get_snapshot(self.tip)['inputs'],[2])
+
+    def test_suffix_manifest_requires_independently_bound_parent(self):
+        parent = dict(parent_snapshot=self.root, parent_consumed=1,
+                      parent_payload_sha256='a' * 64)
+        required = dict(schema=5, snapshot=self.tip, consumed=2, **parent)
+        manifest = dict(required, positions='absolute-zero-based', input_identity='b' * 64,
+                        model_contract_id='model', execution_profile_id='profile', logits_count=8,
+                        state_bytes=32, payload_sha256='c' * 64)
+
+        def envelope(values):
+            return dict(manifest=values, checksum=hashlib.sha256(_json_bytes(values)).hexdigest())
+
+        self.assertEqual(validate_manifest(envelope(manifest), required), manifest)
+        for key in parent:
+            incomplete = dict(required)
+            del incomplete[key]
+            with self.subTest(missing=key), self.assertRaises(IntegrityError):
+                validate_manifest(envelope(manifest), incomplete)
+        for changes in (dict(parent_snapshot=self.tip), dict(parent_payload_sha256='z' * 64),
+                        dict(parent_consumed=True), dict(parent_consumed=2)):
+            with self.subTest(changes=changes), self.assertRaises(IntegrityError):
+                validate_manifest(envelope(dict(manifest, **changes)), dict(required, **changes))
+        with self.assertRaises(IntegrityError):
+            validate_manifest(envelope(dict(manifest, parent_payload_sha256='d' * 64)), required)
 
     def test_suffix_read_lease_protects_parent_and_both_become_evictable(self):
         directory = self.pool.directory
