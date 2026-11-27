@@ -48,6 +48,10 @@ With one 65,035-token parent resident on each P4, three simultaneous HTTP reques
 
 ![Three simultaneous warm HTTP requests on independent P4 workers](docs/benchmarks/inkling/p4-three-warm-http.png)
 
+Once text started streaming, the mean time per visible output token ranged from 149 to 189 ms across the six requests. Each mean uses the first-to-last text interval divided by 158, for 159 visible tokens.
+
+![Mean streamed time per output token on each P4](docs/benchmarks/inkling/p4-three-warm-tpot.png)
+
 ### RTX 4090 and RTX PRO 6000 Blackwell
 
 ![Cached single-request prefill, generation, full HTTP throughput and first-text latency on the RTX 4090 and RTX PRO 6000](docs/benchmarks/inkling/gpu-comparison.png)

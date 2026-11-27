@@ -35,3 +35,23 @@ for ax in (timing, rate):
     ax.spines[["top", "right"]].set_visible(False)
 fig.suptitle("Cached SQ-10 · 65,035-token resident prompt on each Tesla P4")
 fig.savefig(folder / "p4-three-warm-http.png", dpi=160)
+
+fig, ax = plt.subplots(figsize=(8, 4), layout="constrained")
+for trial in (1, 2):
+    selected = [r for r in rows if int(r["trial"]) == trial]
+    for index, row in enumerate(selected):
+        # Client-observed mean seconds per visible token after the first text.
+        intervals = int(row["visible_tokens"]) - 1
+        elapsed = float(row["last_stream_text_s"]) - float(row["first_stream_text_s"])
+        milliseconds = 1000 * elapsed / intervals
+        x = int(row["gpu"]) + (trial - 1.5) * .36
+        ax.bar(x, milliseconds, width=.33, color=colors[trial - 1],
+               label=f"Trial {trial}" if index == 0 else None)
+        ax.text(x, milliseconds + 2, f"{milliseconds:.1f}", ha="center")
+ax.set_xticks(range(3), ["GPU 0", "GPU 1", "GPU 2"])
+ax.set_ylim(0, 220)
+ax.set_ylabel("Mean milliseconds per visible token after first text")
+ax.set_title("Three simultaneous P4 streams · 159 visible tokens per answer")
+ax.spines[["top", "right"]].set_visible(False)
+ax.legend(frameon=False, loc="lower right")
+fig.savefig(folder / "p4-three-warm-tpot.png", dpi=160)
