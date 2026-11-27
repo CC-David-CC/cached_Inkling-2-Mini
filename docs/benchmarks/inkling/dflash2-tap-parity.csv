@@ -1,0 +1,3 @@
+reference,candidate,rows_bit_equal,rows,tokens_equal_by_index,tokens,common_token_prefix,initial_logits_bit_different,initial_max_abs_delta
+off,on,0,41,40,40,40,200058,0.6301717758178711
+off,off-repeat,0,41,38,40,3,200058,0.33034420013427734
