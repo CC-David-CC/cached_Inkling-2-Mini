@@ -373,7 +373,7 @@ done
 unlink "$fixture"
 ```
 
-On llm-60 the writer extended a 1,017-token parent by 18 tokens across the sliding-window boundary. The 7,372,800-byte suffix and parent reproduced the full 205,520,896-byte native child image. The reader loaded the fixture in a fresh process and matched all 200,058 uninterrupted continuation logits. The HTTP server still uses full checkpoints.
+On llm-60 the writer extended a 1,017-token parent by 18 tokens across the sliding-window boundary. The 7,372,800-byte suffix and parent reproduced the full 205,520,896-byte native child image. The reader loaded the fixture in a fresh process and matched all 200,058 uninterrupted continuation logits. To exercise complete replacement of the sliding window, append `--wrapped` to both the write and read invocations. This fixture extends a 1,537-token parent by 1,027 tokens. The HTTP server still uses full checkpoints.
 
 The clean-checkout run at `0e77805` reused the host CUDA installation and model assets. Its fresh process restored the checkpoint in 0.518 seconds. The temporary test store is RAM-backed and can be removed after checking the results.
 

@@ -14,7 +14,8 @@ static void check(bool ok, const std::string& message) {
 
 int main(int argc, char** argv) try {
     using namespace ink2;
-    check(argc == 4, "usage: check_parent_suffix MODEL write|read FIXTURE");
+    const bool wrapped = argc == 5 && std::string(argv[4]) == "--wrapped";
+    check(argc == 4 || wrapped, "usage: check_parent_suffix MODEL write|read FIXTURE [--wrapped]");
     std::string mode = argv[2];
     check(mode == "write" || mode == "read", "invalid fixture mode");
     BackendOpts opts;
@@ -47,12 +48,13 @@ int main(int argc, char** argv) try {
         check(!image.empty() && backend->export_portable_state(0, length, image.data(), image.size()), "full export failed");
         return image;
     };
-    constexpr int parent = 1017, child = 1035;
+    const int parent = wrapped ? 1537 : 1017;
+    const int child = parent + (wrapped ? 1027 : 18);
     std::vector<char> base(backend->portable_state_size(0, parent));
     std::vector<char> suffix(backend->portable_suffix_size(0, parent, child));
     std::vector<float> reference(logits.size());
     std::vector<char> expected;
-    check(!base.empty() && !suffix.empty() && suffix.size() < base.size(), "invalid fixture sizes");
+    check(!base.empty() && !suffix.empty() && suffix.size() < backend->portable_state_size(0, child), "invalid fixture sizes");
     auto transfer = [&](std::fstream& file, auto& values) {
         auto* data = reinterpret_cast<char*>(values.data());
         const auto bytes = values.size() * sizeof(values.front());
@@ -85,10 +87,12 @@ int main(int argc, char** argv) try {
         const int layer = visit < 6 ? visit : visit < 42 ? 6 + (visit - 6) % 12 : visit - 24;
         const bool local = model.m.c.is_swa[layer];
         const int child_rows = local ? std::min(child, 1024) : child;
-        const int retained = child_rows - (child - parent);
+        const int parent_rows = local ? std::min(parent, 1024) : parent;
+        const int added = std::min(child_rows, child - parent);
+        const int retained = child_rows - added;
         for (int kv = 0; kv < 2; ++kv) {
-            size_t parent_end = parent_pos + parent * row;
-            size_t suffix_end = suffix_pos + (child - parent) * row;
+            size_t parent_end = parent_pos + parent_rows * row;
+            size_t suffix_end = suffix_pos + added * row;
             check(parent_end <= base.size() && suffix_end <= suffix.size(), "range outside payload");
             assembled.insert(assembled.end(), base.begin()+parent_end-retained*row, base.begin()+parent_end);
             assembled.insert(assembled.end(), suffix.begin()+suffix_pos, suffix.begin()+suffix_end);

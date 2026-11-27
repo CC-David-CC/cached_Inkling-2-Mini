@@ -10,6 +10,7 @@ Results cover the RTX PRO 6000 Blackwell on llm-60 unless a row identifies anoth
 
 | Goal | Status | Verified result and remaining work |
 |---|---|---|
+| Native child checkpoint export | Exact restart passed for two SQ-10 branches on llm-60 | A 1,017-token parent plus an 18-token continuation produced a 7,372,800-byte suffix for a 205,520,896-byte child. A 1,537-token parent plus 1,027 tokens replaced the entire sliding window and produced a 205,258,752-byte suffix for a 255,623,168-byte child. Both reconstructed states matched the full export, and both fresh processes matched all 200,058 next-token logits. Single-GPU FP16 KV, drafting off. HTTP integration and 128K latency remain open. [Build and run](../../../README.md#native-parent-plus-suffix-regression) |
 | Reproducible install | Partial | A clean public checkout built the pinned CUDA bridge and passed text and vision checkpoint tests in a new virtual environment. Fresh-machine provisioning of CUDA and model assets is open. |
 | Text serving | Pass for greedy single requests | PCC HTTP reproduced output tokens and checkpoint hashes after restart with zero saved-prefix replay. |
 | cuBLAS workspace checkpoint isolation | Pass for SQ-10 token HTTP on llm-60 | Three server processes used one RAM-backed store. A checkpoint created with `:4096:8` returned HTTP 409 on generation under `:16:8`. Restoring `:4096:8` allowed the original branch revision to generate the same five tokens and payload SHA-256 with five native forward steps. |
