@@ -85,6 +85,49 @@ class DiskPoolTests(unittest.TestCase):
         self.assertEqual(list(directory.glob('*.json')), [])
         self.assertEqual(list(directory.glob('*.state')), [])
 
+    def test_cumulative_manifest_binds_logical_parent_and_full_base_separately(self):
+        grandchild = self.store.append(self.tip, (3,), {'status': 'idle'})
+        required = dict(schema=6, snapshot=grandchild, consumed=3, parent_consumed=1,
+                        parent_snapshot=self.root, logical_parent_snapshot=self.tip,
+                        parent_payload_sha256='a' * 64)
+        manifest = dict(required, positions='absolute-zero-based', input_identity='b' * 64,
+                        model_contract_id='model', execution_profile_id='profile', logits_count=8,
+                        state_bytes=32, payload_sha256='c' * 64)
+
+        def envelope(values):
+            return dict(manifest=values, checksum=hashlib.sha256(_json_bytes(values)).hexdigest())
+
+        self.assertEqual(validate_manifest(envelope(manifest), required), manifest)
+        for key in ('parent_snapshot', 'parent_payload_sha256', 'logical_parent_snapshot'):
+            with self.subTest(key=key), self.assertRaises(IntegrityError):
+                validate_manifest(envelope(dict(manifest, **{key: 'd' * 64})), required)
+        for invalid in (self.root, grandchild, 'invalid'):
+            with self.subTest(invalid=invalid), self.assertRaises(IntegrityError):
+                validate_manifest(envelope(dict(manifest, logical_parent_snapshot=invalid)),
+                                  dict(required, logical_parent_snapshot=invalid))
+
+    def test_cumulative_suffix_retains_base_after_intermediate_checkpoint_eviction(self):
+        grandchild = self.store.append(self.tip, (3,), {'status': 'idle'})
+        directory = self.pool.directory
+        for snapshot, data, binding in (
+                (self.root, b'base', {'schema': 1}),
+                (self.tip, b'intermediate', {'schema': 5, 'parent_snapshot': self.root}),
+                (grandchild, b'cumulative', {'schema': 6, 'parent_snapshot': self.root,
+                                             'logical_parent_snapshot': self.tip})):
+            digest = hashlib.sha256(data).hexdigest()
+            (directory / (digest + '.state')).write_bytes(data)
+            manifest = dict(binding, payload_sha256=digest)
+            (directory / (snapshot + '.json')).write_text(json.dumps({'manifest': manifest}))
+        with self.store.read_lease(grandchild):
+            self.pool.collect()
+            self.assertEqual({p.stem for p in directory.glob('*.json')}, {self.root, grandchild})
+            self.assertEqual(self.store.get_snapshot(grandchild)['parent'], self.tip)
+            self.assertEqual(self.store.get_snapshot(self.tip)['parent'], self.root)
+            for data in (b'base', b'cumulative'):
+                self.assertTrue((directory / (hashlib.sha256(data).hexdigest() + '.state')).exists())
+        self.pool.collect()
+        self.assertFalse(list(directory.glob('*.state')))
+
     def test_failed_reservation_releases_and_does_not_exceed_limit(self):
         with self.assertRaises(RuntimeError):
             with self.pool.reserve(64):

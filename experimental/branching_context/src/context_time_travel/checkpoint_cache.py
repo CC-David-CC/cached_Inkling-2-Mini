@@ -19,8 +19,10 @@ def validate_manifest(envelope, expected):
         fields |= {'execution_schedule','schedule_sha256'}
     if expected.get('schema') == 4:
         fields |= {'native_input_sha256','position_sha256','rotary_cursor'}
-    if expected.get('schema') == 5:
+    if expected.get('schema') in (5, 6):
         parent_fields = {'parent_snapshot', 'parent_payload_sha256', 'parent_consumed'}
+        if expected['schema'] == 6:
+            parent_fields.add('logical_parent_snapshot')
         if not parent_fields.issubset(expected):
             raise IntegrityError('Suffix checkpoint requires an independently bound parent')
         fields |= parent_fields
@@ -39,8 +41,12 @@ def validate_manifest(envelope, expected):
     if any(manifest.get(key) != value for key, value in expected.items()):
         raise IntegrityError('Checkpoint manifest incompatible')
     identities = ['payload_sha256']
-    if manifest['schema'] == 5:
+    if manifest['schema'] in (5, 6):
         identities.extend(('parent_snapshot', 'parent_payload_sha256'))
+        if manifest['schema'] == 6:
+            identities.append('logical_parent_snapshot')
+            if manifest['logical_parent_snapshot'] in (manifest['snapshot'], manifest['parent_snapshot']):
+                raise IntegrityError('Invalid cumulative suffix ancestry')
         length = manifest['parent_consumed']
         if (type(length) is not int or not 0 < length < manifest['consumed']
                 or manifest['parent_snapshot'] == manifest['snapshot']):

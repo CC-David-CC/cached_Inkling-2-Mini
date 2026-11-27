@@ -697,7 +697,7 @@ class DiskCheckpointPool:
                     or any(ch not in '0123456789abcdef' for ch in digest)):
                 raise ValueError('invalid payload digest')
             parent = None
-            if manifest.get('schema') == 5:
+            if manifest.get('schema') in (5, 6):
                 parent = manifest['parent_snapshot']
                 if (type(parent) is not str or len(parent) != 64 or parent == path.stem
                         or any(ch not in '0123456789abcdef' for ch in parent)):
