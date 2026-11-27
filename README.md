@@ -20,6 +20,19 @@ INKLING_DIR=/mnt/fast_cache/inkling tools/inkling_smoke.sh
 
 The baseline uses FP16 conversation state and disables speculative decoding.
 
+For a single-request HTTP endpoint, also place the pinned Strata checkout at
+`strata-source` and the companion tokenizer files from the checkpoint revision
+under `tokenizer`. Install `tokenizers` and `jinja2` into the runtime environment.
+
+```bash
+python tools/inkling_serve.py /mnt/fast_cache/inkling
+curl --fail-with-body http://127.0.0.1:18060/v1/chat/completions \
+    -H 'Content-Type: application/json' \
+    -d '{"model":"Inkling-2-Mini","messages":[{"role":"user","content":"What is 2 + 2? Reply with just the number."}],"max_tokens":128,"temperature":0}'
+```
+
+The HTTP endpoint binds to loopback and serves one request at a time.
+
 ## PCC integration
 
 The next integration step is to determine which native state operations
@@ -28,7 +41,12 @@ separate KV and convolution state for each pass. The first PCC milestone is
 text continuation from a persisted checkpoint. Compare full next-token logits
 against direct execution, verify strict restore in a fresh process with zero
 prefix replay, and verify that writing to a sibling branch preserves its
-parent's state. Physical prefix sharing needs its own evidence.
+parent's state. The current native checkpoint hooks retain
+a live slot's full-attention KV and snapshot its sliding-window KV and
+ShortConv state. A portable PCC checkpoint must capture all of that state,
+including full-attention KV, and bind it to the model, tokens and runtime
+profile. Qualify RAM and disk restores independently. Physical prefix sharing
+needs its own evidence.
 
 The [upstream README](README-PCC.md) records earlier PCC model results. Those
 results apply to their documented profiles.
