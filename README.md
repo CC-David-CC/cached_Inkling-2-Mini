@@ -45,6 +45,21 @@ The test sends the same question with two different PNGs, verifies the
 answers, checks text inference after an invalid model request, and verifies
 that disconnecting a stream cancels generation and releases the slot.
 
+## Building the native engine
+
+Build the pinned Strata source with CMake and a CUDA toolkit that supports
+SM120. On llm-60 the build uses CUDA 13.5 and writes to the fast-cache
+runtime directory beside the released executable.
+
+```bash
+git -C /mnt/fast_cache/inkling/strata-source sparse-checkout add engine
+tools/inkling_build_native.sh /mnt/fast_cache/inkling
+/mnt/fast_cache/inkling/native-build/strata-inkling --version
+```
+
+`INKLING_NVCC`, `INKLING_CUDA_ARCHS` and `INKLING_BUILD_JOBS` can override the
+compiler path, GPU architecture and build parallelism.
+
 ## PCC integration
 
 The next integration step is to determine which native state operations
