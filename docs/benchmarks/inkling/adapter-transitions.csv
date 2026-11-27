@@ -1,0 +1,7 @@
+transition,previous_correct,current_correct,gained,lost,changed_answer_text
+First AdamW round,51,14,2,39,42
+Second AdamW round,14,24,10,0,32
+First Muon round,51,8,3,46,49
+Second Muon round,8,8,6,6,51
+Add residual (rank 4 → 8),14,15,1,0,19
+Compress sum (rank 8 → 4),15,14,0,1,11

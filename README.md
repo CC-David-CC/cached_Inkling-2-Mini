@@ -69,6 +69,12 @@ A rank-4 AdamW output-head adapter trained for eight steps on three missed looku
 
 [Download the aggregate training and retention counts](docs/benchmarks/inkling/training-retention.csv)
 
+In a separate experiment, each optimizer trained only on the original three corrections. The second Muon round stayed at 8/54 while fixing six previously wrong answers and losing six previously correct ones. Starting from the first AdamW adapter, adding a second rank-4 update produced a rank-8 sum that scored 15/54. Compressing that sum to rank 4 changed eleven answer texts and lost one correct answer, leaving 14/54.
+
+![Answer gains and losses between successive adapter checkpoints](docs/benchmarks/inkling/adapter-transitions.png)
+
+[Download the paired adapter comparisons](docs/benchmarks/inkling/adapter-transitions.csv)
+
 ## Native inference baseline
 
 Use the Linux x86-64 CUDA 13 `strata-inkling` 0.1.69 package from
