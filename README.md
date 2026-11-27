@@ -58,6 +58,14 @@ Stock Strata reported prompt processing speed and the number of DSpark draft tok
 
 [Download the cross-engine proposal counts](docs/benchmarks/inkling/dspark-acceptance.csv)
 
+### DFlash2 verifier timing
+
+On llm-60, direct retention of the batched prefix missed full-logit exactness on both tested prompts. Rewinding and replaying the accepted prefix sequentially recovered the control frontier. In six warm trials per prompt, the extra verification work cost about 13.5 ms per block before draft generation.
+
+![Median SQ-10 target processing time for sequential decode and exact replay on two prompts](docs/benchmarks/inkling/dflash2-replay-cost.png)
+
+[Download all paired timings, including warmup](docs/benchmarks/inkling/dflash2-replay-cost.csv)
+
 ### Three questions on one 128K document
 
 BranchWrite loaded one station register, forked three siblings from the same parent and asked each a different lookup question. All three asks restored the resident parent and imported zero checkpoint bytes. Two answers were correct. The bars time parent loading and each ask through answer and receipt verification. Fork creation is outside the ask timer. Each bar is one observation.
