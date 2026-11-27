@@ -1,0 +1,4 @@
+topology,worker,station,document_tokens,root_load_s,lookup_s,expected,answer,exact,save_s,forward_tokens,checkpoint_import_bytes,resident_parent_restores,completed_group_wall_s,completed_requests_overlap_s,error
+combined-sequential,0,17,130000,2923.823,45.581,34,34 degrees.,False,13.814,35,0,1,133.76,0,
+combined-sequential,0,5712,130000,2923.823,44.332,63,63 degrees.,False,13.969,35,0,1,133.76,0,
+combined-sequential,0,11182,130000,2923.823,43.846,49,49 degrees,False,14.682,23,0,1,133.76,0,
