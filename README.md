@@ -18,6 +18,10 @@ A separate native restart run saved an 8,363,606,016-byte parent and a 4,227,072
 
 For repeated questions that need reproducible child checkpoints, pass `--serial-followup` to `tools/inkling_pcc_serve.py` with undrafted text. Root prefill stays batched. Each generation request consumes its appended text tokens individually. This setting has a distinct execution profile. On llm-60 with SQ-10, three randomized lookups produced identical output tokens and child payload hashes after restarting from one saved 250,064-token parent. The two warm requests after restart took 11.43 and 11.66 seconds. [Per-request measurements](docs/benchmarks/inkling/branchwrite-250k-serial.csv)
 
+![Time to durable BranchWrite answers with 250k-token parents](docs/benchmarks/inkling/branchwrite-250k-serving.png)
+
+The register lookups and SQLite query used separate parents. Reading the document happened before timing began. Each bar covers one complete request, including child checkpoint publication. [SQL timings](docs/benchmarks/inkling/branchwrite-250k-sql.csv)
+
 ### Repeated questions on one 130K-token document
 
 ![Elapsed client time for three sequential warm BranchWrite questions on r730 and llm-60](docs/benchmarks/inkling/warm-130k-pooled-client.png)
