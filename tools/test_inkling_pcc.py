@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import json
+import math
 from pathlib import Path
 import struct
 
@@ -12,6 +13,10 @@ from context_time_travel.store import IntegrityError, _json_bytes
 
 
 def exact_row(logits):
+    if len(logits) != 200_058:
+        raise AssertionError(f"Expected 200,058 Inkling logits, received {len(logits)}")
+    if not all(map(math.isfinite, logits)):
+        raise AssertionError("Inkling frontier contains a nonfinite logit")
     return struct.pack(f'<{len(logits)}f', *logits)
 
 
