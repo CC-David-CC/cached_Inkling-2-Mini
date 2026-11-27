@@ -24,6 +24,10 @@ Enable `--suffix-checkpoints` for compact saves on the undrafted single-GPU text
 
 The register lookups and SQLite query used separate parents. Reading the document happened before timing began. Each bar covers one complete request, including child checkpoint publication. [SQL timings](docs/benchmarks/inkling/branchwrite-250k-sql.csv)
 
+![Completion times for two warm SQL requests sharing a 250k-token parent](docs/benchmarks/inkling/branchwrite-250k-sql-pair.png)
+
+With one worker, two overlapping SQL requests finished in 32.04 seconds versus 36.12 seconds of summed sequential request time. All four generated 235 tokens, passed the SQL fixture, matched the checkpoint checksum and imported zero checkpoint bytes. Each mode used one pair of identical requests on separate branches. [Request timings](docs/benchmarks/inkling/branchwrite-250k-sql-pair.csv)
+
 ### Repeated questions on one 130K-token document
 
 ![Elapsed client time for three sequential warm BranchWrite questions on r730 and llm-60](docs/benchmarks/inkling/warm-130k-pooled-client.png)
