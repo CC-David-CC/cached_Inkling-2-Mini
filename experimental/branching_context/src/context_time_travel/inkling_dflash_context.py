@@ -69,3 +69,29 @@ def restore_hidden_context(path, context, *, prompt_tokens, saved_tokens, expect
                 destination[prompt_tokens:saved_tokens].copy_(packed[split:].reshape(-1, 4, 2304))
             finally:
                 del packed
+
+
+def verify_greedy_block(backend, lease, context, proposal, *, remaining, stop_tokens=()):
+    """Commit the target's greedy anchor and matching draft tokens within the request limit."""
+    position = backend.position(lease) + 1
+    _validate_context(context, position, position)
+    if type(remaining) is not int or remaining < 1 or len(proposal) > 7:
+        raise ValueError("Invalid DFlash2 block size or request limit")
+    if any(type(token) is not int or not 0 <= token < backend.vocab_size for token in proposal):
+        raise ValueError("Invalid DFlash2 proposal token")
+    limit = min(remaining, context.shape[1] - position, backend.context_capacity - position)
+    if limit < 1:
+        raise ValueError("DFlash2 context is full")
+
+    committed = []
+    for index in range(min(limit, len(proposal) + 1)):
+        logits = backend.logits(lease)
+        token = max(range(len(logits)), key=logits.__getitem__)
+        if index and proposal[index - 1] != token:
+            break
+        taps = backend.consume_dflash_taps(lease, [token])
+        context[0, position + index].copy_(torch.frombuffer(taps, dtype=torch.float32))
+        committed.append(token)
+        if token in stop_tokens:
+            break
+    return committed
