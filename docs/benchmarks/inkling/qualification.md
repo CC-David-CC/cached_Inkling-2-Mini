@@ -105,3 +105,5 @@ Three sequential SQ-10 lookups on llm-60 reused the same 130,000-token parent wi
 ![Median parent selection, suffix import and suffix export time on llm-60](suffix-128k-phases.png)
 
 Two SQ-10 branches extended the same 131,072-token parent by two tokens each. Each switch in B → A → B order imported 4,227,072 bytes and reproduced 200,058 continuation logits. Reusing the verified immutable checkpoint owner reduced median parent selection from 1,660 ms to 22.2 ms. Suffix import took another 11.2 ms. Measurements cover the Python backend after prefill. HTTP publication and durable restart remain open. [Per-observation measurements](suffix-128k-phases.csv)
+
+With 512 fixed continuation tokens per child, each switch transferred 104,497,152 bytes. Median verified parent selection took 22.3 ms, suffix import 18.0 ms and suffix export 103.4 ms. All three switches reproduced the uninterrupted continuation logits. Reproduce this row with `--parent-tokens 131072 --child-tokens 512`.

@@ -11,16 +11,18 @@ with (folder / 'suffix-128k-phases.csv').open() as source:
 fig, axes = plt.subplots(1, 3, figsize=(10, 3.9), layout='constrained')
 for ax, key, title in zip(axes, ('parent_select_seconds', 'restore_seconds', 'suffix_export_seconds'),
                           ('Select parent', 'Import child suffix', 'Export child suffix')):
-    for index, (mode, color) in enumerate([('Rehash', '#567496'), ('Verified owner', '#127562')]):
-        samples = [float(r['ms']) for r in rows if r['phase'] == key and r['parent_verification'] == mode]
+    for index, (mode, length, color) in enumerate([('Rehash', '2', '#567496'), ('Verified owner', '2', '#127562'),
+                                                  ('Verified owner', '512', '#d48436')]):
+        samples = [float(r['ms']) for r in rows if r['phase'] == key and r['parent_verification'] == mode
+                   and r['child_tokens'] == length]
         value = median(samples)
         ax.bar(index, value, color=color, width=.55)
         ax.text(index, value, f'{value:,.1f}', ha='center', va='bottom')
-    ax.set_xticks([0, 1], ['Rehash', 'Verified owner'])
+    ax.set_xticks(range(3), ['Rehash\n2 tokens', 'Verified\n2 tokens', 'Verified\n512 tokens'])
     ax.set_title(title)
     ax.set_ylabel('Median milliseconds')
     ax.margins(y=.2)
     ax.spines[['top', 'right']].set_visible(False)
-fig.suptitle('128K shared parent · two-token children · SQ-10 on llm-60\n'
-             'One run per mode · 3 selections and imports, 2 exports per run', fontsize=13)
+fig.suptitle('128K shared parent · 2- and 512-token children · SQ-10 on llm-60\n'
+             'One run per configuration · 3 selections and imports, 2 exports per run', fontsize=13)
 fig.savefig(folder / 'suffix-128k-phases.png', dpi=160)

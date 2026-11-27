@@ -15,11 +15,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('runtime', type=Path)
     parser.add_argument('--parent-tokens', type=int, default=1017)
+    parser.add_argument('--child-tokens', type=int, default=2)
     args = parser.parse_args()
-    if not 1 <= args.parent_tokens <= 133117:
-        parser.error('parent must leave room for three continuation tokens')
+    capacity = args.parent_tokens + args.child_tokens + 1
+    if min(args.parent_tokens, args.child_tokens) < 1 or capacity > 133120:
+        parser.error('positive parent and child lengths must leave room for one continuation token')
     history = tuple(100 + pos % 1000 for pos in range(args.parent_tokens))
-    profile = runtime_profile(args.runtime.resolve(), pack='SQ-10', capacity=max(16384, len(history) + 3))
+    profile = runtime_profile(args.runtime.resolve(), pack='SQ-10', capacity=max(16384, capacity))
     backend = load_backend(profile)
     try:
         with backend.lease() as lease:
@@ -32,7 +34,8 @@ def main():
             digest = restore_payload_digest(owner.blob)
             children = []
             export_times = []
-            for tokens in [(110, 111), (150, 151)]:
+            for first in (110, 150):
+                tokens = tuple(first + pos % 1000 for pos in range(args.child_tokens))
                 backend.restore(lease, parent, history=history, frontier=parent_row)
                 backend.consume(lease, tokens)
                 started = perf_counter()
@@ -51,7 +54,7 @@ def main():
                 started = perf_counter()
                 backend.restore(lease, parent, history=history, frontier=parent_row)
                 select_times.append(perf_counter() - started)
-                child_length = len(history) + 2
+                child_length = len(history) + args.child_tokens
                 assert not backend.restore_pinned_suffix(lease, len(history), bytes(32), child_length, suffix, row)
                 start = perf_counter()
                 assert backend.restore_pinned_suffix(lease, len(history), digest, child_length, suffix, row)
@@ -62,7 +65,7 @@ def main():
             transferred = after['checkpoint_import_bytes'] - before['checkpoint_import_bytes']
             assert transferred == sum(len(children[i][0]) for i in (1, 0, 1))
             assert after['consumed_tokens'] - before['consumed_tokens'] == 3
-            print(json.dumps(dict(parent_tokens=len(history), parent_bytes=len(parent),
+            print(json.dumps(dict(parent_tokens=len(history), child_tokens=args.child_tokens, parent_bytes=len(parent),
                                   import_bytes=transferred, restores=3, restore_seconds=timings,
                                   parent_select_seconds=select_times, suffix_export_seconds=export_times,
                                   exact_logits=backend.vocab_size)))

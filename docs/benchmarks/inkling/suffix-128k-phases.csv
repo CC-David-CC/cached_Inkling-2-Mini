@@ -1,17 +1,25 @@
-parent_verification,phase,trial,ms
-Rehash,parent_select_seconds,1,1663.6057528667152
-Rehash,parent_select_seconds,2,1660.002979915589
-Rehash,parent_select_seconds,3,1659.1552118770778
-Rehash,restore_seconds,1,11.337958974763751
-Rehash,restore_seconds,2,11.61838206462562
-Rehash,restore_seconds,3,11.441715992987156
-Rehash,suffix_export_seconds,1,1.175037818029523
-Rehash,suffix_export_seconds,2,1.175137935206294
-Verified owner,parent_select_seconds,1,22.3695810418576
-Verified owner,parent_select_seconds,2,22.17151504009962
-Verified owner,parent_select_seconds,3,22.20999705605209
-Verified owner,restore_seconds,1,11.220503831282258
-Verified owner,restore_seconds,2,11.378795141354203
-Verified owner,restore_seconds,3,11.195896891877055
-Verified owner,suffix_export_seconds,1,1.1582060251384974
-Verified owner,suffix_export_seconds,2,1.118720043450594
+parent_verification,phase,trial,ms,child_tokens
+Rehash,parent_select_seconds,1,1663.6057528667152,2
+Rehash,parent_select_seconds,2,1660.002979915589,2
+Rehash,parent_select_seconds,3,1659.1552118770778,2
+Rehash,restore_seconds,1,11.337958974763751,2
+Rehash,restore_seconds,2,11.61838206462562,2
+Rehash,restore_seconds,3,11.441715992987156,2
+Rehash,suffix_export_seconds,1,1.175037818029523,2
+Rehash,suffix_export_seconds,2,1.175137935206294,2
+Verified owner,parent_select_seconds,1,22.3695810418576,2
+Verified owner,parent_select_seconds,2,22.17151504009962,2
+Verified owner,parent_select_seconds,3,22.20999705605209,2
+Verified owner,restore_seconds,1,11.220503831282258,2
+Verified owner,restore_seconds,2,11.378795141354203,2
+Verified owner,restore_seconds,3,11.195896891877055,2
+Verified owner,suffix_export_seconds,1,1.1582060251384974,2
+Verified owner,suffix_export_seconds,2,1.118720043450594,2
+Verified owner,parent_select_seconds,1,22.17955607920885,512
+Verified owner,parent_select_seconds,2,22.25012006238103,512
+Verified owner,parent_select_seconds,3,22.337778005748987,512
+Verified owner,restore_seconds,1,17.66119385138154,512
+Verified owner,restore_seconds,2,17.967015970498323,512
+Verified owner,restore_seconds,3,18.111301120370626,512
+Verified owner,suffix_export_seconds,1,100.50148679874837,512
+Verified owner,suffix_export_seconds,2,106.37691291049123,512
