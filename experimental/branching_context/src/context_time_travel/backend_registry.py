@@ -76,10 +76,17 @@ def _legacy_llama(profile, gpu_id):
     return import_module('.real', __package__).NativeBackend(profile)
 
 
+def _inkling(profile, gpu_id):
+    if gpu_id not in (None, 0):
+        raise IntegrityError('The Inkling CUDA profile uses visible device zero')
+    return import_module('.inkling_backend', __package__).InklingBackend(profile)
+
+
 DEFAULT_REGISTRY = BackendRegistry((
     BackendDefinition('qwen35-llama.cpp', _dense_qwen),
     BackendDefinition('llama-dense-llama.cpp', _dense_llama),
     BackendDefinition('strata', _strata),
+    BackendDefinition('inkling-cuda', _inkling),
     BackendDefinition('llama.cpp', _legacy_llama),
 ))
 

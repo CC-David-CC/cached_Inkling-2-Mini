@@ -1,8 +1,8 @@
 diff --git a/engine/src/inkling2/CMakeLists.txt b/engine/src/inkling2/CMakeLists.txt
-index 1e7d168..fbda1b6 100644
+index 1e7d168..88979d0 100644
 --- a/engine/src/inkling2/CMakeLists.txt
 +++ b/engine/src/inkling2/CMakeLists.txt
-@@ -298,2 +298,9 @@ if(STRATA_INK_BUILD_PREFIX_TESTS)
+@@ -298,2 +298,16 @@ if(STRATA_INK_BUILD_PREFIX_TESTS)
    set_tests_properties(ink_shared_prefix PROPERTIES TIMEOUT 30)
  endif()
 +
@@ -11,6 +11,13 @@ index 1e7d168..fbda1b6 100644
 +  target_include_directories(inkling_portable_state_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 +  target_compile_definitions(inkling_portable_state_test PRIVATE INKLING_ENABLE_CUDA=1)
 +  target_link_libraries(inkling_portable_state_test PRIVATE strata_inkling_core strata_inkling_cuda strata_inkling_core)
++endif()
++
++if(STRATA_ENABLE_CUDA AND INKLING_PCC_BRIDGE_SOURCE)
++  add_library(inkling_pcc_bridge SHARED "${INKLING_PCC_BRIDGE_SOURCE}")
++  target_include_directories(inkling_pcc_bridge PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
++  target_compile_definitions(inkling_pcc_bridge PRIVATE INKLING_ENABLE_CUDA=1)
++  target_link_libraries(inkling_pcc_bridge PRIVATE strata_inkling_core strata_inkling_cuda strata_inkling_core)
 +endif()
 diff --git a/engine/src/inkling2/cuda/ink_cuda_backend.cu b/engine/src/inkling2/cuda/ink_cuda_backend.cu
 index d43d90a..92835f3 100644

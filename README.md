@@ -62,18 +62,13 @@ compiler path, GPU architecture and build parallelism.
 
 ## PCC integration
 
-The next integration step is to determine which native state operations
-`strata-inkling` exposes and wire them into PCC. Inkling's loop layers keep
-separate KV and convolution state for each pass. The first PCC milestone is
-text continuation from a persisted checkpoint. Compare full next-token logits
-against direct execution, verify strict restore in a fresh process with zero
-prefix replay, and verify that writing to a sibling branch preserves its
-parent's state. The current native checkpoint hooks retain
-a live slot's full-attention KV and snapshot its sliding-window KV and
-ShortConv state. A portable PCC checkpoint must capture all of that state,
-including full-attention KV, and bind it to the model, tokens and runtime
-profile. Qualify RAM and disk restores independently. Physical prefix sharing
-needs its own evidence.
+PCC's Inkling CUDA adapter stores per-visit full-attention and sliding-window
+KV, ShortConv state, and a separately stored full-vocabulary frontier. The
+pinned profile consumes canonical text token IDs at 8K context with FP16 KV,
+512-token prefill chunks, and drafting disabled. The RAM cache retains up to
+2 GiB of native payloads and 32 entries. Disk checkpoints use PCC's existing
+checksummed envelope and bind the model, tokenizer, execution profile and
+token history. The current HTTP service still uses Strata serving directly.
 
 The [upstream README](README-PCC.md) records earlier PCC model results. Those
 results apply to their documented profiles.
@@ -107,16 +102,44 @@ native-build/inkling_portable_state_test Inkling-2-Mini-SQ-20.strata read portab
 On llm-60 the 4,097-token fixture exported 305,856,512 bytes of native state.
 RAM restore after a sibling write and disk restore in a fresh process
 matched all 200,058 continuation logits bit for bit with CUDA, FP16 KV,
-8K context, 512-token prefill chunks and DSpark disabled. The fixture stores
-unframed test bytes. The PCC integration still needs a versioned envelope
-with integrity and identity checks and an independently stored frontier.
+8K context, 512-token prefill chunks and DSpark disabled. The native-only fixture stores unframed test bytes. The PCC regression below
+uses the durable checkpoint format.
+
+### PCC CUDA checkpoint regression
+
+With the CUDA state patch applied, configure the bridge from the local fork.
+Keep an original copy of the pinned Hugging Face `tokenizer.json` named
+`tokenizer-source.json` in the runtime directory. Strata's serving adapter
+writes its converted tokenizer files to a different directory.
+
+```bash
+runtime=/mnt/fast_cache/inkling
+cmake -S "$runtime/strata-source/engine/src/inkling2" -B "$runtime/native-build" \
+    -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+    -DINKLING_PCC_BRIDGE_SOURCE="$PWD/experimental/branching_context/native/inkling/inkling_bridge.cpp"
+cmake --build "$runtime/native-build" --target inkling_pcc_bridge
+export PYTHONPATH="$PWD/experimental/branching_context/src"
+test_dir=$(mktemp -d "$runtime/pcc-check.XXXXXXXX")
+python tools/test_inkling_pcc.py "$runtime" "$test_dir" write
+python tools/test_inkling_pcc.py "$runtime" "$test_dir" read
+```
+
+The two-process regression passed on llm-60 with the pinned Strata source
+`b28ca95e3e6847f2d5e317994f253b66716deeaa` and CUDA 13.5. RAM and disk
+restore matched all 200,058 frontier logits and all 200,058 logits after one
+continuation token. Restore consumed zero prefix tokens. A sibling write
+preserved the parent. The test rejected changed model, execution and input
+identities with valid manifest checksums, and rejected a flipped payload byte.
+The 306,656,744-byte disk payload restored in 0.530 seconds in that run.
+PCC's G0 reference suite passed 58 tests. Coverage here is the single-GPU,
+text-token, draft-off profile with owned copies of the native state.
 
 ### DFlash2 and Splash
 
 [Splash](https://github.com/incoai/splash) is an Apple Silicon engine with
-Inkling 2 Mini DFlash2 support. Use it as a separate Mac reference and
-evaluate the Inkling-specific DFlash2 drafter on CUDA for llm-60 as an
-opt-in profile. Compare against DSpark and draft-off under matched conditions.
+Inkling 2 Mini DFlash2 support. Use its speculative serving and memory-planning design as a reference for
+Cached Inkling. Evaluate the Inkling-specific DFlash2 drafter on CUDA for
+llm-60 as an opt-in profile. Compare against DSpark and draft-off under matched conditions.
 Include draft acceptance, verifier cost, memory overhead, and post-restore
 continuation. Qualify the drafter's state and rejection rollback before
 enabling it with PCC checkpoints.

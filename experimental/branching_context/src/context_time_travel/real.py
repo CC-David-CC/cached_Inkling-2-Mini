@@ -51,6 +51,8 @@ def digest_file(path):
 
 
 class NativeBackend:
+    context_capacity = 2048
+
     def __init__(self, profile):
         self.profile = profile
         self.validate_execution_profile()
@@ -146,7 +148,7 @@ class NativeBackend:
     def consume(self, lease, ids):
         if not ids or any(type(t) is not int or not 0<=t<self.vocab_size for t in ids):
             raise InvalidOperation('Invalid token IDs')
-        if self.lib.ctt_position(lease)+1+len(ids)>2048:
+        if self.lib.ctt_position(lease)+1+len(ids)>self.context_capacity:
             raise InvalidOperation('Certified execution context exceeded')
         native_ids = (C.c_int32*len(ids))(*ids)
         before = self.lib.ctt_work(lease)
