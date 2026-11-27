@@ -541,12 +541,26 @@ class MissingMaterializationProbeTests(unittest.TestCase):
     def test_owned_process_group_cleanup_kills_ignored_term_grandchild(self):
         with tempfile.TemporaryDirectory() as directory:
             ready = Path(directory) / "grandchild.pid"
-            grandchild_code = "import signal,time; signal.signal(signal.SIGTERM, signal.SIG_IGN); time.sleep(60)"
-            leader_code = ("import subprocess,sys,time; p=subprocess.Popen([sys.executable,'-c',"
-                           + repr(grandchild_code) + "]); open(sys.argv[1],'w').write(str(p.pid)); time.sleep(60)")
+            grandchild_code = """
+import os
+from pathlib import Path
+import signal
+import sys
+import time
+
+signal.signal(signal.SIGTERM, signal.SIG_IGN)
+ready = Path(sys.argv[1])
+stage = ready.with_suffix('.tmp')
+stage.write_text(str(os.getpid()))
+stage.replace(ready)
+time.sleep(60)
+"""
+            leader_code = ("import subprocess,sys,time; subprocess.Popen([sys.executable,'-c',"
+                           + repr(grandchild_code) + ",sys.argv[1]]); time.sleep(60)")
             leader = subprocess.Popen([sys.executable, "-c", leader_code, str(ready)],
                                       start_new_session=True, stdout=subprocess.DEVNULL,
                                       stderr=subprocess.DEVNULL)
+            self.addCleanup(lambda: PROBE._stop_child(leader, grace_seconds=0.1) if leader.poll() is None else None)
             deadline = time.monotonic() + 5
             while not ready.exists() and time.monotonic() < deadline:
                 time.sleep(0.01)
