@@ -22,7 +22,7 @@ The baseline uses FP16 conversation state and disables speculative decoding.
 
 For a single-request HTTP endpoint, also place the pinned Strata checkout at
 `strata-source` and the companion tokenizer files from the checkpoint revision
-under `tokenizer`. Install `tokenizers` and `jinja2` into the runtime environment.
+under `tokenizer`. Install `tokenizers`, `jinja2` and `regex` into the runtime environment.
 
 ```bash
 python tools/inkling_serve.py /mnt/fast_cache/inkling
@@ -50,3 +50,16 @@ needs its own evidence.
 
 The [upstream README](README-PCC.md) records earlier PCC model results. Those
 results apply to their documented profiles.
+
+## Serving performance
+
+Establish a cold and warm single-request baseline on llm-60 before tuning.
+Measure prefill rate, time to first visible token, decode rate, peak VRAM and
+restore latency across short and long prompts. Track visible and reasoning
+tokens separately.
+
+Use exact FP16-state continuation as the reference for RAM and disk cache
+tests. Then measure native FP4 kernels and DSpark drafting with the same
+weights, prompts, decoding settings and context sizes. Explore selective
+layer and expert residency when the full checkpoint exceeds available VRAM.
+Compare concurrent requests after the single-request results are reproducible.
