@@ -1,0 +1,5 @@
+run,station,expected,answer,document_tokens,root_s,lookup_s,generation_s,save_s,forward_tokens,import_bytes
+http-owner,17,orange,orange,32000,6.29,1.989,0.03,0.877,22,0
+http-owner,2500,red,red,32000,6.29,2.101,0.143,0.875,35,0
+http-owner-traced,17,orange,orange,32000,6.27,2.012,0.03,0.885,22,0
+http-owner-traced,2500,red,red,32000,6.27,2.101,0.143,0.877,35,0
