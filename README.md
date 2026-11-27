@@ -14,6 +14,12 @@ Each bar measures one cold request on one RTX PRO 6000 Blackwell, with SQ-20 wei
 
 [Download the underlying long-context measurements](docs/benchmarks/inkling/long-context.csv)
 
+Stock Strata reported prompt processing speed and the number of DSpark draft tokens offered and accepted. Cached recorded proposed tree nodes only in these runs, so its acceptance rate is unknown.
+
+![Stock Strata prefill speed and DSpark acceptance for 64K and 128K inputs](docs/benchmarks/inkling/stock-dspark.png)
+
+[Download the prefill and proposal counts](docs/benchmarks/inkling/stock-dspark.csv)
+
 ### Three questions on one 128K document
 
 BranchWrite loaded one station register, forked three siblings from the same parent and asked each a different lookup question. All three asks restored the resident parent and imported zero checkpoint bytes. Two answers were correct. The bars time parent loading and each ask through answer and receipt verification. Fork creation is outside the ask timer. Each bar is one observation.

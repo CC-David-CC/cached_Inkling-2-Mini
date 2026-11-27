@@ -1,0 +1,5 @@
+content_tokens,draft,prompt_tokens_per_second,draft_n,draft_n_accepted
+65536,off,7165.8,0,0
+65536,dspark,7062.3,1018,852
+131072,off,5534.9,0,0
+131072,dspark,5446.4,1071,854
