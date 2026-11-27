@@ -1,0 +1,20 @@
+pack,correct,completion_tokens,finish_reason,visible_answer
+SQ-15,False,4,stop,6754
+Q4,False,123,stop,"6754
+- Initial mode: 6754 (setuid=4, setgid=2, sticky=1; owner rwx=7, group r-x=5, other r--=4)
+- chmod g-w: group loses write → group becomes r-x (5)
+- chmod o+x: other gains execute → other becomes r-x (5)
+- chmod u-s: owner loses setuid → owner becomes rwx (7), setuid bit cleared
+- Result: 755
+
+Answer: 755"
+SQ-10,False,291,stop,"6754
+6754
+6754
+67546754"
+SQ-20,False,44,stop,"6754
+- Initial mode: 6754
+- After chmod g-w,o+x: 6755
+- After chmod u-s: 6755
+
+Result: 6755"
