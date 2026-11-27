@@ -1,5 +1,6 @@
 """CPU regression tests for Inkling DFlash2 checkpoint layout and publication."""
 from array import array
+from io import BytesIO
 import hashlib
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -10,7 +11,7 @@ import sys
 import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "experimental/branching_context/src"))
-from context_time_travel.inkling_dflash_context import restore_hidden_context, save_hidden_context, verify_greedy_block
+from context_time_travel.inkling_dflash_context import restore_hidden_buffer, restore_hidden_context, save_hidden_context, verify_greedy_block, write_hidden_context
 
 
 class HiddenContextTest(unittest.TestCase):
@@ -34,6 +35,21 @@ class HiddenContextTest(unittest.TestCase):
                                        expected_sha256=digest)
                 self.assertTrue(torch.equal(destination[:, :3], self.context[:, :3]))
                 self.assertTrue((destination[:, 3:] == -1).all())
+
+    def test_append_hidden_rows_after_target_payload(self):
+        stream = BytesIO()
+        stream.write(b"target payload")
+        digest = write_hidden_context(stream, self.context, prompt_tokens=2, saved_tokens=3)
+        file_digest = save_hidden_context(self.path, self.context, prompt_tokens=2, saved_tokens=3)
+        self.assertEqual(stream.getvalue(), b"target payload" + self.path.read_bytes())
+        self.assertEqual(digest, file_digest)
+
+        restored = torch.zeros_like(self.context)
+        with stream.getbuffer() as buffer:
+            restore_hidden_buffer(buffer[len(b"target payload"):], restored,
+                                  prompt_tokens=2, saved_tokens=3, expected_sha256=digest)
+        self.assertTrue(torch.equal(restored[:, :3], self.context[:, :3]))
+        self.assertEqual(restored[:, 3:].count_nonzero().item(), 0)
 
     def test_truncated_or_extended_file_leaves_destination_untouched(self):
         for delta in (-2, 2):

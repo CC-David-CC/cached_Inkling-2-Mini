@@ -28,24 +28,47 @@ def _write_rows(stream, rows, digest):
         digest.update(data)
 
 
-def save_hidden_context(path, context, *, prompt_tokens, saved_tokens):
-    """Publish the compact checkpoint and return its SHA-256 for the caller’s manifest."""
+def write_hidden_context(stream, context, *, prompt_tokens, saved_tokens):
+    """Append checkpoint rows to a binary stream and return their SHA-256."""
     _validate_context(context, prompt_tokens, saved_tokens)
-    path = Path(path)
     layers = context.detach()[0].view(-1, 4, 2304)
     digest = hashlib.sha256()
+    for layer in range(4):
+        _write_rows(stream, layers[:prompt_tokens, layer], digest)
+    if saved_tokens > prompt_tokens:
+        _write_rows(stream, layers[prompt_tokens:saved_tokens], digest)
+    return digest.hexdigest()
+
+
+def save_hidden_context(path, context, *, prompt_tokens, saved_tokens):
+    """Publish the compact checkpoint and return its SHA-256 for the caller’s manifest."""
+    path = Path(path)
     stream = NamedTemporaryFile(dir=path.parent, delete=False)
     temporary = Path(stream.name)
     try:
         with stream:
-            for layer in range(4):
-                _write_rows(stream, layers[:prompt_tokens, layer], digest)
-            if saved_tokens > prompt_tokens:
-                _write_rows(stream, layers[prompt_tokens:saved_tokens], digest)
+            digest = write_hidden_context(stream, context, prompt_tokens=prompt_tokens, saved_tokens=saved_tokens)
         os.replace(temporary, path)
-        return digest.hexdigest()
+        return digest
     finally:
         temporary.unlink(missing_ok=True)
+
+
+def restore_hidden_buffer(buffer, context, *, prompt_tokens, saved_tokens, expected_sha256=None):
+    """Restore from a writable contiguous byte buffer, including a slice of a RAM checkpoint."""
+    _validate_context(context, prompt_tokens, saved_tokens)
+    with memoryview(buffer) as view:
+        if view.nbytes != saved_tokens * context.shape[2] * 2:
+            raise ValueError("Drafter checkpoint size differs from saved length")
+        if view.readonly or not view.c_contiguous:
+            raise ValueError("Expected writable contiguous drafter checkpoint storage")
+        if expected_sha256 is not None and hashlib.sha256(view).hexdigest() != expected_sha256:
+            raise ValueError("Drafter checkpoint digest mismatch")
+        packed = torch.frombuffer(view, dtype=torch.bfloat16)
+        destination = context[0].view(-1, 4, 2304)
+        split = prompt_tokens * context.shape[2]
+        destination[:prompt_tokens].copy_(packed[:split].reshape(4, prompt_tokens, 2304).transpose(0, 1))
+        destination[prompt_tokens:saved_tokens].copy_(packed[split:].reshape(-1, 4, 2304))
 
 
 def restore_hidden_context(path, context, *, prompt_tokens, saved_tokens, expected_sha256=None):
@@ -59,16 +82,8 @@ def restore_hidden_context(path, context, *, prompt_tokens, saved_tokens, expect
         # The descriptor binds validation and the GPU copy to one file even if
         # another writer atomically publishes a newer checkpoint at this path.
         with mmap.mmap(stream.fileno(), 0, access=mmap.ACCESS_COPY) as mapped:
-            if expected_sha256 is not None and hashlib.sha256(mapped).hexdigest() != expected_sha256:
-                raise ValueError("Drafter checkpoint digest mismatch")
-            packed = torch.frombuffer(mapped, dtype=torch.bfloat16)
-            try:
-                destination = context[0].view(-1, 4, 2304)
-                split = prompt_tokens * context.shape[2]
-                destination[:prompt_tokens].copy_(packed[:split].reshape(4, prompt_tokens, 2304).transpose(0, 1))
-                destination[prompt_tokens:saved_tokens].copy_(packed[split:].reshape(-1, 4, 2304))
-            finally:
-                del packed
+            restore_hidden_buffer(mapped, context, prompt_tokens=prompt_tokens, saved_tokens=saved_tokens,
+                                  expected_sha256=expected_sha256)
 
 
 def verify_greedy_block(backend, lease, context, proposal, *, remaining, stop_tokens=()):
