@@ -1,0 +1,3 @@
+allocated_kv_tokens,sample_time_r730,used_mib,free_mib,total_mib,gpu_percent
+57344,2026/11/27 03:36:29.774,5647,1953,7680,100
+65536,2026/11/27 03:37:30.328,5903,1697,7680,100

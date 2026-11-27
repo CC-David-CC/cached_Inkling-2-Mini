@@ -16,6 +16,8 @@ Each process used SQ-10, greedy native decoding, FP16 device KV and drafting off
 
 At 64K, three SQ-10 workers with all experts in host RAM decoded 32 steps each after a synchronized start from synthetic 65,504-token FP16 KV states. Across the common wall-clock interval the three cards produced **15.21 output tok/s combined**. The interval includes native decode, finite-logit checks and greedy selection. Real prompt prefill is outside this measurement. [Per-stream timing](docs/benchmarks/inkling/p4-64k-decode.csv)
 
+A single Cached HTTP worker reading a 65,000-token document on SQ-10 with a 768 MiB GPU expert budget had 1,953 MiB free at 57,344 allocated KV slots and 1,697 MiB free at 65,536 slots. These are device-wide prefill samples from P4 index 2 on r730. [VRAM samples](docs/benchmarks/inkling/p4-prefill-vram-by-capacity.csv)
+
 Three independent P4 workers also read the same 65,504-token register from scratch, using a 0.75 GiB expert budget on each card. Each produced the correct final-station temperature before the first message boundary. Reading took 17.9–18.8 minutes per worker. The native benchmark continued for 32 fixed greedy steps. The workers finished prefill at different times, so their individual decode rates cannot be added to infer simultaneous decode throughput.
 
 ![P4 long-register prefill and decode timings](docs/benchmarks/inkling/p4-register.png)
