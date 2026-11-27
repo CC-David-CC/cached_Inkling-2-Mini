@@ -1,4 +1,5 @@
 """CPU regression tests for Inkling DFlash2 checkpoint layout and publication."""
+import hashlib
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -39,6 +40,20 @@ class HiddenContextTest(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     restore_hidden_context(self.path, destination, prompt_tokens=1, saved_tokens=1)
                 self.assertTrue(torch.equal(destination, self.context))
+
+    def test_corruption_rejected_before_copy(self):
+        save_hidden_context(self.path, self.context, prompt_tokens=2, saved_tokens=3)
+        raw = self.path.read_bytes()
+        expected = hashlib.sha256(raw).hexdigest()
+        destination = torch.zeros_like(self.context)
+        restore_hidden_context(self.path, destination, prompt_tokens=2, saved_tokens=3,
+                               expected_sha256=expected)
+        self.path.write_bytes(bytes([raw[0] ^ 1]) + raw[1:])
+        destination.zero_()
+        with self.assertRaisesRegex(ValueError, "digest mismatch"):
+            restore_hidden_context(self.path, destination, prompt_tokens=2, saved_tokens=3,
+                                   expected_sha256=expected)
+        self.assertEqual(destination.count_nonzero().item(), 0)
 
     def test_failed_publication_preserves_previous_checkpoint(self):
         self.path.write_bytes(b"previous checkpoint")

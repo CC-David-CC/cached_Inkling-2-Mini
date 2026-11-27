@@ -1,5 +1,7 @@
 """Restore Inkling DFlash2's four tapped layers into a BF16 drafter context."""
+import hashlib
 import math
+import mmap
 import os
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -41,15 +43,24 @@ def save_hidden_context(path, context, *, prompt_tokens, saved_tokens):
         temporary.unlink(missing_ok=True)
 
 
-def restore_hidden_context(path, context, *, prompt_tokens, saved_tokens):
+def restore_hidden_context(path, context, *, prompt_tokens, saved_tokens, expected_sha256=None):
     """Load layer-major prefill taps and token-major continuation taps."""
     _validate_context(context, prompt_tokens, saved_tokens)
     path = Path(path)
     elements = saved_tokens * context.shape[2]
-    if path.stat().st_size != elements * 2:
-        raise ValueError("Drafter checkpoint size differs from saved length")
-    packed = torch.from_file(str(path), size=elements, dtype=torch.uint16).view(torch.bfloat16)
-    destination = context[0].view(-1, 4, 2304)
-    split = prompt_tokens * context.shape[2]
-    destination[:prompt_tokens].copy_(packed[:split].reshape(4, prompt_tokens, 2304).transpose(0, 1))
-    destination[prompt_tokens:saved_tokens].copy_(packed[split:].reshape(-1, 4, 2304))
+    with path.open("rb") as stream:
+        if os.fstat(stream.fileno()).st_size != elements * 2:
+            raise ValueError("Drafter checkpoint size differs from saved length")
+        # The descriptor binds validation and the GPU copy to one file even if
+        # another writer atomically publishes a newer checkpoint at this path.
+        with mmap.mmap(stream.fileno(), 0, access=mmap.ACCESS_COPY) as mapped:
+            if expected_sha256 is not None and hashlib.sha256(mapped).hexdigest() != expected_sha256:
+                raise ValueError("Drafter checkpoint digest mismatch")
+            packed = torch.frombuffer(mapped, dtype=torch.bfloat16)
+            try:
+                destination = context[0].view(-1, 4, 2304)
+                split = prompt_tokens * context.shape[2]
+                destination[:prompt_tokens].copy_(packed[:split].reshape(4, prompt_tokens, 2304).transpose(0, 1))
+                destination[prompt_tokens:saved_tokens].copy_(packed[split:].reshape(-1, 4, 2304))
+            finally:
+                del packed
