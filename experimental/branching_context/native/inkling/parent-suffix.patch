@@ -1,0 +1,59 @@
+diff -ur a/engine/src/inkling2/cuda/ink_cuda_backend.cu b/engine/src/inkling2/cuda/ink_cuda_backend.cu
+--- a/engine/src/inkling2/cuda/ink_cuda_backend.cu
++++ b/engine/src/inkling2/cuda/ink_cuda_backend.cu
+@@ -423,6 +423,18 @@
+         return bytes;
+     }
+ 
++    size_t portable_suffix_size(int slot, int parent, int length) const override {
++        if (parent <= 0 || parent >= length || dspark_ || model_.ls_active
++            || !portable_state_size(slot, length)) return 0;
++        // Each visit retains at most the suffix still visible to its attention window.
++        return portable_state_size(slot, length - parent);
++    }
++
++    bool export_portable_suffix(int slot, int parent, int length, void* data, size_t size) override {
++        return parent > 0 && transfer_portable_state<true>(
++            slot, length, static_cast<uint8_t*>(data), size, parent);
++    }
++
+     bool export_portable_state(int slot, int length, void* data, size_t size) override {
+         return transfer_portable_state<true>(slot, length, static_cast<uint8_t*>(data), size);
+     }
+@@ -1211,9 +1223,10 @@
+     }
+ 
+     template<bool Export, typename Byte>
+-    bool transfer_portable_state(int slot, int length, Byte* data, size_t size) {
++    bool transfer_portable_state(int slot, int length, Byte* data, size_t size, int parent = 0) {
+         using namespace strata::ink;
+-        if (!data || size == 0 || size != portable_state_size(slot, length)) return false;
++        const size_t expected = parent ? portable_suffix_size(slot, parent, length) : portable_state_size(slot, length);
++        if (!data || !size || size != expected) return false;
+         if (cudaSetDevice(gpu_id_) != cudaSuccess) return false;
+         if constexpr (!Export) {
+             if (!runner_->ensure_global_kv_cap(length)
+@@ -1257,8 +1270,9 @@
+             if (!ok) break;
+             const auto& kv = runner_->kv_desc[visit];
+             if (model_.ls_active) stream = visit_stream(visit);
+-            const int rows = kv.is_swa ? std::min(length, kInkSwaWin) : length;
+-            const int start = kv.is_swa ? (length - rows) % kv.dev_cap : 0;
++            const int added = length - parent;
++            const int rows = kv.is_swa ? std::min(added, kInkSwaWin) : added;
++            const int start = kv.is_swa ? (length - rows) % kv.dev_cap : parent;
+             const int first = std::min(rows, kv.dev_cap - start);
+             const size_t base = size_t(slot) * kv.dev_cap * kInkKVDim;
+             for (auto* buffer : {kv.k_f16, kv.v_f16}) {
+diff -ur a/engine/src/inkling2/ink_backend.h b/engine/src/inkling2/ink_backend.h
+--- a/engine/src/inkling2/ink_backend.h
++++ b/engine/src/inkling2/ink_backend.h
+@@ -114,6 +114,8 @@
+ 
+     // Native state payload only. The caller binds the token history, frontier,
+     // model and execution profile and validates the payload before import.
++    virtual size_t portable_suffix_size(int, int, int) const { return 0; }
++    virtual bool export_portable_suffix(int, int, int, void*, size_t) { return false; }
+     virtual size_t portable_state_size(int, int) const { return 0; }
+     virtual bool export_portable_state(int, int, void*, size_t) { return false; }
+     virtual bool import_portable_state(int, int, const void*, size_t) { return false; }

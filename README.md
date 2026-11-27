@@ -350,6 +350,31 @@ test_dir=$(mktemp -d /dev/shm/inkling-check.XXXXXXXX)
 "$runtime/.venv/bin/python" tools/test_inkling_pcc.py "$runtime" "$test_dir" read
 ```
 
+#### Native parent-plus-suffix regression
+
+For the experimental single-GPU FP16 KV exporter, start from the patched Strata checkout and build variables above. Use a dedicated build directory because the suffix patch extends the native backend interface. The fixture uses SQ-10, a 3 GiB GPU expert budget, and two processes on the same GPU. Set `weights` to the SQ-10 pack path.
+
+```bash
+git -C "$runtime/strata-source" apply "$bridge/parent-suffix.patch"
+suffix_build="$runtime/suffix-build"
+engine="$runtime/strata-source/engine"
+cmake -S "$engine/src/inkling2" -B "$suffix_build" \
+    -DCMAKE_BUILD_TYPE=Release -DSTRATA_ENABLE_CUDA=ON -DSTRATA_INK_CUDA_ARCHS=120 \
+    -DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+    -DINKLING_PCC_BRIDGE_SOURCE="$bridge/inkling_bridge.cpp"
+cmake --build "$suffix_build" --target inkling_pcc_bridge --parallel 6
+c++ -std=c++20 -O2 -DINKLING_ENABLE_CUDA -I"$engine/src/inkling2" -I"$engine/include" \
+    "$bridge/check_parent_suffix.cpp" -L"$suffix_build" -Wl,-rpath,"$suffix_build" \
+    -linkling_pcc_bridge -o "$suffix_build/check_parent_suffix"
+fixture=$(mktemp /dev/shm/inkling-suffix.XXXXXXXX)
+for phase in write read; do
+    STRATA_INK_EXACT=1 "$suffix_build/check_parent_suffix" "${weights:?Set the SQ-10 pack path}" "$phase" "$fixture"
+done
+unlink "$fixture"
+```
+
+On llm-60 the writer extended a 1,017-token parent by 18 tokens across the sliding-window boundary. The 7,372,800-byte suffix and parent reproduced the full 205,520,896-byte native child image. The reader loaded the fixture in a fresh process and matched all 200,058 uninterrupted continuation logits. The HTTP server still uses full checkpoints.
+
 The clean-checkout run at `0e77805` reused the host CUDA installation and model assets. Its fresh process restored the checkpoint in 0.518 seconds. The temporary test store is RAM-backed and can be removed after checking the results.
 
 The two-process regression passed on llm-60 with the pinned Strata source
