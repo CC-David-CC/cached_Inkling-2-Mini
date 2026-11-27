@@ -345,6 +345,13 @@ class BranchingModel:
         with ExitStack() as leases:
             saved = self.cache.get(snapshot)
             if saved is None and (self.checkpoint_directory/(snapshot+'.json')).exists():
+                if self.profile.get('backend') == 'inkling-cuda':
+                    envelope = _decode((self.checkpoint_directory / (snapshot + '.json')).read_bytes())
+                    if isinstance(envelope, dict) and isinstance(envelope.get('manifest'), dict) and envelope['manifest'].get('schema') == 5:
+                        with self.materialize_suffix(snapshot, envelope) as (lease, row):
+                            self.cache[snapshot] = self._save(lease, history)
+                            yield (None if frontier_only else lease), row
+                        return
                 saved = self._load_checkpoint(snapshot,history)
                 self.cache[snapshot] = saved
             if saved is not None and saved.input_identity != input_identity:
@@ -1278,6 +1285,12 @@ class BranchingModel:
         expected = PreparedCheckpoint(prepared.snapshot,cold,
             self._prepared_envelope(prepared.snapshot,cold,history))
         if expected != prepared: raise IntegrityError('Prepared checkpoint manifest/payload changed')
+        files = self._publish_prepared_files(prepared)
+        self.validate_checkpoint(prepared.snapshot)
+        return files
+
+    def _publish_prepared_files(self, prepared):
+        cold = prepared.checkpoint
         payload = self.checkpoint_directory/(cold.checksum+'.state')
         manifest = self.checkpoint_directory/(prepared.snapshot+'.json')
         if payload.exists():
@@ -1291,7 +1304,6 @@ class BranchingModel:
         else: self._publish_checkpoint_file(manifest,prepared.envelope)
         # Validate actual saved bytes, including a new write, before a branch
         # can acknowledge this checkpoint. RAM hashes alone do not certify I/O.
-        self.validate_checkpoint(prepared.snapshot)
         return dict(manifest_path=manifest,payload_path=payload)
 
     def save_prepared_branch(self, name, expected_revision, prepared, operation_id, *, presentation=None,
@@ -1636,13 +1648,39 @@ class BranchingModel:
                 envelope = dict(manifest=manifest, checksum=hashlib.sha256(_json_bytes(manifest)).hexdigest())
                 return PreparedCheckpoint(snapshot, child, _json_bytes(envelope))
 
+    def publish_suffix_checkpoint(self, prepared):
+        """Publish the checked suffix payload and its snapshot-addressed manifest."""
+        from .checkpoint_cache import validate_manifest
+
+        if not isinstance(prepared, PreparedCheckpoint):
+            raise IntegrityError('Invalid prepared suffix checkpoint')
+        self.store.authorize(prepared.snapshot, 'checkpoint')
+        with self._suffix_binding(prepared.snapshot) as (_, required):
+            child = prepared.checkpoint
+            if (type(child.blob) is not bytes or len(child.frontier) != required['logits_count']
+                    or not all(map(math.isfinite, child.frontier))
+                    or child.model_contract_id != required['model_contract_id']
+                    or child.execution_profile_id != required['execution_profile_id']
+                    or child.consumed != required['consumed'] or child.input_identity != required['input_identity']
+                    or verified_checkpoint_digest(child) != child.checksum):
+                raise IntegrityError('Prepared suffix does not match canonical snapshot')
+            validate_manifest(_decode(prepared.envelope),
+                              dict(required, state_bytes=len(child.blob), payload_sha256=child.checksum))
+            files = self._publish_prepared_files(prepared)
+            if (files['manifest_path'].read_bytes() != prepared.envelope
+                    or digest_file(files['payload_path']) != child.checksum):
+                raise IntegrityError('Published suffix checkpoint differs')
+            return files
+
     @contextmanager
-    def materialize_suffix(self, snapshot, envelope):
+    def materialize_suffix(self, snapshot, envelope=None):
         """Restore a stored Inkling suffix over its exact canonical parent."""
         from .checkpoint_cache import validate_manifest
         from .digest_attestation import restore_payload_digest
 
         with self._suffix_binding(snapshot) as (parent, required):
+            if envelope is None:
+                envelope = _decode((self.checkpoint_directory / (snapshot + '.json')).read_bytes())
             manifest = validate_manifest(envelope, required)
             child = self._read_checkpoint_payload(manifest)
             with self._materialize(parent) as (lease, _):

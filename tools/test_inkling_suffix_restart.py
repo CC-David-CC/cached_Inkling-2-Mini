@@ -34,17 +34,15 @@ def main():
         row_format = f'<{backend.vocab_size}f'
         if args.phase == 'write':
             prepared = model.prepare_suffix_checkpoint(child)
-            envelope = json.loads(prepared.envelope)
-            checkpoint = prepared.checkpoint
-            model._publish_checkpoint_parts(model.checkpoint_directory / (checkpoint.checksum + '.state'),
-                                            (checkpoint.blob, struct.pack(row_format, *checkpoint.frontier)))
+            first = model.publish_suffix_checkpoint(prepared)
+            assert model.publish_suffix_checkpoint(prepared) == first
             with model.materialize(child) as (lease, _):
                 backend.consume(lease, (501,))
                 expected = hashlib.sha256(struct.pack(row_format, *backend.logits(lease))).hexdigest()
-            fixture.write_text(json.dumps(dict(child=child, envelope=envelope, expected=expected)))
+            fixture.write_text(json.dumps(dict(child=child, expected=expected)))
             return
 
-        envelope = saved['envelope']
+        envelope = json.loads((model.checkpoint_directory / (child + '.json')).read_bytes())
         altered = dict(envelope['manifest'], parent_payload_sha256='0' * 64)
         before = backend.work_counters()
         try:
@@ -56,7 +54,7 @@ def main():
             raise AssertionError('Rechecksummed child accepted the wrong parent payload')
         assert before == backend.work_counters()
         suffix_bytes = envelope['manifest']['state_bytes']
-        with model.materialize_suffix(child, envelope) as (lease, _):
+        with model.materialize(child) as (lease, _):
             backend.consume(lease, (501,))
             assert hashlib.sha256(struct.pack(row_format, *backend.logits(lease))).hexdigest() == saved['expected']
         assert backend.work_counters()['consumed_tokens'] == 1
