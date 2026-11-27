@@ -248,6 +248,30 @@ class InklingBackend(NativeBackend):
             raise InvalidOperation('Inkling decode requires one selected token')
         self.consume(lease, ids)
 
+    def consume_dflash_taps(self, lease, tokens):
+        """Consume unadapted text and return layer-major float32 taps."""
+        capture = getattr(self.lib, 'ctt_consume_dflash_taps', None)
+        if capture is None:
+            raise InvalidOperation('DFlash2 capture requires a bridge with tap support')
+        if self.draft or self.adapter_sha256:
+            raise InvalidOperation('DFlash2 capture requires an unadapted target with DSpark off')
+        if not tokens or any(type(t) is not int or not 0 <= t < self.vocab_size for t in tokens):
+            raise InvalidOperation('Invalid token IDs')
+        if len(tokens) > self.context_capacity - self.position(lease) - 1:
+            raise InvalidOperation('Certified execution context exceeded')
+        capture.argtypes = [C.c_void_p, C.POINTER(C.c_int32), C.c_int, C.POINTER(C.c_float), C.c_size_t]
+        capture.restype = C.c_int
+        ids = (C.c_int32 * len(tokens))(*tokens)
+        taps = (C.c_float * (4 * len(tokens) * HEAD_WIDTH))()
+        before = self.lib.ctt_work(lease)
+        if capture(lease, ids, len(tokens), taps, len(taps)):
+            raise RuntimeError(self.lib.ctt_error().decode())
+        delta = self.lib.ctt_work(lease) - before
+        if delta != len(tokens):
+            raise AssertionError('Native consumed-work counter mismatch')
+        self.stats['consumed_tokens'] += delta
+        return taps
+
     def head_features(self, lease, tokens):
         if self.adapter_sha256:
             raise InvalidOperation('Head training requires the unadapted Inkling profile')
