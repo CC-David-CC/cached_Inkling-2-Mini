@@ -1,0 +1,6 @@
+prompt_type,proposed_tokens,raw_accepted_prefix,normalized_accepted_prefix,raw_first_target_rank,normalized_first_target_rank
+arithmetic,7,0,0,325,2
+python,7,0,2,450,1
+linux,7,0,3,29,1
+repeat,7,0,7,46531,1
+json,7,0,7,16523,1
