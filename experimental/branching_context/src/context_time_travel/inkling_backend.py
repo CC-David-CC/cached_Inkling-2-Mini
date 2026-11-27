@@ -199,6 +199,18 @@ class InklingBackend(NativeBackend):
         self.lib.ctt_logit_softcap.restype = C.c_float
         self.lib.ctt_attach_head_lora.argtypes = [C.c_void_p, C.c_int, C.c_void_p, C.c_void_p]
         self.lib.ctt_attach_head_lora.restype = C.c_int
+        self._import_suffix = getattr(self.lib, 'ctt_import_suffix', None)
+        if self._import_suffix is not None:
+            self._import_suffix.argtypes = [C.c_void_p, C.c_int, C.c_int, C.c_void_p, C.c_size_t,
+                                           C.POINTER(C.c_float), C.c_size_t]
+            self._import_suffix.restype = C.c_size_t
+        self._suffix_size = getattr(self.lib, 'ctt_suffix_size', None)
+        self._export_suffix = getattr(self.lib, 'ctt_export_suffix', None)
+        if self._suffix_size is not None and self._export_suffix is not None:
+            self._suffix_size.argtypes = [C.c_void_p, C.c_int]
+            self._suffix_size.restype = C.c_size_t
+            self._export_suffix.argtypes = [C.c_void_p, C.c_int, C.c_void_p, C.c_size_t]
+            self._export_suffix.restype = C.c_size_t
         execution = self.profile['execution']
         gpu_count = len(execution.get('layer_split_devices', execution.get('expert_parallel_devices', [0])))
         if gpu_count > 1 and self.draft:
@@ -501,6 +513,41 @@ class InklingBackend(NativeBackend):
         blob = super().export(lease)
         self._pin_export(lease, blob)
         return blob
+
+    def export_pinned_suffix(self, lease, parent_length, parent_state_sha256):
+        """Return suffix bytes for the named resident state, or None if unavailable."""
+        if (self._suffix_size is None or self._export_suffix is None
+                or type(parent_state_sha256) is not bytes or len(parent_state_sha256) != 32
+                or parent_state_sha256 != self._pinned_digest
+                or type(parent_length) is not int or not 0 < parent_length < self.context_capacity):
+            return None
+        size = self._suffix_size(lease, parent_length)
+        if not size:
+            return None
+        buffer = C.create_string_buffer(size)
+        if self._export_suffix(lease, parent_length, buffer, size) != size:
+            raise IntegrityError('Inkling suffix export failed')
+        return buffer.raw
+
+    def restore_pinned_suffix(self, lease, parent_length, parent_state_sha256, child_length, suffix, frontier):
+        """Apply a verified child payload after the caller materializes its parent."""
+        if (self._import_suffix is None or type(parent_state_sha256) is not bytes
+                or len(parent_state_sha256) != 32 or parent_state_sha256 != self._pinned_digest):
+            return False
+        if (type(parent_length) is not int or type(child_length) is not int
+                or not 0 < parent_length < child_length <= self.context_capacity
+                or self.position(lease) + 1 != parent_length):
+            return False
+        if type(suffix) is not bytes or not suffix or len(frontier) != self.vocab_size:
+            raise IntegrityError('Incomplete Inkling suffix checkpoint')
+        row = (C.c_float * self.vocab_size)(*frontier)
+        if self._import_suffix(lease, parent_length, child_length, C.c_char_p(suffix), len(suffix),
+                               row, len(row)) != len(suffix):
+            self.close()
+            raise IntegrityError('Inkling suffix import failed')
+        self.stats['checkpoint_import_bytes'] += len(suffix)
+        self._exported_digest = None
+        return True
 
     def _pin_export(self, lease, blob):
         if self.context_capacity > 8192:

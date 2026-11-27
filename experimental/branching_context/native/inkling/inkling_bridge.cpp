@@ -91,7 +91,10 @@ static void* load_devices(const char* path, int capacity, bool dspark, int gpus,
     }
     if (model->backend->effective_max_ctx() != capacity ||
         model->backend->effective_chunk() != chunk) {
-        error = "Inkling CUDA runtime did not honor the pinned capacity or chunk";
+        error = "Inkling CUDA runtime did not honor the pinned capacity or chunk: requested "
+                + std::to_string(capacity) + "/" + std::to_string(chunk)
+                + ", got " + std::to_string(model->backend->effective_max_ctx())
+                + "/" + std::to_string(model->backend->effective_chunk());
         return nullptr;
     }
     return model.release();
@@ -398,6 +401,41 @@ size_t ctt_export(void* raw, void* target, size_t size) {
     lease.model.exported_length = lease.length;
     return size;
 }
+
+#ifdef INKLING_HAS_PORTABLE_SUFFIX
+// The caller binds the pinned parent digest and stores the child's frontier.
+size_t ctt_suffix_size(void* raw, int parent) {
+    auto& lease = *static_cast<Lease*>(raw);
+    if (!lease.frontier || parent <= 0 || parent != lease.model.pinned_length) return 0;
+    return lease.model.backend->portable_suffix_size(0, parent, lease.length);
+}
+
+size_t ctt_export_suffix(void* raw, int parent, void* target, size_t size) try {
+    if (!target || !size || size != ctt_suffix_size(raw, parent)) return 0;
+    auto& lease = *static_cast<Lease*>(raw);
+    return lease.model.backend->export_portable_suffix(0, parent, lease.length, target, size)
+        ? size : 0;
+} catch (const std::exception& e) { error = e.what(); return 0; }
+
+size_t ctt_import_suffix(void* raw, int parent, int child, const void* data, size_t size,
+                         const float* frontier, size_t count) try {
+    auto& lease = *static_cast<Lease*>(raw);
+    if (!lease.frontier || parent <= 0 || lease.length != parent ||
+        lease.model.pinned_length != parent || !data || !size ||
+        !frontier || count != lease.logits.size() ||
+        lease.model.backend->portable_suffix_size(0, parent, child) != size) return 0;
+    lease.frontier = false;
+    lease.model.exported_length = 0;
+    if (!lease.model.backend->import_portable_suffix(0, parent, child, data, size)) {
+        lease.model.pinned_length = 0;
+        return 0;
+    }
+    std::copy_n(frontier, count, lease.logits.data());
+    lease.length = child;
+    lease.frontier = true;
+    return size;
+} catch (const std::exception& e) { error = e.what(); return 0; }
+#endif
 
 // A resident parent keeps its append-only global KV on the device. The backend
 // saves the ShortConv and sliding-window rows overwritten by later questions.

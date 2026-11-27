@@ -375,6 +375,19 @@ unlink "$fixture"
 
 On llm-60 the writer extended a 1,017-token parent by 18 tokens across the sliding-window boundary. The 7,372,800-byte suffix and parent reproduced the full 205,520,896-byte native child image. The reader loaded the fixture in a fresh process and matched all 200,058 uninterrupted continuation logits. To exercise complete replacement of the sliding window, append `--wrapped` to both the write and read invocations. This fixture extends a 1,537-token parent by 1,027 tokens. The HTTP server still uses full checkpoints.
 
+To reproduce the 128K Python backend measurement on llm-60, use the suffix-enabled build from above. Set `weights` to an absolute SQ-10 pack path. The temporary runtime links to the existing assets. Its parent checkpoint stays in RAM.
+
+```bash
+suffix_runtime=$(mktemp -d "$assets/suffix-runtime.XXXXXXXX")
+ln -s "$suffix_build" "$suffix_runtime/native-build"
+ln -s "$weights" "$suffix_runtime/Inkling-2-Mini-SQ-10.strata"
+ln -s "$assets/tokenizer-source.json" "$suffix_runtime/tokenizer-source.json"
+PYTHONPATH="$PWD/experimental/branching_context/src" INKLING_EXPERT_VRAM_MIB=4096 STRATA_INK_EXACT=1 \
+    "$runtime/.venv/bin/python" tools/test_inkling_pinned_suffix.py "$suffix_runtime" --parent-tokens 131072
+```
+
+The regression reports parent selection, suffix export and suffix import times separately. It checks the full continuation logits for three sibling switches and counts transferred bytes and forwarded tokens. [Measured timings](docs/benchmarks/inkling/suffix-128k-phases.csv)
+
 The clean-checkout run at `0e77805` reused the host CUDA installation and model assets. Its fresh process restored the checkpoint in 0.518 seconds. The temporary test store is RAM-backed and can be removed after checking the results.
 
 The two-process regression passed on llm-60 with the pinned Strata source

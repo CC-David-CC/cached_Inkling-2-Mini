@@ -103,6 +103,10 @@ int main(int argc, char** argv) try {
     check(parent_pos == base.size() && suffix_pos == suffix.size(), "fixture size mismatch");
     if (mode == "write") check(assembled == expected, "reconstructed bytes differ");
     check(std::all_of(reference.begin(), reference.end(), [](float v){ return std::isfinite(v); }), "nonfinite logits");
+    check(backend->import_portable_state(0, parent, base.data(), base.size()), "parent import failed");
+    check(backend->import_portable_suffix(0, parent, child, suffix.data(), suffix.size()), "direct suffix import failed");
+    forward(child, child+1);
+    check(!std::memcmp(reference.data(), logits.data(), logits.size()*sizeof(float)), "direct suffix continuation differs");
     check(backend->import_portable_state(0, child, assembled.data(), assembled.size()), "import failed");
     forward(child, child+1);
     check(!std::memcmp(reference.data(), logits.data(), logits.size()*sizeof(float)), "continuation differs");
