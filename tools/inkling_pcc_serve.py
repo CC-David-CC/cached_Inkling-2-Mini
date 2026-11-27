@@ -23,7 +23,7 @@ from serve.cow_adapter import CowAdapter
 from serve.cow_http import make_server
 from serve.cow_workspace import CowWorkspace
 from serve.cow_inkling_prompt import text_components
-from serve.cow_inkling_effort import InklingTextAdapter
+from serve.cow_inkling_effort import InklingTextAdapter, InklingWorkspaceDecoder
 from serve.cow_vision import CowImageNormalizer
 from serve.cow_inkling_vision import InklingVisionPreparer
 
@@ -132,7 +132,7 @@ def serve(args, temporary):
         coordinator.ready()
         adapter = CowAdapter(coordinator)
         text = InklingTextAdapter(adapter, **components, vision_preparer=preparer)
-        workspace = CowWorkspace(coordinator.store, components['tokenizer'],
+        workspace = CowWorkspace(coordinator.store, InklingWorkspaceDecoder(text.render.__self__.tok),
                                  root_mode_resolver=text.root_mode_for_projection)
         with make_server(adapter, '127.0.0.1', args.port, key, text_adapter=text, workspace=workspace,
                          grammar_catalog=catalog, connection_info={name: profile[name] for name in

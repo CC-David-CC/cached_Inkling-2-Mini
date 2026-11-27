@@ -3,6 +3,7 @@ import codecs
 from copy import copy
 
 from .cow_text_adapter import CowTextAdapter
+from .cow_inkling_prompt import InklingTextDecoder
 
 
 class InklingChannels:
@@ -24,6 +25,20 @@ class InklingChannels:
         tail = self.decoder.decode(b'', final=True)
         self.decoder.reset()
         return channel, tail
+
+
+class InklingWorkspaceDecoder(InklingTextDecoder):
+    def visible_assistant_text(self, tokens, eos):
+        channels = InklingChannels(self._tokenizer)
+        parts = []
+        for token in tokens:
+            terminal = token in eos
+            channel, text = channels.push(token, terminal=terminal)
+            if channel == 'text':
+                parts.append(text)
+            if terminal:
+                break
+        return ''.join(parts)
 
 
 class InklingChannelRequest:

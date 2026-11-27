@@ -569,7 +569,15 @@ class CowWorkspace:
             if value:
                 parts.append(value)
         text = "".join(parts)
+        if not final:
+            text = self._visible_assistant_text(tokens, final_controller, text)
         return descriptor["text"] if final else text
+
+    def _visible_assistant_text(self, tokens, controller, decoded):
+        project = getattr(self.tokenizer, 'visible_assistant_text', None)
+        if project is None or controller.get('text_stop') or controller.get('constraint'):
+            return decoded
+        return project(tokens, controller.get('policy', {}).get('eos_tokens', ()))
 
     @staticmethod
     def _common_prefix_length(paths):
@@ -931,11 +939,13 @@ class CowWorkspace:
             raise IntegrityError("Projected completed text-stop state differs from durable controller")
         final_status = final_controller.get("status")
         first_order = min((segment["start"], *segment["order"]) for segment in unique)
+        visible = self._visible_assistant_text(
+            (token for segment in unique for token in segment["tokens"]), final_controller, "".join(parts))
         return {
             "id": message_id,
             "role": "assistant",
-            "text": "".join(parts),
-            "content": "".join(parts),
+            "text": visible,
+            "content": visible,
             "node_id": final_tip,
             "boundary_available": True,
             "boundary_reason": None,
