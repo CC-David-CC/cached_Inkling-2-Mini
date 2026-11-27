@@ -31,6 +31,7 @@ class InklingChannelRequest:
         self.request = view.request
         self.snapshot = view.snapshot
         self.durable = view.durable
+        self.input_preparation = getattr(view, 'input_preparation', None)
         self.tokenizer = tokenizer
         self.initial_channel = channel
         self.pending = pending
@@ -52,6 +53,9 @@ class InklingChannelRequest:
         if terminal:
             events.append(dict(event='turn_complete', token_id=token))
         return events
+
+    def text_result(self):
+        return self.channel_result()['text']
 
     def channel_result(self):
         channels = self.new_channels()
@@ -77,18 +81,31 @@ class InklingTextAdapter(CowTextAdapter):
         adapter.encode_rendered = encoder.encode_rendered
         return adapter
 
+    def _present_turn(self, view, options):
+        if options.get('text_stops') or options.get('grammar_state'):
+            return view
+        return InklingChannelRequest(view, self.render.__self__.tok)
+
+    def ask(self, *args, **kwargs):
+        return self._present_turn(super().ask(*args, **kwargs), kwargs)
+
+    def answer(self, *args, **kwargs):
+        return self._present_turn(super().answer(*args, **kwargs), kwargs)
+
+    def append_user(self, *args, **kwargs):
+        return self._present_turn(super().append_user(*args, **kwargs), kwargs)
+
     def generate(self, *args, **kwargs):
         if self.render.__self__.template_kwargs['reasoning_effort'] == 0:
-            return super().generate(*args, **kwargs)
+            return self._present_turn(super().generate(*args, **kwargs), kwargs)
         if kwargs.get('text_stops') or kwargs.get('grammar_state'):
             raise ValueError('Positive effort with a grammar or text stops is unsupported')
         view = super().generate(*args, **kwargs)
         return InklingChannelRequest(view, self.render.__self__.tok)
 
     def resume(self, branch, revision, operation_id, max_tokens, **kwargs):
-        if self._namespace(branch) is not None:
-            return super().resume(branch, revision, operation_id, max_tokens, **kwargs)
         _, ids, controller = self.token_adapter.source_state(branch, revision, operation_id)
+        ids = self._text_tail(ids)
         tokenizer = self.render.__self__.tok
         special = tokenizer.special_tokens
         # The last user frame ends before the generated assistant channel markers.
