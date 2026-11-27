@@ -482,10 +482,12 @@ identity. On llm-60 a streamed Linux command answer and a request resumed
 after its first token produced identical output IDs, including the native stop.
 
 On a 300-record inventory prompt with 256 output tokens, Cached produced
-identical token IDs in six SQ-10 HTTP requests on llm-60. Timings include
+identical token IDs in nine SQ-10 HTTP requests on llm-60. Timings include
 branch creation for end-to-end throughput and first visible token. Output
-generation uses the server timer. DSpark returned HTTP 409 during root
-checkpoint creation on this bridge, so its matched rate is unavailable.
+generation uses the server timer. All three modes used the same bridge linked
+against the DSpark-checkpoint-patched CUDA core, with a 256 MiB GPU expert
+budget and GPU execution for cold experts. The initial bridge rejected DSpark
+root checkpoint creation.
 
 ![Cached HTTP drafting results](docs/benchmarks/inkling/draft-http-matched.png)
 
