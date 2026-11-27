@@ -1284,7 +1284,7 @@ class BranchingModel:
             if payload.stat().st_size != len(cold.blob)+4*len(cold.frontier) or digest_file(payload) != cold.checksum:
                 raise IntegrityError('Existing immutable checkpoint payload is corrupt')
         else:
-            self._publish_checkpoint_parts(payload,(cold.blob,struct.pack('<'+'f'*len(cold.frontier),*cold.frontier)))
+            self._publish_checkpoint_parts(payload,(cold.blob,struct.pack(f'<{len(cold.frontier)}f',*cold.frontier)))
         self._checkpoint_fault('before_manifest_publish')
         if manifest.exists():
             if manifest.read_bytes() != prepared.envelope: raise IntegrityError('Existing checkpoint manifest differs')
@@ -1530,7 +1530,7 @@ class BranchingModel:
                 model_contract_id=saved.model_contract_id,execution_profile_id=saved.execution_profile_id,
                 schedule_sha256=schedule_digest(saved.execution_schedule),
                 controller_sha256=hashlib.sha256(_json_bytes(record['controller'])).hexdigest(),
-                frontier_sha256=hashlib.sha256(struct.pack('<'+'f'*len(saved.frontier),*saved.frontier)).hexdigest(),
+                frontier_sha256=hashlib.sha256(struct.pack(f'<{len(saved.frontier)}f',*saved.frontier)).hexdigest(),
                 forward_tokens=after['forward_tokens']-before['forward_tokens'],
                 counter_deltas={key:value-before[key] for key,value in after.items()
                     if type(value) is int and type(before.get(key)) is int},
@@ -1586,7 +1586,7 @@ class BranchingModel:
                 raise IntegrityError('Checkpoint payload corruption')
             with path.open('rb') as stream:
                 stream.seek(size)
-                logits = struct.unpack('<'+'f'*self.backend.vocab_size,stream.read(width))
+                logits = struct.unpack(f'<{self.backend.vocab_size}f',stream.read(width))
             if not all(map(math.isfinite,logits)): raise IntegrityError('Nonfinite checkpoint frontier')
             return manifest
         except (OSError,ValueError,struct.error) as exc:
