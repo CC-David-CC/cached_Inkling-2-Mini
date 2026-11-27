@@ -1,0 +1,5 @@
+case,normalized_image_match,embedding_match,text_token_match,prefill_logits_match,embedding_rows,llm49_top_id,llm60_top_id
+red,True,True,True,False,16,3977,3977
+left-red,True,True,True,False,36,3977,3977
+blue,True,True,True,False,16,3904,3904
+left-blue,True,True,True,False,36,4601,4601
