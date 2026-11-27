@@ -8,6 +8,14 @@ context. GPU count is a runtime setting for later trials.
 
 ## Measured performance
 
+### RTX 4090 and RTX PRO 6000 Blackwell
+
+![Cached single-request prefill, generation, full HTTP throughput and first-text latency on the RTX 4090 and RTX PRO 6000](docs/benchmarks/inkling/gpu-comparison.png)
+
+Each bar averages two single-request transcription trials with a fresh branch, 1,024 greedy output tokens, SQ-20 weights, FP16 KV, an 8,192-token capacity, 512-token prefill chunks and a 5 GiB RAM checkpoint pool. Both hosts kept all 3,072 experts on the GPU. Each drafting mode started a fresh server. The native prefill timer covers the 3,045 or 6,045 tokens consumed during branch creation. The client timer starts before branch creation and ends after the streamed completion receipt. Existing services also held VRAM on the RTX PRO 6000. These are single-request measurements on the two hosts.
+
+[Download individual timings and generated-token hashes](docs/benchmarks/inkling/gpu-comparison.csv)
+
 ### 64K and 128K single requests
 
 Each bar measures one cold request on one RTX PRO 6000 Blackwell, with SQ-20 weights, FP16 KV, a 512-token prefill chunk and a 1,024-token output. Each configuration starts a fresh server. Time to first visible token includes prompt processing. Peak GPU memory is sampled across the serving process and its children. The Cached client also times root creation and branch completion in the complete operation. All eight runs returned the same output text. Repeated questions on a shared parent require a separate warm-cache measurement.
