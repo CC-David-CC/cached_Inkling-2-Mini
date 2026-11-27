@@ -137,7 +137,7 @@ def _id(value: str) -> str:
 
 def _name(value: str) -> str:
     if not isinstance(value, str) or not _NAME.fullmatch(value):
-        raise InvalidOperation("Expected 1..128 byte ASCII branch/operation ID")
+        raise InvalidOperation("Branch or operation ID must start with an ASCII letter and contain 1 to 128 ASCII letters, digits, underscores, or hyphens")
     return value
 
 
