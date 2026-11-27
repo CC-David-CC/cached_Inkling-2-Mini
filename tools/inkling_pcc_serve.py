@@ -60,8 +60,10 @@ def main():
     parser.add_argument('--gpus', type=int, choices=(1, 2, 3), default=1)
     parser.add_argument('--dspark', action='store_true', help='experimental fused DSpark for greedy text requests')
     parser.add_argument('--vision', action='store_true')
-    parser.add_argument('--port', type=int, default=18061)
+    parser.add_argument('--port', type=int, default=18061, help='TCP port (0 selects an available port)')
     args = parser.parse_args()
+    if not 0 <= args.port <= 65535:
+        parser.error('--port must be between 0 and 65535')
     if args.ram_cache_gib is not None and args.ram_cache_gib <= 0:
         parser.error('--ram-cache-gib must be positive')
     if args.store is not None or args.persistent:
