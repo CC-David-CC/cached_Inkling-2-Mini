@@ -14,6 +14,8 @@ def main():
     parser.add_argument("directory", type=Path, help="engine, checkpoint, tokenizer and Strata checkout directory")
     parser.add_argument("--port", type=int, default=18060)
     parser.add_argument("--vision", action="store_true", help="load the SQ-20 companion vision tower")
+    parser.add_argument("--draft", choices=("off", "dspark"), default="off",
+                        help="select the native Inkling drafter (default: off)")
     args = parser.parse_args()
     root = args.directory.resolve()
     terminal = root / "strata-source" / "terminal"
@@ -21,7 +23,7 @@ def main():
     engine_args = [
         "--native", str(root / "Inkling-2-Mini-SQ-20.strata"),
         "--gpus", "1", "--parallel", "1", "--max-context", "8192",
-        "--kv", "fp16", "--draft", "off",
+        "--kv", "fp16", "--draft", args.draft,
     ]
     if args.vision:
         vision = root / "Inkling-2-Mini-Vision.strata"
@@ -38,7 +40,7 @@ def main():
             "cwd": str(root),
             "tokenizer": str(root / "tokenizer"),
             "model_name": "Inkling-2-Mini",
-            "log": str(root / "engine.log"),
+            "log": str(root / ("engine.log" if args.port == 18060 else f"engine-{args.port}.log")),
             "host": "127.0.0.1",
             "port": args.port,
         }), encoding="utf-8")
