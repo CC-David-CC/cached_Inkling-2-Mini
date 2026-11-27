@@ -1,4 +1,5 @@
 """Restore Inkling DFlash2's four tapped layers into a BF16 drafter context."""
+import math
 import os
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -15,6 +16,14 @@ def _validate_context(context, prompt_tokens, saved_tokens):
         raise ValueError("Invalid checkpoint prompt or saved length")
 
 
+def _write_rows(stream, rows):
+    # Bound transient contiguous GPU and host copies for long prompts.
+    values_per_row = math.prod(rows.shape[1:])
+    rows_per_chunk = (16 << 20) // (values_per_row * rows.element_size())
+    for chunk in rows.split(rows_per_chunk):
+        chunk.contiguous().cpu().view(torch.uint16).numpy().tofile(stream)
+
+
 def save_hidden_context(path, context, *, prompt_tokens, saved_tokens):
     """Atomically publish prefill and continuation taps in the restore layout."""
     _validate_context(context, prompt_tokens, saved_tokens)
@@ -25,8 +34,8 @@ def save_hidden_context(path, context, *, prompt_tokens, saved_tokens):
     try:
         with stream:
             for layer in range(4):
-                layers[:prompt_tokens, layer].contiguous().cpu().view(torch.uint16).numpy().tofile(stream)
-            layers[prompt_tokens:saved_tokens].cpu().view(torch.uint16).numpy().tofile(stream)
+                _write_rows(stream, layers[:prompt_tokens, layer])
+            _write_rows(stream, layers[prompt_tokens:saved_tokens])
         os.replace(temporary, path)
     finally:
         temporary.unlink(missing_ok=True)

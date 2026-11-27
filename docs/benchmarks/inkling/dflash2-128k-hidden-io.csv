@@ -1,0 +1,2 @@
+positions,prompt_positions,state_bytes,save_seconds,restore_seconds,extra_peak_save_cuda_allocated_bytes,all_bits_equal
+131072,131064,2415919104,0.8667977261357009,0.4907256979495287,16777216,True
