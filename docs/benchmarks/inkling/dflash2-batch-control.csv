@@ -1,0 +1,3 @@
+mode,prompt_tokens,output_tokens,decode_seconds,decode_tps,common_prefix_with_plain,blocks,fully_batched_blocks,output_sha256
+plain,3072,259,2.96026,87.49,259,,,ae78e9fc83e72aafe88349727a158b59100a014fb45590c3a2f0862a08c2a41e
+batched_dflash2,3072,259,3.423559,75.65,259,33,31,ae78e9fc83e72aafe88349727a158b59100a014fb45590c3a2f0862a08c2a41e
