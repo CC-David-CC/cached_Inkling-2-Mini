@@ -1,0 +1,2 @@
+resume_position,initial_bf16_bytes,expanded_fp32_history_bytes,blocks_matched,full_logit_rows_matched,logits_per_row,trace_sha256
+3080,56770560,0,11,83,200058,0fa191ecd472d4c6958399ad1300706a22f40f3d088589d04bbf78fcb82a62f6
