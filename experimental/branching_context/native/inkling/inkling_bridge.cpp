@@ -4,6 +4,7 @@
 #include "ink_vision.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <stdexcept>
 #include <string_view>
@@ -205,6 +206,16 @@ void ctt_free_image(void* raw) { delete static_cast<ImageEmbedding*>(raw); }
 const float* ctt_logits(void* raw) {
     auto& lease = *static_cast<Lease*>(raw);
     return lease.frontier ? lease.logits.data() : nullptr;
+}
+
+int ctt_select_greedy(void* raw) {
+    const auto& lease = *static_cast<Lease*>(raw);
+    if (!lease.frontier || !std::all_of(lease.logits.begin(), lease.logits.end(),
+                                      [](float value) { return std::isfinite(value); })) {
+        error = "Inkling greedy selection requires finite frontier logits";
+        return -1;
+    }
+    return int(std::max_element(lease.logits.begin(), lease.logits.end()) - lease.logits.begin());
 }
 
 size_t ctt_state_size(void* raw) {

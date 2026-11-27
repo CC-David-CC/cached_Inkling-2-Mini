@@ -557,7 +557,8 @@ class BranchingModel:
                 sampling=dict(temperature=0,min_p=0,top_k=0,top_p=1,repetition_penalty=1),
                 stream=stream,on_token=on_token,cancelled=cancelled,
                 artifacts=artifacts,reencode=reencode)
-        if (execution.get('resume_contract') not in ('identical-native-operators-v1',RESUME_CONTRACT)
+        if ((execution.get('resume_contract') not in ('identical-native-operators-v1',RESUME_CONTRACT)
+                and self.profile.get('backend') != 'inkling-cuda')
                 or execution.get('generated_operator') != 'normal-verifier-decode'
                 or execution.get('native_request_protocol') != 'consumed-greedy-ack-v1'
                 or not callable(getattr(self.backend,'generate_request',None))):

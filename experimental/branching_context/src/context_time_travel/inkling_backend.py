@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import struct
+import subprocess
 from tempfile import TemporaryDirectory
 from threading import RLock
 
@@ -20,7 +21,10 @@ VISION_SHA256 = '6589eff47f9c20bc3a032faa3d449f10bf4f04a84cc6b2ee8a44d51d2b6fc67
 VISION_EXECUTION = dict(input_projection='inkling-absolute-image-rows-v1',
                         embedding_width=2304, vision_weights_sha256=VISION_SHA256)
 EXECUTION = dict(capacity=8192, prefill_chunk=512, kv='fp16', draft='off',
-                 state_format='inkling-cuda-fp16-v1')
+                 state_format='inkling-cuda-fp16-v1',
+                 native_request_protocol='consumed-greedy-ack-v1',
+                 generated_operator='normal-verifier-decode',
+                 eos_tokens=[199999, 200006], GPU=[0])
 
 
 def model_contract_id(vision=False):
@@ -29,6 +33,29 @@ def model_contract_id(vision=False):
                     vision=VISION_SHA256 if vision else False,
                     tokenizer_sha256=TOKENIZER_SHA256)
     return hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
+
+
+def runtime_profile(runtime, *, vision=False):
+    bridge = str(runtime / 'native-build/libinkling_pcc_bridge.so')
+    build = {'sha256': {bridge: digest_file(bridge)}}
+    execution = dict(EXECUTION,
+                     cuda_cublas_compute_type=os.getenv('GGML_CUDA_CUBLAS_COMPUTE_TYPE', 'auto'),
+                     nvidia_tf32_override=os.getenv('NVIDIA_TF32_OVERRIDE', 'unset'))
+    hardware = subprocess.check_output([
+        'nvidia-smi', '--query-gpu=name,uuid,driver_version', '--format=csv,noheader'
+    ], text=True).strip()
+    extra = {}
+    if vision:
+        execution.update(VISION_EXECUTION)
+        extra['vision_path'] = str(runtime / 'Inkling-2-Mini-Vision.strata')
+    identity = dict(build=build, execution=execution, hardware=hardware)
+    return dict(backend='inkling-cuda', bridge_library=bridge, native_build=build,
+                model_path=str(runtime / 'Inkling-2-Mini-SQ-20.strata'),
+                tokenizer_path=str(runtime / 'tokenizer-source.json'),
+                model_weights_sha256=MODEL_SHA256, model_contract_id=model_contract_id(vision),
+                execution=execution, hardware=hardware,
+                execution_profile_id=hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest(),
+                **extra)
 
 
 class InklingBackend(NativeBackend):
@@ -70,6 +97,8 @@ class InklingBackend(NativeBackend):
             C.POINTER(C.c_float), C.c_size_t,
         ]
         self.lib.ctt_import_checkpoint.restype = C.c_size_t
+        self.lib.ctt_select_greedy.argtypes = [C.c_void_p]
+        self.lib.ctt_select_greedy.restype = C.c_int
         self.lib.ctt_image_pad.argtypes = [C.c_void_p]
         self.lib.ctt_image_pad.restype = C.c_int
         self.lib.ctt_encode_image.argtypes = [C.c_void_p, C.c_char_p, C.c_char_p]
@@ -186,11 +215,30 @@ class InklingBackend(NativeBackend):
                 if self._close_pending:
                     super().close()
 
+    @contextmanager
+    def generate_request(self, lease, max_steps):
+        def generate():
+            for _ in range(max_steps):
+                token = self.lib.ctt_select_greedy(lease)
+                if token < 0:
+                    raise IntegrityError(self.lib.ctt_error().decode())
+                self.consume(lease, (token,))
+                yield token
+                if self.is_eog(token):
+                    break
+
+        request = generate()
+        try:
+            yield request
+        finally:
+            request.close()
+
     def work_counters(self):
         with self._lock:
             if not self.model:
                 raise RuntimeError('Inkling backend is closed')
-            return dict(consumed_tokens=self.lib.ctt_model_work(self.model))
+            tokens = self.lib.ctt_model_work(self.model)
+            return dict(consumed_tokens=tokens, forward_tokens=tokens)
 
     def restore(self, lease, blob, *, history=None, frontier=None):
         if not blob or not history or frontier is None or len(frontier) != self.vocab_size:

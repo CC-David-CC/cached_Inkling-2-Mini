@@ -70,8 +70,8 @@ pinned profile consumes canonical text token IDs at 8K context with FP16 KV,
 checksummed envelope and bind the model, tokenizer, execution profile and
 token history. An optional vision profile uses the pinned vision tower and
 absolute-position image embedding rows. Its histories also bind the original
-image, encoder profile, and exact embedding bytes. The current HTTP service
-still uses Strata serving directly.
+image, encoder profile, and exact embedding bytes. The Strata chat baseline
+and the PCC token service have separate launchers.
 
 The [upstream README](README-PCC.md) records earlier PCC model results. Those
 results apply to their documented profiles.
@@ -151,6 +151,27 @@ produced distinct history IDs and frontier logits. Each image matched all
 200,058 frontier and continuation logits through RAM restore after sibling
 writes and disk restore in a fresh process. The native work counter recorded
 zero replay. The fresh-process test had no image encoding step.
+
+### PCC HTTP token service
+
+After building the PCC bridge, start the authenticated localhost service
+with a persistent store:
+
+```bash
+python tools/inkling_pcc_serve.py /mnt/fast_cache/inkling
+```
+
+The launcher creates a private `pcc-http.key` in the runtime directory.
+The service listens on port 18061 by default and uses PCC's
+`/cow/create` and `/cow/generate` token APIs. It serves greedy text-token
+requests. The separate Strata baseline serves OpenAI-compatible text and
+vision requests on port 18060.
+
+Run `tools/test_inkling_pcc_http.py RUNTIME FIXTURE write` against the live
+service, then restart it with the same store and run the test in `read` mode.
+On llm-60 the restart returned the same five tokens and the same numerical
+payload SHA-256. The native counter recorded five forward tokens for the
+five generated tokens.
 
 ### DFlash2 and Splash
 
