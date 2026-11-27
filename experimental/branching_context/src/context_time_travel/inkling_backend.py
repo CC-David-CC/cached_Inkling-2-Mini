@@ -243,6 +243,13 @@ class InklingBackend(NativeBackend):
         if not isinstance(engine, GrammarEngine) or engine.tokenizer_sha256 != GRAMMAR_TOKENIZER_SHA256:
             raise IntegrityError('Inkling grammar tokenizer fingerprint mismatch')
 
+    def select_greedy(self, lease):
+        """Select from the native target frontier without copying logits into Python."""
+        token = self.lib.ctt_select_greedy(lease)
+        if token < 0:
+            raise IntegrityError(self.lib.ctt_error().decode())
+        return token
+
     def consume_generated(self, lease, ids):
         if len(ids) != 1:
             raise InvalidOperation('Inkling decode requires one selected token')
@@ -433,9 +440,7 @@ class InklingBackend(NativeBackend):
                         break
                 return
             for _ in range(max_steps):
-                token = self.lib.ctt_select_greedy(lease)
-                if token < 0:
-                    raise IntegrityError(self.lib.ctt_error().decode())
+                token = self.select_greedy(lease)
                 self.consume(lease, (token,))
                 yield token
                 if self.is_eog(token):

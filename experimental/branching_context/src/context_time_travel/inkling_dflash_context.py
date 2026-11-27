@@ -85,8 +85,7 @@ def verify_greedy_block(backend, lease, context, proposal, *, remaining, stop_to
 
     committed = []
     for index in range(min(limit, len(proposal) + 1)):
-        logits = backend.logits(lease)
-        token = max(range(len(logits)), key=logits.__getitem__)
+        token = backend.select_greedy(lease)
         if index and proposal[index - 1] != token:
             break
         taps = backend.consume_dflash_taps(lease, [token])

@@ -1,15 +1,16 @@
 """CPU regression tests for Inkling DFlash2 checkpoint layout and publication."""
+from array import array
 import hashlib
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, call, patch
 import sys
 
 import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "experimental/branching_context/src"))
-from context_time_travel.inkling_dflash_context import restore_hidden_context, save_hidden_context
+from context_time_travel.inkling_dflash_context import restore_hidden_context, save_hidden_context, verify_greedy_block
 
 
 class HiddenContextTest(unittest.TestCase):
@@ -64,6 +65,28 @@ class HiddenContextTest(unittest.TestCase):
                 save_hidden_context(self.path, self.context, prompt_tokens=1, saved_tokens=2)
         self.assertEqual(self.path.read_bytes(), b"previous checkpoint")
         self.assertEqual(list(self.path.parent.iterdir()), [self.path])
+
+
+class GreedyVerifierTest(unittest.TestCase):
+    def test_rejection_preserves_next_position_for_target_continuation(self):
+        lease = object()
+        backend = Mock(vocab_size=64, context_capacity=8)
+        backend.position.side_effect = [0, 2]
+        backend.select_greedy.side_effect = [10, 20, 30, 30]
+        taps = array("f", [1.0]) * 9216
+        backend.consume_dflash_taps.return_value = taps
+        context = torch.zeros((1, 8, 9216), dtype=torch.bfloat16)
+
+        committed = verify_greedy_block(backend, lease, context, [20, 42], remaining=7)
+        self.assertEqual(committed, [10, 20])
+        self.assertTrue((context[0, 1:3] == 1).all())
+        self.assertEqual(context[0, 3:].count_nonzero().item(), 0)
+
+        continuation = verify_greedy_block(backend, lease, context, [], remaining=1)
+        self.assertEqual(continuation, [30])
+        self.assertEqual(backend.consume_dflash_taps.call_args_list,
+                         [call(lease, [10]), call(lease, [20]), call(lease, [30])])
+        self.assertTrue((context[0, 3] == 1).all())
 
 
 if __name__ == "__main__":
