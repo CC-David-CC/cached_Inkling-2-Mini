@@ -14,7 +14,7 @@ Each bar measures one cold request on one RTX PRO 6000 Blackwell, with SQ-20 wei
 
 [Download the underlying long-context measurements](docs/benchmarks/inkling/long-context.csv)
 
-The client also timestamped first text, last text and the complete receipt. At 128K with DSpark the last text arrived 16.3 seconds before the receipt. The server separately measured 3.8 seconds inside its capture timer. The rest of that interval needs profiling.
+The client also timestamped first text, last text and the complete receipt. At 128K with DSpark the last text arrived 16.3 seconds before the receipt. The server separately measured 3.8 seconds inside its capture timer. A separate instrumented repeat measured 16.2 seconds from last text to receipt. Three successive server operations accounted for 14.3 seconds of that interval: checkpoint export (6.80 s), checkpoint preparation (3.76 s), and publication to the temporary RAM-backed filesystem (3.75 s). The 4.94 s native export is included in the export total. The 1.48 s payload write is included in publication. The parent restore counter showed zero imported bytes.
 
 ![Elapsed time before, during and after visible output in cold Cached requests](docs/benchmarks/inkling/cached-request-phases.png)
 
