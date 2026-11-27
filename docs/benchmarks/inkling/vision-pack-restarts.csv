@@ -1,0 +1,9 @@
+pack,case,answer,outcome,restart_hash_match,restart_tokens_match
+SQ-10,red,red,correct,True,True
+SQ-10,left-red,red,correct,True,True
+SQ-10,blue,blue,correct,True,True
+SQ-10,left-blue,Blue,correct,True,True
+SQ-15,red,Red,correct,True,True
+SQ-15,left-red,Red,correct,True,True
+SQ-15,blue,blue,correct,True,True
+SQ-15,left-blue,Blue,correct,True,True
