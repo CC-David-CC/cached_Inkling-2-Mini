@@ -1,0 +1,4 @@
+gpu,prompt_sha256,prompt_tokens,depth_percent,expected,visible_answer,outcome,prefill_seconds,prefill_tps,decode_steps,decode_tps,tpot_ms,final_free_mib,failure
+0,43e2e25eca753e694cc7d86d11a895f1309a64c57be0a2418a50f5923ccee804,111328,49.42,73,,ungraded,,,0,,,,VRAM exhausted growing KV to 110592
+1,e22ab68b269116dcceb8a1df5f9771efa4907175affb8544a2f87420ac9cea91,111328,12.21,81,81,correct,2451.01,45.42,32,6.55087,152.65,760,
+2,7755d87f4474dcc7c8de695ca6a57542804c6f6a354a99e2e6a9b09edde40833,111328,88.94,94,94,correct,2352.42,47.32,32,6.57653,152.06,760,
