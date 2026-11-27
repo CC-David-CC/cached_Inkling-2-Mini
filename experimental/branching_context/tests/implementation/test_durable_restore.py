@@ -84,6 +84,32 @@ class DurableRestoreControlTests(unittest.TestCase):
         self.assertEqual(receipt['consumed'], 2)
         self.assertEqual(self.model.cache[self.sid].frontier, (1., 2.))
 
+    def test_cumulative_suffix_read_checks_canonical_ancestry_before_import(self):
+        from context_time_travel.store import _json_bytes
+
+        self.persist()
+        model = self.model
+        model.profile.update(backend='inkling-cuda', execution=dict(draft='off', state_format='inkling-cuda-fp16-v1'))
+        child = model.store.append(self.sid, (0,), {'status': 'idle'})
+        tip = model.store.append(child, (1,), {'status': 'idle'})
+        sibling = model.store.append(self.sid, (1,), {'status': 'idle'})
+        binding = dict(schema=6, parent_snapshot=self.sid)
+        with model._suffix_binding(tip, binding) as (base, required):
+            self.assertEqual(base, self.sid)
+            prepared = model._suffix_from_export(tip, required, b'delta', (2., 3.))
+        model.publish_prepared_checkpoint(prepared)
+        self.assertEqual(model.validate_checkpoint(tip)['logical_parent_snapshot'], child)
+        self.assertEqual(model.next_logits(tip), (2., 3.))
+        self.assertEqual(self.backend.work_counters()['loaded_file_bytes'], 0)
+        for changes in (dict(parent_snapshot=sibling), dict(parent_snapshot=child),
+                        dict(logical_parent_snapshot=sibling)):
+            envelope = json.loads(prepared.envelope)
+            envelope['manifest'].update(changes)
+            envelope['checksum'] = hashlib.sha256(_json_bytes(envelope['manifest'])).hexdigest()
+            with self.subTest(changes=changes), self.assertRaises(IntegrityError):
+                with model.materialize_suffix(tip, envelope, frontier_only=True):
+                    self.fail('Incorrect ancestry reached the saved frontier')
+
     def test_disk_reader_allocates_one_state_buffer(self):
         import tracemalloc
         size = 8 * 1024**2

@@ -336,7 +336,7 @@ class BranchingModel:
                 yield state
 
     @contextmanager
-    def _materialize(self, snapshot, *, frontier_only=False, retain_suffix_image=True, transient_owner=False):
+    def _materialize(self, snapshot, *, frontier_only=False, retain_suffix_image=True, transient_owner=False, restored_base=None):
         record = self.store.get_snapshot(snapshot)
         if record['model_contract_id'] != self.profile['model_contract_id']:
             raise IntegrityError('Snapshot model contract mismatch')
@@ -348,9 +348,9 @@ class BranchingModel:
             if saved is None and (self.checkpoint_directory/(snapshot+'.json')).exists():
                 if self.profile.get('backend') == 'inkling-cuda':
                     envelope = _decode((self.checkpoint_directory / (snapshot + '.json')).read_bytes())
-                    if isinstance(envelope, dict) and isinstance(envelope.get('manifest'), dict) and envelope['manifest'].get('schema') == 5:
+                    if isinstance(envelope, dict) and isinstance(envelope.get('manifest'), dict) and envelope['manifest'].get('schema') in (5, 6):
                         with self.materialize_suffix(snapshot, envelope, frontier_only=frontier_only,
-                                                     transient_parent=not retain_suffix_image) as (lease, row):
+                                                     transient_parent=not retain_suffix_image, restored_base=restored_base) as (lease, row):
                             if retain_suffix_image and not frontier_only:
                                 self.cache[snapshot] = self._save(lease, history)
                             yield lease, row
@@ -570,9 +570,9 @@ class BranchingModel:
                 return self._publish_feed(snapshot,delta,decoder,saved)
 
     @contextmanager
-    def _generation_source(self, snapshot):
+    def _generation_source(self, snapshot, restored_base=None):
         needs_schedule = self._schedule_contract() is not None
-        with self._materialize(snapshot, retain_suffix_image=needs_schedule) as (lease, frontier):
+        with self._materialize(snapshot, retain_suffix_image=needs_schedule, restored_base=restored_base) as (lease, frontier):
             schedule = self.cache[snapshot].execution_schedule if needs_schedule else ()
             yield lease, frontier, schedule
 
@@ -649,7 +649,8 @@ class BranchingModel:
                         or policy['eos_tokens'] != execution['eos_tokens']):
                     raise InvalidOperation('Native request cannot resume this controller policy')
             payloads=held.enter_context(self._input_artifacts(ids,artifacts,reencode)) if mixed_delta else None
-            with self._generation_source(snapshot) as (lease, _, schedule):
+            restored_base = {} if capture_suffix else None
+            with self._generation_source(snapshot, restored_base) as (lease, _, schedule):
                 check_cancelled()
                 if ids:
                     if mixed_delta:self.backend.consume_inputs(lease,ids.spans,embeddings=payloads)
@@ -681,7 +682,7 @@ class BranchingModel:
                 self._lease_fault('after_token_consume')
                 save_started = time.monotonic()
                 sid, compact = self._capture_request(lease, snapshot, ids+tuple(outputs), decoder,
-                                                     consumed_history, schedule, capture_suffix)
+                                                     consumed_history, schedule, restored_base)
                 state_save_seconds = time.monotonic() - save_started
         return dict(**compact, snapshot=sid,tokens=outputs,generation_seconds=generation_seconds,
                     state_save_seconds=state_save_seconds,
@@ -864,7 +865,8 @@ class BranchingModel:
             check_cancelled()
             payloads=held.enter_context(self._input_artifacts(ids,artifacts,reencode)) if mixed_delta else None
             check_cancelled()
-            with self._generation_source(snapshot) as (lease, frontier, schedule):
+            restored_base = {} if capture_suffix else None
+            with self._generation_source(snapshot, restored_base) as (lease, frontier, schedule):
                 if ids:
                     if mixed_delta:self.backend.consume_inputs(lease,ids.spans,embeddings=payloads)
                     else:self._consume_request_text(lease, ids, check_cancelled)
@@ -936,7 +938,7 @@ class BranchingModel:
                 self._lease_fault('after_token_consume')
                 save_started = time.monotonic()
                 sid, compact = self._capture_request(lease, snapshot, ids + tuple(outputs), decoder,
-                                                     consumed_history, schedule, capture_suffix)
+                                                     consumed_history, schedule, restored_base)
                 state_save_seconds = time.monotonic() - save_started
         return dict(**compact, snapshot=sid, tokens=outputs, grammar_complete=session.is_complete(),
                     stopped=session.is_stopped(), generation_seconds=generation_seconds,
@@ -977,23 +979,31 @@ class BranchingModel:
         self._lease_fault('after_token_consume')
         return self._save(lease,history,self._completed_schedule(previous_schedule,history))
 
-    def _capture_request(self, lease, parent, delta, decoder, history, schedule, capture_suffix):
-        if capture_suffix and not schedule:
+    def _capture_request(self, lease, parent, delta, decoder, history, schedule, restored_base):
+        if restored_base is not None and not schedule:
             from .digest_attestation import restore_payload_digest
-            owner = self.cache.get(parent)
-            if owner is not None and (self.checkpoint_directory / (parent + '.json')).exists():
-                manifest = self.checkpoint_manifest(parent)
-                if manifest['schema'] != 5 and verified_checkpoint_digest(owner) == manifest['payload_sha256']:
-                    suffix = self.backend.export_pinned_suffix(lease, owner.consumed, restore_payload_digest(owner.blob))
-                    if suffix:
-                        if self.backend.position(lease) + 1 != len(history):
-                            raise IntegrityError('Suffix capture omitted consumed inputs')
-                        sid = self._append_feed(parent, delta, decoder)
-                        with self._suffix_binding(sid) as (_, required):
-                            prepared = self._suffix_from_export(sid, required, owner, suffix, self.backend.logits(lease))
-                            path = self.checkpoint_directory / (sid + '.json')
-                            if not path.exists() or path.read_bytes() == prepared.envelope:
-                                return sid, dict(_prepared_suffix=prepared)
+            binding = None
+            if restored_base:
+                binding = dict(schema=6, parent_snapshot=restored_base['snapshot'])
+                length, digest = restored_base['consumed'], restored_base['digest']
+            else:
+                owner = self.cache.get(parent)
+                digest = None
+                if owner is not None and (self.checkpoint_directory / (parent + '.json')).exists():
+                    manifest = self.checkpoint_manifest(parent)
+                    if verified_checkpoint_digest(owner) == manifest['payload_sha256']:
+                        length, digest = owner.consumed, restore_payload_digest(owner.blob)
+            if digest is not None:
+                suffix = self.backend.export_pinned_suffix(lease, length, digest)
+                if suffix:
+                    if self.backend.position(lease) + 1 != len(history):
+                        raise IntegrityError('Suffix capture omitted consumed inputs')
+                    sid = self._append_feed(parent, delta, decoder)
+                    with self._suffix_binding(sid, binding) as (_, required):
+                        prepared = self._suffix_from_export(sid, required, suffix, self.backend.logits(lease))
+                        path = self.checkpoint_directory / (sid + '.json')
+                        if not path.exists() or path.read_bytes() == prepared.envelope:
+                            return sid, dict(_prepared_suffix=prepared)
         saved = self._save(lease, history, schedule)
         if saved.consumed != len(history):
             raise IntegrityError('Request capture omitted consumed inputs')
@@ -1332,7 +1342,7 @@ class BranchingModel:
         if self.profile.get('backend') == 'inkling-cuda':
             envelope = _decode(prepared.envelope)
             manifest = envelope.get('manifest') if isinstance(envelope, dict) else None
-            if isinstance(manifest, dict) and manifest.get('schema') == 5:
+            if isinstance(manifest, dict) and manifest.get('schema') in (5, 6):
                 return self.publish_suffix_checkpoint(prepared)
         cold = prepared.checkpoint
         history = self.history(prepared.snapshot)
@@ -1649,8 +1659,8 @@ class BranchingModel:
         from .checkpoint_cache import validate_manifest
         envelope = self._checkpoint_envelope(snapshot)
         manifest = envelope.get('manifest') if isinstance(envelope, dict) else None
-        if isinstance(manifest, dict) and manifest.get('schema') == 5:
-            with self._suffix_binding(snapshot) as (parent, required):
+        if isinstance(manifest, dict) and manifest.get('schema') in (5, 6):
+            with self._suffix_binding(snapshot, manifest) as (parent, required):
                 child = validate_manifest(envelope, required)
                 parent_manifest = self.checkpoint_manifest(parent)
                 if parent_manifest['payload_sha256'] != required['parent_payload_sha256']:
@@ -1674,7 +1684,7 @@ class BranchingModel:
             raise IntegrityError('Invalid checkpoint payload') from exc
 
     @contextmanager
-    def _suffix_binding(self, snapshot):
+    def _suffix_binding(self, snapshot, manifest=None):
         self.store.authorize(snapshot, 'materialize')
         execution = self.profile['execution']
         if (self.profile.get('backend') != 'inkling-cuda' or execution.get('draft') != 'off'
@@ -1685,11 +1695,19 @@ class BranchingModel:
             parent = record['parent']
             if not parent or record['model_contract_id'] != self.profile['model_contract_id']:
                 raise IntegrityError('Invalid suffix snapshot or model contract')
+            binding = {}
+            if manifest is not None and manifest.get('schema') == 6:
+                base = manifest.get('parent_snapshot')
+                if (type(base) is not str or len(base) != 64 or any(c not in '0123456789abcdef' for c in base)
+                        or base == parent or not self.store._snapshot_is_ancestor(base, parent)):
+                    raise IntegrityError('Cumulative suffix base must precede the logical parent')
+                binding['logical_parent_snapshot'] = parent
+                parent = base
             self.store.authorize(parent, 'materialize')
             with self.store.read_lease(parent):
                 history = self.history(snapshot)
                 parent_manifest = self.checkpoint_manifest(parent)
-                required = dict(schema=5, snapshot=snapshot, consumed=len(history),
+                required = dict(schema=6 if binding else 5, **binding, snapshot=snapshot, consumed=len(history),
                     input_identity=self._input_identity(history), **self._checkpoint_position_binding(history),
                     logits_count=self.backend.vocab_size, model_contract_id=self.profile['model_contract_id'],
                     execution_profile_id=self.profile['execution_profile_id'], parent_snapshot=parent,
@@ -1706,9 +1724,9 @@ class BranchingModel:
             return 0
         envelope = self._checkpoint_envelope(snapshot)
         manifest = envelope.get('manifest') if isinstance(envelope, dict) else None
-        if not isinstance(manifest, dict) or manifest.get('schema') != 5:
+        if not isinstance(manifest, dict) or manifest.get('schema') not in (5, 6):
             return 0
-        with self._suffix_binding(snapshot) as (parent, required):
+        with self._suffix_binding(snapshot, manifest) as (parent, required):
             child = validate_manifest(envelope, required)
             base = self.checkpoint_manifest(parent)
             return sum(item['state_bytes'] + 4 * item['logits_count'] for item in (base, child))
@@ -1728,12 +1746,12 @@ class BranchingModel:
                     if optional:
                         return None
                     raise InvalidOperation('Native suffix capture unavailable')
-                return self._suffix_from_export(snapshot, required, owner, suffix, row)
+                return self._suffix_from_export(snapshot, required, suffix, row)
 
-    def _suffix_from_export(self, snapshot, required, owner, suffix, row):
+    def _suffix_from_export(self, snapshot, required, suffix, row):
         if len(row) != self.backend.vocab_size or not all(map(math.isfinite, row)):
             raise IntegrityError('Invalid suffix frontier')
-        child = Checkpoint.create(owner.model_contract_id, owner.execution_profile_id,
+        child = Checkpoint.create(required['model_contract_id'], required['execution_profile_id'],
             required['consumed'], suffix, row, required['input_identity'])
         manifest = dict(required, state_bytes=len(suffix), payload_sha256=child.checksum)
         envelope = dict(manifest=manifest, checksum=hashlib.sha256(_json_bytes(manifest)).hexdigest())
@@ -1746,7 +1764,8 @@ class BranchingModel:
         if not isinstance(prepared, PreparedCheckpoint):
             raise IntegrityError('Invalid prepared suffix checkpoint')
         self.store.authorize(prepared.snapshot, 'checkpoint')
-        with self._suffix_binding(prepared.snapshot) as (parent, required):
+        envelope = _decode(prepared.envelope)
+        with self._suffix_binding(prepared.snapshot, envelope['manifest']) as (parent, required):
             self.validate_checkpoint(parent)
             child = prepared.checkpoint
             if (type(child.blob) is not bytes or len(child.frontier) != required['logits_count']
@@ -1765,14 +1784,14 @@ class BranchingModel:
             return files
 
     @contextmanager
-    def materialize_suffix(self, snapshot, envelope=None, *, frontier_only=False, transient_parent=False):
+    def materialize_suffix(self, snapshot, envelope=None, *, frontier_only=False, transient_parent=False, restored_base=None):
         """Restore a stored Inkling suffix over its exact canonical parent."""
         from .checkpoint_cache import validate_manifest
         from .digest_attestation import restore_payload_digest
 
-        with self._suffix_binding(snapshot) as (parent, required):
-            if envelope is None:
-                envelope = _decode((self.checkpoint_directory / (snapshot + '.json')).read_bytes())
+        if envelope is None:
+            envelope = self._checkpoint_envelope(snapshot)
+        with self._suffix_binding(snapshot, envelope['manifest']) as (parent, required):
             manifest = validate_manifest(envelope, required)
             child = self._read_checkpoint_payload(manifest)
             if frontier_only:
@@ -1788,6 +1807,8 @@ class BranchingModel:
                     raise IntegrityError('Native suffix restore unavailable')
                 if self.backend.position(lease) + 1 != child.consumed:
                     raise IntegrityError('Restored suffix position mismatch')
+                if restored_base is not None:
+                    restored_base.update(snapshot=parent, consumed=owner.consumed, digest=restore_payload_digest(owner.blob))
                 if transient:
                     self.cache.pop(parent, None)
                     del owner

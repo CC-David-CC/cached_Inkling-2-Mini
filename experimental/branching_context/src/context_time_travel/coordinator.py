@@ -2720,8 +2720,8 @@ class ContextCoordinator:
             path = model.checkpoint_directory / (snapshot + '.json')
             if path.exists():
                 envelope = model._checkpoint_envelope(snapshot)
-                if envelope['manifest'].get('schema') == 5:
-                    with model._suffix_binding(snapshot) as (_, required):
+                if envelope['manifest'].get('schema') in (5, 6):
+                    with model._suffix_binding(snapshot, envelope['manifest']) as (_, required):
                         manifest = validate_manifest(envelope, required)
                         cold = model._read_checkpoint_payload(manifest)
                         return PreparedCheckpoint(snapshot, cold, _json_bytes(envelope)), key + ('suffix',)

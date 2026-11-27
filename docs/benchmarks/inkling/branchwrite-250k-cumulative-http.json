@@ -1,0 +1,10 @@
+{
+  "parent_tokens": 250064,
+  "second_turn_tokens": 250121,
+  "second_turn_state_bytes": 15040512,
+  "second_turn_frontier_bytes": 800232,
+  "continued_tokens": 12,
+  "continued_suffix_bytes": 17399808,
+  "reference_schema": 5,
+  "identical_continuation_frontier_sha256": "0c99f39450cb1bc976cf25a6aa55273eda1c33c92df1217753b736029daff5c6"
+}
