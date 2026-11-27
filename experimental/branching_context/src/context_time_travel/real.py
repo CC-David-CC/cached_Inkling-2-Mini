@@ -3,6 +3,7 @@ from contextlib import contextmanager, ExitStack, nullcontext
 from concurrent.futures import CancelledError
 import ctypes as C
 from dataclasses import asdict, dataclass
+from io import BytesIO
 import hashlib
 import fcntl
 import json
@@ -170,11 +171,19 @@ class NativeBackend:
 
     def export(self, lease):
         size = self.lib.ctt_state_size(lease)
-        data = C.create_string_buffer(size)
-        if self.lib.ctt_export(lease,data,size) != size:
-            raise IntegrityError('Incomplete state export')
+        # CPython BytesIO can hand its backing bytes to getvalue() once the
+        # writable view is released. Avoid copying the entire native payload.
+        with BytesIO() as buffer:
+            if size:
+                buffer.seek(size - 1)
+                buffer.write(b'\0')
+            with buffer.getbuffer() as view:
+                address = C.addressof(C.c_char.from_buffer(view)) if size else None
+                if self.lib.ctt_export(lease, address, size) != size:
+                    raise IntegrityError('Incomplete state export')
+            blob = buffer.getvalue()
         self.stats['checkpoint_export_bytes'] += size
-        return data.raw
+        return blob
 
     def piece(self, token):
         data = C.create_string_buffer(4096)
