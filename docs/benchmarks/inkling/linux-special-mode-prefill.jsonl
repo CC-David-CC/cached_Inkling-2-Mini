@@ -1,0 +1,6 @@
+{"split_opener": false, "position": 69, "argmax": 97948, "newline": 16.036497116088867, "end_message": 14.017208099365234, "next_forced": 97948}
+{"split_opener": false, "position": 70, "argmax": 19, "newline": 16.410751342773438, "end_message": 11.323488235473633, "next_forced": 19}
+{"split_opener": false, "position": 71, "argmax": 200010, "newline": 26.073558807373047, "end_message": 26.457508087158203, "next_forced": null}
+{"split_opener": true, "position": 69, "argmax": 97948, "newline": 14.739696502685547, "end_message": 12.421089172363281, "next_forced": 97948}
+{"split_opener": true, "position": 70, "argmax": 19, "newline": 17.21470069885254, "end_message": 11.238995552062988, "next_forced": 19}
+{"split_opener": true, "position": 71, "argmax": 198, "newline": 25.98768424987793, "end_message": 25.286514282226562, "next_forced": null}
