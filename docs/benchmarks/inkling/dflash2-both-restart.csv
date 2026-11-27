@@ -1,0 +1,2 @@
+checkpoint_position,target_state_bytes,hidden_state_bytes,blocks,identical_proposals,identical_accepted_lengths,identical_anchor_pairs,continuation_rows,bit_equal_rows
+3080,272531456,113541120,11,11,11,11,83,83
