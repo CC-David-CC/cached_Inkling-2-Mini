@@ -26,10 +26,13 @@ def evaluate(answer):
             db.execute('CREATE TABLE checks(host TEXT, service TEXT, ts INTEGER, seq INTEGER, rc INTEGER)')
             db.executemany('INSERT INTO checks VALUES (?,?,?,?,?)', rows)
             db.execute('PRAGMA query_only=ON')
-            allowed = {sqlite3.SQLITE_SELECT, sqlite3.SQLITE_FUNCTION, sqlite3.SQLITE_READ}
+            allowed = {sqlite3.SQLITE_SELECT, sqlite3.SQLITE_FUNCTION, sqlite3.SQLITE_READ, sqlite3.SQLITE_RECURSIVE}
             db.set_authorizer(lambda op, *args: sqlite3.SQLITE_OK if op in allowed else sqlite3.SQLITE_DENY)
             db.set_progress_handler(lambda: 1, 100000)
-            actual = db.execute(query).fetchall()
+            cursor = db.execute(query)
+            if cursor.description is None or len(cursor.description) != 2:
+                raise sqlite3.DatabaseError('Expected a query returning two columns')
+            actual = cursor.fetchall()
             results.append(dict(fixture=name, passed=actual == expected, expected=expected, actual=actual))
         except sqlite3.Error as error:
             results.append(dict(fixture=name, passed=False, error=str(error)))
