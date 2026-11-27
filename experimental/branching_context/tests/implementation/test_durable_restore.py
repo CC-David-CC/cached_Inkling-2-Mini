@@ -56,14 +56,14 @@ class DurableRestoreControlTests(unittest.TestCase):
         self.model._checkpoint_fault = lambda point: None
         self.sid = self.model.store.create_root('model', (0, 1), {'status': 'idle'})
 
-    def persist(self):
+    def persist(self, state=b'native-state'):
         import struct
-        payload = b'native-state' + struct.pack('<2f', 1., 2.)
+        payload = state + struct.pack('<2f', 1., 2.)
         sha = hashlib.sha256(payload).hexdigest()
         manifest = dict(schema=1, snapshot=self.sid,
             input_identity=self.model._input_identity(self.model.history(self.sid)), model_contract_id='model',
             execution_profile_id='execution', consumed=len(self.model.history(self.sid)), positions='absolute-zero-based',
-            state_bytes=12, logits_count=2, payload_sha256=sha)
+            state_bytes=len(state), logits_count=2, payload_sha256=sha)
         from context_time_travel.store import _json_bytes
         envelope = dict(manifest=manifest, checksum=hashlib.sha256(_json_bytes(manifest)).hexdigest())
         self.model._publish_checkpoint_file(self.model.checkpoint_directory/(sha+'.state'),payload)
@@ -83,6 +83,26 @@ class DurableRestoreControlTests(unittest.TestCase):
         self.assertEqual(receipt['forward_tokens'], 0)
         self.assertEqual(receipt['consumed'], 2)
         self.assertEqual(self.model.cache[self.sid].frontier, (1., 2.))
+
+    def test_disk_reader_allocates_one_state_buffer(self):
+        import tracemalloc
+        size = 8 * 1024**2
+        self.persist(b'x' * size)
+        history = self.model.history(self.sid)
+        was_tracing = tracemalloc.is_tracing()
+        if not was_tracing:
+            tracemalloc.start()
+        try:
+            baseline = tracemalloc.get_traced_memory()[0]
+            tracemalloc.reset_peak()
+            checkpoint = self.model._load_checkpoint(self.sid, history)
+            peak = tracemalloc.get_traced_memory()[1] - baseline
+        finally:
+            if not was_tracing:
+                tracemalloc.stop()
+        self.assertEqual(len(checkpoint.blob), size)
+        self.assertEqual(checkpoint.frontier, (1., 2.))
+        self.assertLess(peak, size + 1024**2)
 
     def test_dr_schedule_missing_rejected_before_native_load(self):
         self.persist()
