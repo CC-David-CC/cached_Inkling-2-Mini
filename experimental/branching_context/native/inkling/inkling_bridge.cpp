@@ -156,7 +156,7 @@ uint64_t ctt_work(void* raw) { return static_cast<Lease*>(raw)->model.work; }
 
 static int consume(void* raw, const int32_t* ids, const int32_t* image_rows,
                       const float* embeddings, int rows, int count,
-                      float* training_hidden = nullptr) try {
+                      float* training_hidden = nullptr, float* draft_taps = nullptr) try {
     auto& lease = *static_cast<Lease*>(raw);
     if (!ids || count < 1 || count > lease.model.capacity - lease.length ||
         rows < 0 || rows > count || (rows && (!embeddings || !image_rows)) ||
@@ -218,6 +218,18 @@ static int consume(void* raw, const int32_t* ids, const int32_t* image_rows,
                     frontier[token] = cap * std::tanh((frontier[token] + delta) / cap);
                 }
             }
+        } else if (draft_taps) {
+            ink2::TapCapture capture;
+            if (!model.backend->forward_batch(batch, frontier, &capture, error)) return 1;
+            const size_t width = model.file.m.c.hidden;
+            for (size_t layer = 0; layer < 4; ++layer) {
+                const auto& tap = capture.taps[layer];
+                if (tap.size() != size_t(take) * width) {
+                    error = "Incomplete Inkling DFlash2 tap capture";
+                    return 1;
+                }
+                std::copy(tap.begin(), tap.end(), draft_taps + (layer * count + offset) * width);
+            }
         } else if (!model.backend->forward_batch(batch, frontier, nullptr, error)) return 1;
         lease.length += take;
         lease.model.work += take;
@@ -233,6 +245,15 @@ static int consume(void* raw, const int32_t* ids, const int32_t* image_rows,
 int ctt_consume_mixed(void* raw, const int32_t* ids, const int32_t* image_rows,
                       const float* embeddings, int rows, int count) {
     return consume(raw, ids, image_rows, embeddings, rows, count);
+}
+
+int ctt_consume_dflash_taps(void* raw, const int32_t* ids, int count,
+                            float* taps, size_t elements) {
+    if (!raw || !taps || count < 1) return 1;
+    const auto& model = static_cast<Lease*>(raw)->model;
+    if (model.dspark || model.lora_rank ||
+        elements != size_t(count) * 4 * model.file.m.c.hidden) return 1;
+    return consume(raw, ids, nullptr, nullptr, 0, count, nullptr, taps);
 }
 
 int ctt_head_features(void* raw, const int32_t* ids, int count,
