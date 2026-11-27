@@ -1,0 +1,9 @@
+topology,operation,seconds,answer_correct,forward_tokens,checkpoint_import_bytes,resident_parent_restores
+"one P4, 768 MiB GPU experts",load_parent,1075.059,,,,
+"three P4s, all experts on GPU",load_parent,1017.463,,,,
+"one P4, 768 MiB GPU experts",first_question,48.915,True,18,0,1
+"three P4s, all experts on GPU",first_question,42.358,True,18,0,1
+"one P4, 768 MiB GPU experts",repeat_after_restart,58.248,True,18,2302705664,0
+"three P4s, all experts on GPU",repeat_after_restart,59.265,True,18,2302705664,0
+"one P4, 768 MiB GPU experts",different_question_after_restart,43.408,True,18,0,1
+"three P4s, all experts on GPU",different_question_after_restart,49.643,True,18,0,1

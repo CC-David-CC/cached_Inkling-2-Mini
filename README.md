@@ -36,6 +36,10 @@ At 1 GiB of GPU experts per card, all three P4 workers again answered the final-
 
 For a single Cached worker split across three P4s, apply the [layer-split checkpoint patch](experimental/branching_context/native/inkling/layer-split-checkpoint.patch) after the portable-state and DSpark patches, then rebuild the bridge. Launch with `CUDA_VISIBLE_DEVICES=0,1,2 python tools/inkling_pcc_serve.py RUNTIME --gpus 3 --pack SQ-10`. This places each layer and its KV on its owning GPU. The three-card HTTP restart test covers a short greedy text request. The native restore test covers a 2,049-token prefix.
 
+BranchWrite also restored the 65,000-token register on the three-card worker. Loading the parent took 16m 57s. After restart the first lookup imported 2,302,705,664 bytes from tmpfs and reproduced the original tokens. The next question reused the resident parent, imported zero bytes and answered correctly. Each lookup forwarded 18 tokens. The chart shows one run per configuration, including checkpoint handling. [Per-operation timings and counters](docs/benchmarks/inkling/p4-shared-document-topology.csv)
+
+![BranchWrite shared-register load and lookup latency on one and three P4s](docs/benchmarks/inkling/p4-shared-document-topology.png)
+
 ### RTX 4090 and RTX PRO 6000 Blackwell
 
 ![Cached single-request prefill, generation, full HTTP throughput and first-text latency on the RTX 4090 and RTX PRO 6000](docs/benchmarks/inkling/gpu-comparison.png)
@@ -253,6 +257,8 @@ native-build/inkling_portable_state_test Inkling-2-Mini-SQ-20.strata write porta
 native-build/inkling_portable_state_test Inkling-2-Mini-SQ-20.strata read portable-test.bin
 ```
 
+For a three-P4 layer split, build with the layer-split checkpoint patch, select the SQ-10 model, and add `--three-gpu` to both the write and read commands. Use a path on tmpfs for the fixture to avoid disk writes.
+
 On llm-60 the 4,097-token fixture exported 305,856,512 bytes of native state.
 RAM restore after a sibling write and disk restore in a fresh process
 matched all 200,058 continuation logits bit for bit with CUDA, FP16 KV,
@@ -261,7 +267,7 @@ uses the durable checkpoint format.
 
 ### PCC CUDA checkpoint regression
 
-For a clean build on an RTX PRO 6000 Blackwell, run these commands from the Cached checkout. Set `assets` to the directory containing the SQ-20 model and the original pinned Hugging Face tokenizer saved as `tokenizer-source.json`. The commands create a new runtime and build directory, apply both patches in order and exercise restore in a second Python process.
+For a clean build on an RTX PRO 6000 Blackwell, run these commands from the Cached checkout. Set `assets` to the directory containing the SQ-20 model and the original pinned Hugging Face tokenizer saved as `tokenizer-source.json`. The commands create a new runtime and build directory, apply the checkpoint patches in order and exercise restore in a second Python process.
 
 ```bash
 set -e
@@ -272,7 +278,7 @@ git init -q "$runtime/strata-source"
 git -C "$runtime/strata-source" remote add origin https://github.com/Niko1221/Strata
 git -C "$runtime/strata-source" fetch --depth=1 origin b28ca95e3e6847f2d5e317994f253b66716deeaa
 git -C "$runtime/strata-source" checkout --detach FETCH_HEAD
-for patch in portable-state dspark-checkpoint; do
+for patch in portable-state dspark-checkpoint layer-split-checkpoint; do
     git -C "$runtime/strata-source" apply "$bridge/$patch.patch"
 done
 ln -s "$assets/Inkling-2-Mini-SQ-20.strata" "$runtime/"

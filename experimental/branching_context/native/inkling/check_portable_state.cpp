@@ -20,11 +20,18 @@ static void same_logits(const std::vector<float>& actual, const std::vector<floa
 
 int main(int argc, char** argv) try {
     const bool draft = argc == 5 && std::string(argv[4]) == "--dspark";
-    require(argc == 4 || draft, "usage: check_portable_state MODEL write|read FILE [--dspark]");
+    const bool layer_split = argc == 5 && std::string(argv[4]) == "--three-gpu";
+    require(argc == 4 || draft || layer_split,
+            "usage: check_portable_state MODEL write|read FILE [--dspark|--three-gpu]");
     const std::string mode = argv[2];
     require(mode == "write" || mode == "read", "invalid mode");
     constexpr int prefix = 4097;
     BackendOpts opts;
+    if (layer_split) {
+        opts.gpus = 3;
+        opts.gpu_ids = {0, 1, 2};
+        opts.layer_split = "auto";
+    }
     opts.max_ctx = 8192;
     opts.chunk = 512;
     opts.chunk_auto = false;
@@ -37,6 +44,8 @@ int main(int argc, char** argv) try {
     require(model.open(argv[1], error, false, ""), error);
     auto backend = make_cuda_backend();
     require(backend->init(model, opts, error), error);
+    if (layer_split)
+        require(std::string(backend->backend_name()) == "cuda-ls", "three-GPU layer split unavailable");
     require(backend->alloc_slot(0, opts.max_ctx, opts.kv_dtype, error), error);
     std::vector<float> logits(model.m.c.vocab_unpadded);
     std::vector<float> expected(logits.size());
