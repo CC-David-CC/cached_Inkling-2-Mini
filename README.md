@@ -16,7 +16,7 @@ With a 4 GiB GPU expert pool, DSpark generated 512 tokens at 147.3 tokens/s. Dra
 
 ![Decode speed and mean time per token for four independent workers](docs/benchmarks/inkling/dspark-64k-repeat.png)
 
-Two additional workers per mode reproduced all 512 output IDs. Before generation, all four agreed bit for bit on all 200,058 next-token scores. After generation the two undrafted workers still agreed exactly. The two DSpark workers chose the same next token but differed on every score, with a maximum absolute difference of 0.651. These timings and scores cover one prompt on llm-60. [Per-worker measurements](docs/benchmarks/inkling/dspark-64k-frontier-runs.jsonl) · [All pairwise score comparisons](docs/benchmarks/inkling/dspark-64k-frontiers.csv)
+Two additional workers per mode reproduced all 512 output IDs. Before generation, all four agreed bit for bit on all 200,058 next-token scores. After generation the two undrafted workers still agreed exactly. The two DSpark workers chose the same next token but differed on every score, with a maximum absolute difference of 0.651. These timings and scores cover one prompt on llm-60. [Per-worker measurements](docs/benchmarks/inkling/dspark-64k-frontier-runs.jsonl) · [All pairwise score comparisons](docs/benchmarks/inkling/dspark-64k-frontiers.csv) · [Reproduce with the original token IDs](docs/benchmarks/inkling/frontier64/README.md)
 
 ### Reading a 250,000-token document on llm-60
 
