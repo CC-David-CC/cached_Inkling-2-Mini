@@ -19,6 +19,8 @@ def main():
     args = parser.parse_args()
     if not 1 <= args.port <= 65535:
         parser.error("--port must be between 1 and 65535")
+    if not args.directory.is_dir():
+        parser.error(f"runtime directory not found or not a directory: {args.directory}")
     root = args.directory.resolve()
     terminal = root / "strata-source" / "terminal"
 
