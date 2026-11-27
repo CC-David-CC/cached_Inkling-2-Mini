@@ -1,0 +1,5 @@
+profile,groups,requests,median_per_request_decode_tps,median_group_wall_tps,max_process_storage_read_mib
+mapped-3-long,4,12,10.4,25.41,2.85
+split-mapped-3-long,4,4,21.65,19.17,0.0
+q4-split-mapped-3-long,2,2,7.6,6.2,2811.36
+q4-split-3-pleram-long,2,2,13.7,12.11,5.84
