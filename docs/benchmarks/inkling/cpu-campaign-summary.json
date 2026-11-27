@@ -1,0 +1,21 @@
+{
+  "campaign": "cpu",
+  "source_commit": "769183242643846ade15da1e45c12427a159fe02",
+  "source_dirty": false,
+  "tests_run": 2114,
+  "status": "FAIL",
+  "failures": [
+    "test_cli_grammar_numerical_audit.FrontierAuditTests.test_pinned_llguidance_matcher_word_padding_is_normalized_without_changing_vocab_bits"
+  ],
+  "errors": [
+    "test_p02.SensitiveStorageTests.test_p02_invariant"
+  ],
+  "skipped": [],
+  "followup": {
+    "host": "r730",
+    "test": "test_p02.SensitiveStorageTests.test_p02_invariant",
+    "status": "PASS",
+    "seconds": 0.67,
+    "probe_uid": 65534
+  }
+}
