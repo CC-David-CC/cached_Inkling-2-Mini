@@ -55,4 +55,48 @@ class PoolRequestStopTests(unittest.TestCase):
         finally: stop.set()
 
 
+    def test_cancel_one_of_two_active_workers(self):
+        coordinator, models, _, _ = fixture.CoordinatorTests.start(self, (0, 1))
+        root = coordinator.create('base', (1,), 'create').durable.result(5)['snapshot']
+        coordinator.fork('sibling', root)
+        before = coordinator.store.head('base')
+        stop = threading.Event()
+        release = threading.Event()
+        both_active = threading.Barrier(3)
+
+        def hold_after_first_token(run):
+            def wrapped(*args, **kwargs):
+                kwargs.pop('cancelled', None)
+                callback = kwargs['on_token']
+
+                def progress(token):
+                    callback(token)
+                    if token == 0:
+                        both_active.wait(5)
+                        if not release.wait(5):
+                            raise AssertionError('Test did not release active workers')
+
+                kwargs['on_token'] = progress
+                return run(*args, **kwargs)
+            return wrapped
+
+        for model in models.values():
+            model.run_greedy_request = hold_after_first_token(model.run_greedy_request)
+        cancelled = coordinator.submit('base', (2,), 3, 'cancel-active', cancelled=stop.is_set)
+        survivor = coordinator.submit('sibling', (3,), 3, 'survive-active')
+        try:
+            both_active.wait(5)
+            stop.set()
+        finally:
+            release.set()
+
+        with self.assertRaises(CancelledError):
+            cancelled.durable.result(5)
+        self.assertEqual(coordinator.store.head('base'), before)
+        receipt = survivor.durable.result(5)
+        self.assertEqual(coordinator.store.head('sibling').tip, receipt['snapshot'])
+        self.assertNotEqual(receipt['snapshot'], root)
+        self.assertEqual(survivor.snapshot.result(5)['tokens'], [0, 1, 2])
+
+
 if __name__=='__main__': unittest.main()
