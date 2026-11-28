@@ -1,0 +1,9 @@
+worker,trial,schedule,pair_s,question_index,parent_tokens,parent_state_bytes,correct,output_tokens,forward_tokens,checkpoint_import_bytes,resident_parent_restores
+warm,0,serial,10.13331634690985,1,127612,4353196032,True,6,26,0,1
+warm,0,serial,10.13331634690985,2,127612,4353196032,True,6,26,0,1
+warm,1,parallel,11.854857853148133,1,127612,4353196032,True,6,26,0,1
+warm,1,parallel,11.854857853148133,2,127612,4353196032,True,6,26,0,1
+warm,2,serial,11.890311659080908,1,127612,4353196032,True,6,26,0,1
+warm,2,serial,11.890311659080908,2,127612,4353196032,True,6,26,0,1
+restarted,0,serial,13.521438172087073,1,127612,4353196032,True,6,26,4353196032,0
+restarted,0,serial,13.521438172087073,2,127612,4353196032,True,6,26,0,1
