@@ -82,6 +82,8 @@ Two warm requests submitted together finished in 9.64–9.69 s versus 10.37–10
 
 ![Time to finish two inventory requests and time to first visible text](docs/benchmarks/inkling/sq20-inventory-pair.png)
 
+On three warm repeats per mode, the local HTTP client saw p95 gaps of 8.36 ms between visible updates with drafting off and 29.42 ms with DSpark. DSpark delivered many updates together. [Stream timing chart](docs/benchmarks/inkling/sq20-stream-cadence.png) · [Per-event gaps](docs/benchmarks/inkling/sq20-stream-cadence.csv)
+
 
 Launch undrafted text with `--greedy-text-stops` for checkpointed stop strings at effort zero. This opt-in uses a distinct execution profile. In a live SQ-10 HTTP test on llm-60, a prepared two-line request with a newline stop returned only the first line. Cached consumed four tokens including the delimiter and published the resulting checkpoint. [Live stop receipt](docs/benchmarks/inkling/http-greedy-stop.json) [Original failure and recovery](docs/benchmarks/inkling/http-text-stop-recovery.json)
 
