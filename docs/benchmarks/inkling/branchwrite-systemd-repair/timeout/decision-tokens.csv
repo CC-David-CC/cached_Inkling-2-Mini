@@ -1,0 +1,13 @@
+build,tool,target,consumed_output_tokens,request_count
+earlier,run_shell,cat /run/branchwrite/unit-journal,35,1
+earlier,read_file,worker.py,29,1
+earlier,read_file,service.json,28,1
+earlier,replace,service.json,62,1
+earlier,run_shell,python3 worker.py --check,32,1
+earlier,finish,,74,1
+clean,run_shell,cat /run/branchwrite/unit-journal,35,1
+clean,read_file,worker.py,29,1
+clean,read_file,service.json,28,1
+clean,replace,service.json,62,1
+clean,run_shell,python3 worker.py --check,32,1
+clean,finish,,74,1
