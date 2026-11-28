@@ -9,7 +9,7 @@ from pathlib import Path
 import numpy as np
 from tokenizers import Tokenizer
 from inkling_train_head import (HEAD_ADAPTER_HEADER, HEAD_ADAPTER_MAGIC, MODEL_SHA256,
-                               initialize, load_backend, runtime_profile, torch, train_step)
+                               initialize, load_backend, runtime_profile, torch, train_step, write_adapter)
 from inkling_station_rounds import load_station_fixture
 from record_inkling_answers import record
 
@@ -138,10 +138,7 @@ def main():
         round_no+=1
         prior=good
         adapter=args.out/f'round-{round_no:02}.iklora'
-        with adapter.open('xb') as stream:
-            stream.write(header)
-            for factor in params[:2]:
-                stream.write(factor.detach().cpu().numpy().tobytes())
+        write_adapter(adapter, *params[:2])
         (args.out/'rounds.json').write_text(json.dumps(history,indent=2))
     (args.out/'rounds.json').write_text(json.dumps(history,indent=2))
 

@@ -5,7 +5,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from inkling_train_head import (HEAD_ADAPTER_HEADER, HEAD_ADAPTER_MAGIC, MODEL_SHA256,
+from inkling_train_head import (MODEL_SHA256, write_adapter,
                                initialize, load_backend, parent_factors, runtime_profile, torch, train_step)
 from record_inkling_answers import record
 from tokenizers import Tokenizer
@@ -126,10 +126,7 @@ def main():
                     ('merged-r8', combined_a, combined_b),
                     ('collapsed-r4', vh[:4] @ right.T, (left @ u[:, :4]) * singular[:4])):
                 path = args.out/(label + '.iklora')
-                with path.open('xb') as stream:
-                    stream.write(HEAD_ADAPTER_HEADER.pack(HEAD_ADAPTER_MAGIC, a.shape[0], bytes.fromhex(MODEL_SHA256)))
-                    for factor in (a, b):
-                        stream.write(factor.float().cpu().contiguous().numpy().tobytes())
+                write_adapter(path, a.float(), b.float())
                 stages.append((label, path))
             (args.out/'practice.json').write_text(json.dumps(dict(parent_sha256=hashlib.sha256(payload).hexdigest(),
                 singular_values=singular.tolist(), losses=losses, train_ids=[r['id'] for r in wrong])))
@@ -143,10 +140,7 @@ def main():
                 losses = [train_step(factors, x, raw, targets, cap) for _ in range(8)]
                 label = f'{optimizer}-r{round_id}'
                 path = args.out/(label + '.iklora')
-                with path.open('xb') as stream:
-                    stream.write(HEAD_ADAPTER_HEADER.pack(HEAD_ADAPTER_MAGIC, 4, bytes.fromhex(MODEL_SHA256)))
-                    for factor in factors[:2]:
-                        stream.write(factor.detach().cpu().numpy().tobytes())
+                write_adapter(path, *factors[:2])
                 (args.out/(label+'.json')).write_text(json.dumps(dict(losses=losses, rank=4, train_ids=[r['id'] for r in wrong])))
                 stages.append((label, path))
 

@@ -136,10 +136,16 @@ def export_adapter(output, parameters, parent=None, collapse=False, base_sha256=
         u, singular, vh = torch.linalg.svd(lb @ ra.T)
         b = ((left @ u[:, :RANK]) * singular[:RANK]).float()
         a = (vh[:RANK] @ right.T).float()
-    final = output / 'adapter.iklora'
+    return write_adapter(output / 'adapter.iklora', a, b, base_sha256)
+
+
+def write_adapter(final, a, b, base_sha256=MODEL_SHA256):
+    if (a.ndim != 2 or b.ndim != 2 or not 1 <= a.shape[0] <= 16
+            or a.shape[1] != HEAD_WIDTH or b.shape[1] != a.shape[0] or not b.shape[0]):
+        raise ValueError('Invalid head adapter factor dimensions')
     header = HEAD_ADAPTER_HEADER.pack(HEAD_ADAPTER_MAGIC, a.shape[0], bytes.fromhex(base_sha256))
     digest = hashlib.sha256()
-    with tempfile.NamedTemporaryFile(dir=output, delete=False) as stream:
+    with tempfile.NamedTemporaryFile(dir=final.parent, delete=False) as stream:
         staged = Path(stream.name)
         try:
             stream.write(header)
