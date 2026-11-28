@@ -1,0 +1,40 @@
+{
+  "context": {
+    "prompt": "Restore the failed report worker while preserving its configured duration and unrelated settings.",
+    "model_result_artifact": "d837fd6fe7e8cc0a8c1f57d4cf2dce1099a4a794300c295c3d25c8ed34691adf",
+    "archive_sha256": "53ecdd7f4ee137f31fb471515443d759223cb272cf053797d988a0901378d3d3",
+    "live_run_gate": "failed before deployment",
+    "independent_archive_replay": "3/3 TCP probes and duplicate apply passed"
+  },
+  "cases": [
+    {
+      "id": "repair-timeout-type",
+      "expected": {
+        "mode": "serve",
+        "name": "report-worker",
+        "timeout_ms": 250
+      },
+      "answer": {
+        "mode": "serve",
+        "name": "report-worker",
+        "timeout_ms": 250
+      },
+      "outcome": "correct",
+      "question": "Restore the failed report worker while preserving its configured duration and unrelated settings.",
+      "evidence": "Export matched the known repair byte-for-byte and passed three independent TCP probes."
+    },
+    {
+      "id": "journal-diagnosis",
+      "question": "Did the worker inspect the failed unit journal during repair?",
+      "answer": false,
+      "expected": true,
+      "outcome": "incorrect",
+      "evidence": "The ledger records source and configuration reads and local check commands. The independent journal verifier rejected the run."
+    }
+  ],
+  "counts": {
+    "correct": 1,
+    "incorrect": 1,
+    "ungraded": 0
+  }
+}
