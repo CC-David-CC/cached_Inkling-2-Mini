@@ -16,6 +16,28 @@ def rows(path):
     return [json.loads(line) for line in path.read_text().splitlines()]
 
 
+def load_station_fixture(repo):
+    corrections = repo / 'training/wrong_but_corrected/shared-document-128k'
+    retention = repo / 'evaluation/retention/shared-document-128k'
+    wrong = rows(corrections / 'examples.jsonl')
+    held = rows(retention / 'cases.jsonl')
+    if len(wrong) != 3 or len(held) != 51 or len({r['id'] for r in wrong + held}) != 54:
+        raise ValueError('Expected 3 correction and 51 retention cases with distinct station IDs')
+    system = (corrections / 'system-prompt.txt').read_bytes()
+    digest = hashlib.sha256(system).hexdigest()
+    baseline = json.loads((retention / 'baseline.json').read_text())
+    if baseline['system_prompt_sha256'] != digest or any(r['system_prompt_sha256'] != digest for r in wrong):
+        raise ValueError('Station register checksum differs from the recorded fixture')
+    document = system.decode('utf-8')
+    lines = set(document.splitlines())
+    for group, field in ((wrong, 'chosen'), (held, 'expected')):
+        for case in group:
+            station = case['id'].removeprefix('station-')
+            if f"Station {station} has label {case[field]}." not in lines:
+                raise ValueError(f"Station register does not support the recorded label for {case['id']}")
+    return wrong, held, document
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for key in ('runtime', 'repo', 'out'):
@@ -25,13 +47,8 @@ def main():
                         help='prior rank-four output adapter used as a frozen parent')
     mode.add_argument('--evaluate', type=Path, help='evaluate an existing adapter only')
     args = parser.parse_args()
+    wrong, held, system = load_station_fixture(args.repo)
     args.out.mkdir(exist_ok=False)
-    corrections = args.repo/'training/wrong_but_corrected/shared-document-128k'
-    wrong = rows(corrections/'examples.jsonl')
-    held = rows(args.repo/'evaluation/retention/shared-document-128k/cases.jsonl')
-    assert len(wrong) == 3 and len({r['id'] for r in wrong + held}) == 54 and len(held) == 51
-    system = (corrections/'system-prompt.txt').read_text()
-    assert all(hashlib.sha256(system.encode()).hexdigest() == r['system_prompt_sha256'] for r in wrong)
     tok = Tokenizer.from_file(str(args.runtime/'tokenizer-source.json'))
 
     def encode(text):

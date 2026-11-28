@@ -10,7 +10,7 @@ import numpy as np
 from tokenizers import Tokenizer
 from inkling_train_head import (HEAD_ADAPTER_HEADER, HEAD_ADAPTER_MAGIC, MODEL_SHA256,
                                initialize, load_backend, runtime_profile, torch, train_step)
-from inkling_station_rounds import rows
+from inkling_station_rounds import load_station_fixture
 from record_inkling_answers import record
 
 
@@ -26,14 +26,10 @@ def main():
     with report.open() as source:
         baseline_correct = {row['station'] for row in csv.DictReader(source)
                             if row['stations-v1-adamw-r1'].strip().lower().strip(' .') == row['expected']}
-    args.out.mkdir(exist_ok=False)
-    correction_dir = args.repo/'training/wrong_but_corrected/shared-document-128k'
-    corrections = rows(correction_dir/'examples.jsonl')
-    cases = corrections + rows(args.repo/'evaluation/retention/shared-document-128k/cases.jsonl')
+    corrections, held, system = load_station_fixture(args.repo)
+    cases = corrections + held
     ids = [c['id'] for c in cases]
-    assert len(cases) == len(set(ids)) == 54
-    system = (correction_dir/'system-prompt.txt').read_text()
-    assert hashlib.sha256(system.encode()).hexdigest() == corrections[0]['system_prompt_sha256']
+    args.out.mkdir(exist_ok=False)
     tok = Tokenizer.from_file(str(args.runtime/'tokenizer-source.json'))
     def encode(s):
         return tok.encode(s, add_special_tokens=False).ids
