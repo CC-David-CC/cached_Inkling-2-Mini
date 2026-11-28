@@ -1,0 +1,17 @@
+{
+  "artifacts": [],
+  "frame": "program",
+  "result_artifact": "ca6eee517772bd312eb82e0eb508e1c2e42a2bd35a5d310e99497832df534d09",
+  "status": "complete",
+  "verified": true,
+  "model": "Inkling-2-Mini-SQ-20",
+  "host": "llm-60",
+  "baseline_passed": 63,
+  "replay_passed": 171,
+  "independent_cases": 171,
+  "archive_sha256": "1dfc8b1996179b9b0a57507581379b97fd1e0e0ba437bd21d31e79dcdb72622f",
+  "source_modes": {
+    "batches.py": "0o664",
+    "check.py": "0o664"
+  }
+}
