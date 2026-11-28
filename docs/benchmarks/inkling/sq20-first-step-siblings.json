@@ -1,0 +1,136 @@
+[
+  {
+    "parent": "eb3cc16e742534e075dfd932561ecb883baa83e2d451553027c5c9dfb266472e",
+    "parent_payload": "3e56db6e5bdeabea34893acced1171f3fa99a43ee5c0206393703df9845261fa",
+    "profile": "58b8e06238a61c66f6cc74db7e82f1a87655209a294f9c45acb5c89180dd8055",
+    "children": [
+      {
+        "payload": "2ce94e3480018542465084fd1f5a4456b7fecd9d51e5773148f07ede901149a7",
+        "tokens": [
+          214
+        ],
+        "work": {
+          "consumed_tokens": 1,
+          "forward_tokens": 1,
+          "resident_parent_restores": 1,
+          "checkpoint_import_bytes": 0
+        },
+        "frontier": {
+          "payload": "2ce94e3480018542465084fd1f5a4456b7fecd9d51e5773148f07ede901149a7",
+          "state_sha256": "5c52f59fc4ddb3da1ae46ebe7bd20809db7e8288f47b1758315243d20e470596",
+          "frontier_sha256": "b9e9c4587aae97f2811ead6adc150aade2d400dfbc38a3b44caa6817909092e6",
+          "logits": 200058,
+          "argmax": 214,
+          "bitwise_different_logits": 0,
+          "max_absolute_delta": 0.0
+        }
+      },
+      {
+        "payload": "6fe6e91ce4343a65ff6db1d1c1eddb8f77db7d17b9b1d2949ceddf9333a2b37f",
+        "tokens": [
+          214
+        ],
+        "work": {
+          "consumed_tokens": 1,
+          "forward_tokens": 1,
+          "resident_parent_restores": 0,
+          "checkpoint_import_bytes": 7569408
+        },
+        "frontier": {
+          "payload": "6fe6e91ce4343a65ff6db1d1c1eddb8f77db7d17b9b1d2949ceddf9333a2b37f",
+          "state_sha256": "9639d68222cf87ca0ad3f0086224ae7399d8c3b48c40d3d98b49dcccefee81f2",
+          "frontier_sha256": "32340009c3bc480d7a5542ccb08c6149e86289f6b2fa643ac77a5c9eebea3b6f",
+          "logits": 200058,
+          "argmax": 214,
+          "bitwise_different_logits": 199967,
+          "max_absolute_delta": 0.00276947021484375
+        }
+      },
+      {
+        "payload": "6fe6e91ce4343a65ff6db1d1c1eddb8f77db7d17b9b1d2949ceddf9333a2b37f",
+        "tokens": [
+          214
+        ],
+        "work": {
+          "consumed_tokens": 1,
+          "forward_tokens": 1,
+          "resident_parent_restores": 0,
+          "checkpoint_import_bytes": 7569408
+        },
+        "frontier": {
+          "payload": "6fe6e91ce4343a65ff6db1d1c1eddb8f77db7d17b9b1d2949ceddf9333a2b37f",
+          "state_sha256": "9639d68222cf87ca0ad3f0086224ae7399d8c3b48c40d3d98b49dcccefee81f2",
+          "frontier_sha256": "32340009c3bc480d7a5542ccb08c6149e86289f6b2fa643ac77a5c9eebea3b6f",
+          "logits": 200058,
+          "argmax": 214,
+          "bitwise_different_logits": 199967,
+          "max_absolute_delta": 0.00276947021484375
+        }
+      }
+    ]
+  },
+  {
+    "parent": "eb3cc16e742534e075dfd932561ecb883baa83e2d451553027c5c9dfb266472e",
+    "parent_payload": "eb65d2157b69e2e681f6cf7db2446a1fb549d62763d460efb14f24df3d714e95",
+    "profile": "006b613ec3d646af834075a51e8c5c9b85428f9dbd470e5d3aee231c63e409fd",
+    "children": [
+      {
+        "payload": "9242fec17423dbe92ee3cf29a9c1701b5bb26d3435855b4ec369fe910b5653c3",
+        "tokens": [
+          214
+        ],
+        "work": {
+          "consumed_tokens": 1,
+          "forward_tokens": 1
+        },
+        "frontier": {
+          "payload": "9242fec17423dbe92ee3cf29a9c1701b5bb26d3435855b4ec369fe910b5653c3",
+          "state_sha256": "6bd84bfb7f33171b50b86513d9a03cca5c893ef153bb2a7c056569a7aa6bd9a9",
+          "frontier_sha256": "bbd3181fce318ee947246609ad29a925b448a6bff6e80394a21a8f140a9164b6",
+          "logits": 200058,
+          "argmax": 214,
+          "bitwise_different_logits": 0,
+          "max_absolute_delta": 0.0
+        }
+      },
+      {
+        "payload": "9242fec17423dbe92ee3cf29a9c1701b5bb26d3435855b4ec369fe910b5653c3",
+        "tokens": [
+          214
+        ],
+        "work": {
+          "consumed_tokens": 1,
+          "forward_tokens": 1
+        },
+        "frontier": {
+          "payload": "9242fec17423dbe92ee3cf29a9c1701b5bb26d3435855b4ec369fe910b5653c3",
+          "state_sha256": "6bd84bfb7f33171b50b86513d9a03cca5c893ef153bb2a7c056569a7aa6bd9a9",
+          "frontier_sha256": "bbd3181fce318ee947246609ad29a925b448a6bff6e80394a21a8f140a9164b6",
+          "logits": 200058,
+          "argmax": 214,
+          "bitwise_different_logits": 0,
+          "max_absolute_delta": 0.0
+        }
+      },
+      {
+        "payload": "9242fec17423dbe92ee3cf29a9c1701b5bb26d3435855b4ec369fe910b5653c3",
+        "tokens": [
+          214
+        ],
+        "work": {
+          "consumed_tokens": 1,
+          "forward_tokens": 1
+        },
+        "frontier": {
+          "payload": "9242fec17423dbe92ee3cf29a9c1701b5bb26d3435855b4ec369fe910b5653c3",
+          "state_sha256": "6bd84bfb7f33171b50b86513d9a03cca5c893ef153bb2a7c056569a7aa6bd9a9",
+          "frontier_sha256": "bbd3181fce318ee947246609ad29a925b448a6bff6e80394a21a8f140a9164b6",
+          "logits": 200058,
+          "argmax": 214,
+          "bitwise_different_logits": 0,
+          "max_absolute_delta": 0.0
+        }
+      }
+    ]
+  }
+]
