@@ -78,6 +78,10 @@ On llm-60, Cached generated 1,024 tokens from a 1,400-record inventory prompt at
 
 ![First visible text, completed request time and generation rate on the inventory prompt](docs/benchmarks/inkling/sq20-inventory-1024.png)
 
+Two warm requests submitted together finished in 9.64–9.69 s versus 10.37–10.43 s sequentially. One concurrent caller waited 4.83–5.08 s for first visible text. [Per-request timings](docs/benchmarks/inkling/sq20-inventory-pair.csv)
+
+![Time to finish two inventory requests and time to first visible text](docs/benchmarks/inkling/sq20-inventory-pair.png)
+
 
 Launch undrafted text with `--greedy-text-stops` for checkpointed stop strings at effort zero. This opt-in uses a distinct execution profile. In a live SQ-10 HTTP test on llm-60, a prepared two-line request with a newline stop returned only the first line. Cached consumed four tokens including the delimiter and published the resulting checkpoint. [Live stop receipt](docs/benchmarks/inkling/http-greedy-stop.json) [Original failure and recovery](docs/benchmarks/inkling/http-text-stop-recovery.json)
 
