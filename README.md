@@ -52,6 +52,8 @@ For repeated questions that need reproducible child checkpoints, pass `--serial-
 
 Enable `--suffix-checkpoints` for compact saves on the undrafted single-GPU text profile. On the tested second turn, Cached saved 14.34 MiB of changes plus a 0.76 MiB logit row. The cumulative checkpoint depends on the original full parent, which the disk cache retains while the checkpoint is needed. After restart, 12 continuation tokens and all final logits matched the full-checkpoint control. Use `--store DIRECTORY` for a persistent conversation store. [Second-turn measurements](docs/benchmarks/inkling/branchwrite-250k-cumulative-http.json)
 
+With a native 250,000-token parent pinned on llm-60, three distinct register lookups took 1.61–1.75 seconds with DSpark and 1.57–1.87 seconds undrafted (2 GiB expert pool, 32 generated tokens each). Both modes restored the resident parent in 11–13 ms. All three output sequences matched across modes. Each began with the correct district and continued beyond the requested number. Timings include parent restore, question processing and generation; they exclude HTTP and child checkpoint publication. [Per-question timings and scores](docs/benchmarks/inkling/warm-250k-native-draft.csv)
+
 ![Time to durable BranchWrite answers with 250k-token parents](docs/benchmarks/inkling/branchwrite-250k-serving.png)
 
 The register lookups and SQLite query used separate parents. Reading the document happened before timing began. Each bar covers one complete request, including child checkpoint publication. [SQL timings](docs/benchmarks/inkling/branchwrite-250k-sql.csv)
