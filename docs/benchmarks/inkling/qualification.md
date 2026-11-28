@@ -25,6 +25,12 @@ For supervised coding, use base SQ-20 on llm-60, one worker, greedy direct const
 
 A separate [reviewed fix](https://github.com/CC-David-CC/cached_Inkling-2-Mini/commit/7facf366cf90093f7eb2a02a6c5920829dda68b1) rejected a swapped first-round adapter with identical tensors and reproduced the original valid output byte for byte. The autonomous coding result remains a failure.
 
+### CPU campaign and follow-up checks
+
+The full CPU campaign ran 2,129 tests. Of these, 2,126 passed, one failed and two errored. Separate reruns resolved the service-cleanup and storage-permission errors. All 17 service-recovery tests passed with the adjusted fixture startup deadline. In the Ubuntu guest, an independent OS account was denied access to all three protected files. The historical grammar audit still requires its pinned 248,320-token profile.
+
+A CPU check using the production Inkling tokenizer and llguidance 1.9.1 examined all 200,058 token IDs for a grammar admitting the literal `A`. Initially only token 32 was legal. After consuming it, only stop tokens 199999 and 200006 were legal. Restoring the serialized controller with its token history reproduced the entire matcher bitmask.
+
 ### Proposed acceptance gates
 
 1. **Daily coding and inspection.** From a fresh client checkout, run a real issue through patch selection, restart, export, and independent grading. Exercise a live incorrect inspection answer and require either a verified correction or an explicit unsuccessful result. Record both passing and failing cases.
