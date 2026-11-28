@@ -24,6 +24,8 @@ At 131,072 input tokens on llm-60 with the same SQ-10 hybrid profile, two fresh 
 
 On llm-49 the matched SQ-10 RTX 4090 workers read 65,536 tokens in 36.57–36.64 seconds. Generation reached 74.5 tokens/s undrafted and 137.2–137.6 with DSpark. Each worker generated 512 tokens. [RTX 4090 timings](docs/benchmarks/inkling/llm49-64k-frontier-runs.jsonl) · [Within-host score comparisons](docs/benchmarks/inkling/llm49-64k-frontiers.csv)
 
+Across the two GPU models, all 200,058 undrafted scores differed bitwise both immediately after prefill and after 512 output tokens. The highest-scoring token agreed at both positions, and both hosts generated the same 512 IDs. [Cross-host score comparison](docs/benchmarks/inkling/64k-cross-host-undrafted.csv)
+
 ### Reading a 250,000-token document on llm-60
 
 ![Prefill speed across a 250,000-token document](docs/benchmarks/inkling/llm60-250k-prefill.png)
