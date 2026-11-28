@@ -1,0 +1,25 @@
+--- a/docs/benchmarks/inkling/branchwrite-systemd-repair/source/service.json
++++ b/docs/benchmarks/inkling/branchwrite-systemd-repair/source/service.json
+@@ -1 +1 @@
+-{"mode": "serve", "name": "report-worker", "timeout_ms": "250"}
++{"mode": "serve", "name": "report-worker", "timeout_ms": "1375"}
+--- a/docs/benchmarks/inkling/branchwrite-systemd-repair/replay.sh
++++ b/docs/benchmarks/inkling/branchwrite-systemd-repair/replay.sh
+@@ -34,14 +34,14 @@
+ done
+ systemctl --user is-failed --quiet "$unit"
+ journalctl --user -u "$unit" -o cat --no-pager | grep -F 'ValueError: timeout_ms must be a positive integer'
+-archive="$here/timeout/fix.bw"
+-digest=53ecdd7f4ee137f31fb471515443d759223cb272cf053797d988a0901378d3d3
++archive="$here/timeout/transfer-1375.bw"
++digest=7afc0ee882df8468d8007c61cebad2333344cd86bc4c879ac4cc50f9c429ccae
+ if "$live"; then
+     export BW_USER_JOURNAL_UNIT="$unit"
+     branchwrite code "$work/project" --connection "$connection" --state "$work/state" \
+         --thinking off --instructions compact-finish-request --max-steps 256 \
+         --read worker.py --edit service.json --test-command 'python3 worker.py --check' \
+-        --task 'Inspect the failed report worker using cat /run/branchwrite/unit-journal. Fix its config to serve requests, preserve the configured duration and all unrelated settings, run python3 worker.py --check and finish.' \
++        --task 'Restore the failed report worker while preserving its configured duration and unrelated settings.' \
+         | tee "$work/model.log"
+     python3 - "$work/model.log" <<'PYRESULT'
+ import json

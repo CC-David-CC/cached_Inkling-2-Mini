@@ -36,3 +36,13 @@ Both exported archives matched the published `fix.bw` byte for byte. Applying th
 ![Generated token costs by action for three BranchWrite tool descriptions](decision-cost.png)
 
 All three runs produced the correct configuration. Only the latter two read the failed service journal. The final description yielded one finish request and the highest total output cost. Each bar represents one run. [Per-action ledger counts](journal-discovery-tokens.csv)
+
+### Replay the 1,375 ms transfer case
+
+In the temporary checkout above, apply `timeout/transfer-1375.patch` after the timeout fixture patch and before invoking the harness:
+
+```bash
+(cd "$work" && git apply "$base/timeout/transfer-1375.patch" && bash "$base/replay.sh")
+```
+
+This selects the original 1,375 ms input and its separately recorded BranchWrite archive. The archive digest is pinned in the patched harness.
