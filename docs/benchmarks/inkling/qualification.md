@@ -10,7 +10,7 @@ For supervised coding, use base SQ-20 on llm-60, one worker, greedy direct const
 
 | Workload | Starting profile | Evidence and limits |
 |---|---|---|
-| llm-60, repeated questions | One worker and one warm parent. Use full restore verification for audits. | Warm 131k SQ-10 parent reuse passed. At 250k, three lookups reproduced the output IDs across processes but their child checkpoint hashes differed. |
+| llm-60, repeated questions | One worker and one warm parent. Use full restore verification for audits. | Warm 131k SQ-10 parent reuse passed. For the 250k SQ-10 register, use `--serial-followup` when child checkpoint reproducibility matters. Across two processes, all three lookups matched tokens and payload hashes with serial follow-up. Batched follow-up matched tokens but differed on all three payload hashes. [Serial measurements](branchwrite-250k-serial.csv) · [Batched byte comparisons](branchwrite-250k-byte-diff.csv) |
 | llm-60, independent requests | Add a second resident replica when both answers are ready to run. | On two 128-token requests the trained SQ-20 profile delivered 100.3 aggregate tokens/s concurrently and 92.1 sequentially. Each answer took longer under contention. [Measurements](backbone-muon-two-streams.jsonl) |
 | llm-49, single request | Base SQ-20 for ordinary contexts. Use SQ-10 for the qualified 128k restart path. | SQ-20 fit all experts for the matched 6k workload. DSpark is an option for unconstrained text. [Timings](gpu-comparison.csv) |
 | llm-79, AMD | Evaluation host pending its own installation and workload checks. | The CUDA qualification on llm-49 and llm-60 covers those hosts only. |
@@ -28,7 +28,7 @@ A separate [reviewed fix](https://github.com/CC-David-CC/cached_Inkling-2-Mini/c
 ### Proposed acceptance gates
 
 1. **Daily coding and inspection.** From a fresh client checkout, run a real issue through patch selection, restart, export, and independent grading. Exercise a live incorrect inspection answer and require either a verified correction or an explicit unsuccessful result. Record both passing and failing cases.
-2. **Long-context replay.** For the 250k workload, compare the entire child frontier and checkpoint after restart. For DFlash2, restore both target state and drafter state, then compare the continuation against uninterrupted generation. Record restore bytes, latency, and peak memory.
+2. **Long-context replay.** For batched follow-up at 250k, locate the first divergent operation during question ingestion and rerun the three child comparisons against independent process controls. For DFlash2, restore both target state and drafter state, then compare the continuation against uninterrupted generation. Record restore bytes, latency, and peak memory.
 3. **Portability and training.** Reproduce provisioning on a fresh machine. Qualify llm-79 separately if AMD serving is needed. For wider QLoRA or a new adapter, require train, save, resume, serve, and paired coding and Linux retention checks before changing the default.
 
 ## Detailed results
