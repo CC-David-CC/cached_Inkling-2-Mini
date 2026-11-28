@@ -20,7 +20,7 @@ Both serial asks showed text within 0.53 seconds. The two overlapping asks showe
 
 ![Generation rate and server request time for the verified copy](docs/benchmarks/inkling/sq20-dspark-copy-timing.png)
 
-Both streams produced identical tokens and final logits. The saved-prompt generate request included 0.32 seconds of checkpoint saving undrafted and 0.35 seconds with DSpark. Initial prompt creation and the subsequent HTTP checkpoint download were outside the request timer. [Receipt timings](docs/benchmarks/inkling/sq20-dspark-copy-timing.csv)
+Across two undrafted and three DSpark requests, every output token matched. Within each mode, all saved child payload hashes matched. The final logit rows also matched across modes in the direct comparison. Server request times ranged from 8.616 to 8.623 seconds undrafted and 4.080 to 4.089 seconds with DSpark (rounded to milliseconds). The saved-prompt generate request included 0.32 seconds of checkpoint saving undrafted and 0.35 seconds with DSpark. Initial prompt creation and the subsequent HTTP checkpoint download were outside the request timer. [Receipt timings](docs/benchmarks/inkling/sq20-dspark-copy-timing.csv)
 
 ### DSpark on a 64k-token register
 

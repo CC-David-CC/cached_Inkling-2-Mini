@@ -1,6 +1,7 @@
 """Plot server-side timing for the exact 1,024-token copy comparison."""
 import csv
 from pathlib import Path
+from statistics import median
 
 import matplotlib.pyplot as plt
 
@@ -8,14 +9,17 @@ stem = Path(__file__).with_name("sq20-dspark-copy-timing")
 with stem.with_suffix(".csv").open() as source:
     rows = list(csv.DictReader(source))
 fig, axes = plt.subplots(1, 2, figsize=(9, 3.5), layout="constrained")
-fig.suptitle("SQ-20 on llm-60 · 1,024 copied tokens · one request per mode")
+fig.suptitle("SQ-20 on llm-60 · 1,024 copied tokens · median per mode")
 colors = ["#54748d", "#008174"]
 for ax, title, values, unit in zip(
     axes, ["Generation rate", "Generate request including checkpoint save"],
     [[int(r["output_tokens"]) / float(r["generation_seconds"]) for r in rows],
      [float(r["request_seconds"]) for r in rows]], ["tokens/s", "seconds"]
 ):
-    bars = ax.barh(["Undrafted", "DSpark"], values, color=colors, height=0.55)
+    samples = [[v for r, v in zip(rows, values) if r["mode"] == mode]
+               for mode in ("plain", "dspark")]
+    labels = [f"{name} (n={len(group)})" for name, group in zip(["Undrafted", "DSpark"], samples)]
+    bars = ax.barh(labels, [median(group) for group in samples], color=colors, height=0.55)
     ax.bar_label(bars, fmt="%.1f", padding=4)
     ax.set_xlim(0, max(values) * 1.19)
     ax.set_title(title, fontsize=11)
