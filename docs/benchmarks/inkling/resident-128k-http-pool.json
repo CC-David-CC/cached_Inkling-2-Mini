@@ -1,0 +1,85 @@
+{
+  "host": "llm-60",
+  "pack": "SQ-10",
+  "capacity": 133120,
+  "experts_on_gpu": 3072,
+  "experts_on_host": 0,
+  "draft": false,
+  "storage": "tmpfs",
+  "prompt": "100 + position % 1000, zero-based",
+  "runs": [
+    {
+      "ram_pool_gib": 8,
+      "results": [
+        {
+          "phase": "create",
+          "tokens": 19,
+          "seconds": 0.11244312301278114,
+          "payload": "64e20f1b275825e16b1919398ab7871fff16a059554476a3db86725e0f5d7a90"
+        },
+        {
+          "phase": "generate",
+          "prompt": 19,
+          "seconds": 0.17816439596936107,
+          "tokens": [
+            68014,
+            68025,
+            220,
+            16,
+            13
+          ],
+          "payload": "f555afa3e6dea6c6732678b0aa2108963d6c512244f4fd237bf4f5c53458380a"
+        },
+        {
+          "phase": "create",
+          "tokens": 131072,
+          "status": 409,
+          "error": "Checkpoint/staging reservation exceeds RAM pool"
+        }
+      ]
+    },
+    {
+      "ram_pool_gib": 18,
+      "results": [
+        {
+          "phase": "create",
+          "tokens": 19,
+          "seconds": 0.10925974603742361,
+          "payload": "fe04d640550c818f88561d36742e45924dcf778efcf879fbdb1cb8e6cb1a6289"
+        },
+        {
+          "phase": "generate",
+          "prompt": 19,
+          "seconds": 0.17624513688497245,
+          "tokens": [
+            68014,
+            68025,
+            220,
+            16,
+            13
+          ],
+          "payload": "ac634aaa1359136a39d7aeb36837980cfb95185d22bd1bddbe143d0d6d69a8e4"
+        },
+        {
+          "phase": "create",
+          "tokens": 131072,
+          "seconds": 32.00349362217821,
+          "payload": "dfeedc5cc3ddae9affc883e7648eacdef6d225fc25834033d3e3d89e05ffd59f"
+        },
+        {
+          "phase": "generate",
+          "prompt": 131072,
+          "seconds": 6.59306990285404,
+          "tokens": [
+            172,
+            173,
+            174,
+            175,
+            176
+          ],
+          "payload": "04961ea539396f6056f41be9cc2c3836f51fe9ad2e5b2ad42f2eee52bc0152a4"
+        }
+      ]
+    }
+  ]
+}
