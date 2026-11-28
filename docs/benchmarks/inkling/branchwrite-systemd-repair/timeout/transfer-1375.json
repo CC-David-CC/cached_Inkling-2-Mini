@@ -1,0 +1,42 @@
+{
+  "context": {
+    "prompt": "Restore the failed report worker while preserving its configured duration and unrelated settings.",
+    "tool_context_change": "Journal path and literal completion command rule visible.",
+    "archive_sha256": "7afc0ee882df8468d8007c61cebad2333344cd86bc4c879ac4cc50f9c429ccae",
+    "model_result_artifact": "86034e79c75bc772452ff25dd6343f9043c81dfdf82bbec8c9d79bff8766161c",
+    "tcp_checks": 3,
+    "duplicate_apply_preserved_invocation": true,
+    "source_timeout_ms": "1375"
+  },
+  "cases": [
+    {
+      "id": "repair-timeout-type",
+      "expected": {
+        "mode": "serve",
+        "name": "report-worker",
+        "timeout_ms": 1375
+      },
+      "answer": {
+        "mode": "serve",
+        "name": "report-worker",
+        "timeout_ms": 1375
+      },
+      "outcome": "correct",
+      "question": "Restore the failed report worker while preserving its configured duration and unrelated settings.",
+      "evidence": "Independent type-sensitive configuration comparison and three TCP probes passed."
+    },
+    {
+      "id": "journal-diagnosis",
+      "question": "Did the worker inspect the failed unit journal during repair?",
+      "answer": true,
+      "expected": true,
+      "outcome": "correct",
+      "evidence": "Ledger verifier confirmed successful journal read with the failed unit and timeout error."
+    }
+  ],
+  "counts": {
+    "correct": 2,
+    "incorrect": 0,
+    "ungraded": 0
+  }
+}
