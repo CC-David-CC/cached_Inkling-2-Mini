@@ -868,6 +868,10 @@
       "campaign": "cpu",
       "requires": []
     },
+    "test_resident_payload_validation": {
+      "campaign": "cpu",
+      "requires": []
+    },
     "test_resident_questions": {
       "campaign": "cpu",
       "requires": []
