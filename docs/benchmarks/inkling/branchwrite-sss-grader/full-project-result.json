@@ -1,0 +1,174 @@
+{
+  "source_commit": "4c3e12b",
+  "tracked_files": 1039,
+  "additional_test": "check.py",
+  "step_budget_per_run": 320,
+  "inference_host": "llm-60",
+  "model": "Inkling-2-Mini-SQ-20",
+  "runs": {
+    "full-retry": {
+      "status": "step_budget_exhausted",
+      "verified": false,
+      "actions": [
+        {
+          "tool": "run_shell",
+          "path": null,
+          "exit_code": 0
+        },
+        {
+          "tool": "run_shell",
+          "path": null,
+          "exit_code": 0
+        },
+        {
+          "tool": "run_shell",
+          "path": null,
+          "exit_code": 0
+        },
+        {
+          "tool": "run_shell",
+          "path": null,
+          "exit_code": 0
+        },
+        {
+          "tool": "run_shell",
+          "path": null,
+          "exit_code": 0
+        },
+        {
+          "tool": "run_shell",
+          "path": null,
+          "exit_code": 0
+        },
+        {
+          "tool": "run_shell",
+          "path": null,
+          "exit_code": 0
+        },
+        {
+          "tool": "run_shell",
+          "path": null,
+          "exit_code": 0
+        },
+        {
+          "tool": "run_shell",
+          "path": null,
+          "exit_code": 0
+        },
+        {
+          "tool": "run_shell",
+          "path": null,
+          "exit_code": 0
+        },
+        {
+          "tool": "run_shell",
+          "path": null,
+          "exit_code": 0
+        },
+        {
+          "tool": "run_shell",
+          "path": null,
+          "exit_code": 0
+        },
+        {
+          "tool": "run_shell",
+          "path": null,
+          "exit_code": 0
+        },
+        {
+          "tool": "run_shell",
+          "path": null,
+          "exit_code": 0
+        },
+        {
+          "tool": "run_shell",
+          "path": null,
+          "exit_code": 0
+        }
+      ],
+      "target_unchanged": true
+    },
+    "scoped": {
+      "status": "step_budget_exhausted",
+      "verified": false,
+      "actions": [
+        {
+          "tool": "run_shell",
+          "path": null,
+          "exit_code": 1
+        },
+        {
+          "tool": "read_file",
+          "path": "check.py",
+          "exit_code": 0
+        },
+        {
+          "tool": "read_file",
+          "path": "sss_integration/bw_service_recovery.py",
+          "exit_code": 0
+        },
+        {
+          "tool": "run_shell",
+          "path": null,
+          "exit_code": 0
+        },
+        {
+          "tool": "run_shell",
+          "path": null,
+          "exit_code": 0
+        },
+        {
+          "tool": "run_shell",
+          "path": null,
+          "exit_code": 0
+        },
+        {
+          "tool": "run_shell",
+          "path": null,
+          "exit_code": 0
+        },
+        {
+          "tool": "run_shell",
+          "path": null,
+          "exit_code": 0
+        },
+        {
+          "tool": "run_shell",
+          "path": null,
+          "exit_code": 0
+        },
+        {
+          "tool": "run_shell",
+          "path": null,
+          "exit_code": 0
+        },
+        {
+          "tool": "run_shell",
+          "path": null,
+          "exit_code": 0
+        },
+        {
+          "tool": "run_shell",
+          "path": null,
+          "exit_code": 0
+        },
+        {
+          "tool": "run_shell",
+          "path": null,
+          "exit_code": 0
+        },
+        {
+          "tool": "run_shell",
+          "path": null,
+          "exit_code": 0
+        },
+        {
+          "tool": "run_shell",
+          "path": null,
+          "exit_code": 0
+        }
+      ],
+      "target_unchanged": true
+    }
+  }
+}
