@@ -1,0 +1,23 @@
+{
+  "model": "Inkling-2-Mini-SQ-20",
+  "engine": "stock Strata HTTP",
+  "dataset_role": "retention evaluation",
+  "baseline_correct": 51,
+  "total": 51,
+  "system_prompt_file": "../../../training/wrong_but_corrected/shared-document-128k/system-prompt.txt",
+  "system_prompt_sha256": "e5d775237c38edad604b2d67c99cfb81dbaf208e156554b92af6947fbac09b77",
+  "parameters": {
+    "temperature": 0,
+    "max_tokens": 12,
+    "reasoning_effort": "none",
+    "chat_template_kwargs": {
+      "enable_thinking": false
+    },
+    "strata_prefix": {
+      "tokens": 131072
+    }
+  },
+  "scoring": "answer.strip().lower().strip(' .') == expected",
+  "baseline_source": "capacity-qa-128k.jsonl",
+  "baseline_source_sha256": "470244764464705dd2b793fe8a6e5b5deb4fb30d66eac75112865f5f2c21ea75"
+}
