@@ -26,6 +26,10 @@ On llm-49 the matched SQ-10 RTX 4090 workers read 65,536 tokens in 36.57–36.64
 
 Across the two GPU models, all 200,058 undrafted scores differed bitwise both immediately after prefill and after 512 output tokens. The highest-scoring token agreed at both positions, and both hosts generated the same 512 IDs. [Cross-host score comparison](docs/benchmarks/inkling/64k-cross-host-undrafted.csv)
 
+![Matched 128k native runs on the RTX 4090 and RTX PRO 6000](docs/benchmarks/inkling/cached-128k-hosts.png)
+
+At 128k, the RTX 4090 took 86.6–86.9 seconds for prefill and generated 63.6 tokens/s undrafted or 111.1 tokens/s with DSpark. All four 512-token output hashes across both hosts and modes matched. Each bar covers one fresh worker with a 4 GiB GPU expert pool. [RTX 4090 timings](docs/benchmarks/inkling/llm49-128k-generation.jsonl) · [RTX PRO 6000 timings](docs/benchmarks/inkling/dspark-128k-generation.jsonl)
+
 ### Reading a 250,000-token document on llm-60
 
 ![Prefill speed across a 250,000-token document](docs/benchmarks/inkling/llm60-250k-prefill.png)
