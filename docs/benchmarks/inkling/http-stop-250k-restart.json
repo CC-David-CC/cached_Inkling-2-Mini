@@ -1,0 +1,70 @@
+{
+  "host": "llm-60",
+  "document_tokens": 250000,
+  "capacity": 262144,
+  "pack": "SQ-10",
+  "expert_pool_mib": 4096,
+  "ram_cache_budget_gib": 64,
+  "serial_followup": true,
+  "suffix_checkpoints": true,
+  "initial_visible_answer": "ORANGE",
+  "stop": "\n",
+  "results": [
+    {
+      "phase": "write",
+      "worker_pid": 3163529,
+      "answer": {
+        "snapshot": "f3a896149181e2c570e65fc1dec0198d5b575cc3fdfabd1f50f4bc41d695551f",
+        "tokens": [
+          146143,
+          145967,
+          200010,
+          200006
+        ],
+        "generation_seconds": 0.1021428860258311,
+        "state_save_seconds": 0.17197907296940684,
+        "request_seconds": 19.84700162592344,
+        "counter_deltas": {
+          "consumed_tokens": 24,
+          "forward_tokens": 24,
+          "resident_parent_restores": 1,
+          "resident_child_restores": 0,
+          "checkpoint_import_bytes": 4620288
+        },
+        "capture_seconds": 0.0010378139559179544,
+        "ram_reservation_bytes": 29617104,
+        "text": "BLUE",
+        "reasoning_content": ""
+      },
+      "payload_sha256": "2a873ff4c5e18ceda63fac631c2e62ceecb559e920c32b9d29df7cf971fd9d81"
+    },
+    {
+      "phase": "read",
+      "worker_pid": 3165693,
+      "answer": {
+        "snapshot": "f3a896149181e2c570e65fc1dec0198d5b575cc3fdfabd1f50f4bc41d695551f",
+        "tokens": [
+          146143,
+          145967,
+          200010,
+          200006
+        ],
+        "generation_seconds": 0.10560432402417064,
+        "state_save_seconds": 0.15073277102783322,
+        "request_seconds": 20.828153820009902,
+        "counter_deltas": {
+          "consumed_tokens": 24,
+          "forward_tokens": 24,
+          "resident_parent_restores": 0,
+          "resident_child_restores": 0,
+          "checkpoint_import_bytes": 8369176576
+        },
+        "capture_seconds": 0.0010172459296882153,
+        "ram_reservation_bytes": 29617104,
+        "text": "BLUE",
+        "reasoning_content": ""
+      },
+      "payload_sha256": "2a873ff4c5e18ceda63fac631c2e62ceecb559e920c32b9d29df7cf971fd9d81"
+    }
+  ]
+}
