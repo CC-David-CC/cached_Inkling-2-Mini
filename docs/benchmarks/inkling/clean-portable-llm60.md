@@ -23,3 +23,5 @@ This run exercised inference through the native checkpoint test. The HTTP checks
 ### Cross-build logit comparison
 
 Using the clean checkout's Python backend, load each native bridge in turn with SQ-20, one GPU, default capacity 8,192, and drafting off. Consume 4,097 token IDs given by `100 + i % 1000` starting at zero, capture the complete next-token logit row, then consume token 197 and capture the next row. Each row contains 200,058 float32 values. Comparing their little-endian bytes found zero differences at either position. [Measured row digests](cross-build-logits.json)
+
+With DSpark enabled on both builds, the same 4,097-token prefix yielded identical initial logit digests, 64 identical generated token IDs, and identical final logit digests. Each build counted 68 draft nodes and 28 accepted drafts. These are cross-build measurements with drafting enabled on both sides. [Token sequences, counters and digests](cross-build-dspark.json)
