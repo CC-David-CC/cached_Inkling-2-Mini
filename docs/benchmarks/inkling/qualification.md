@@ -176,3 +176,5 @@ On llm-60 we forked three token branches from a single 19-token parent on each e
 ### SQ-20 hybrid worker with CPU execution of cold experts
 
 On llm-60, 16 consecutive trials imported the same 19-token checkpoint and consumed token 214. Hashing all 200,058 resulting FP32 logits produced four distinct digests with consecutive run lengths of 6, 4, 4 and 2. The loader reported 1,472 GPU and 1,600 host experts at a 6,728 MiB expert budget. Adaptive placement recorded 48 swaps in three rounds with `STRATA_INK_EXACT=0`. Identical native checkpoint imports were insufficient for bitwise repeatability in this configuration. [Per-trial digests](sq20-hybrid-cpu-repeated-imports.jsonl)
+
+With the same checkpoint, bridge, SQ-20 pack, token and budget, forcing GPU computation of cold experts (`STRATA_INK_EXACT=1`) produced one digest across all 16 imports. Both processes loaded 1,472 GPU and 1,600 host experts and recorded 48 swaps. GPU computation preserved bitwise repeatability for this continuation even as expert placement changed. Neither run exercised HTTP restart or filled its 133,120-token capacity. [GPU trial digests](sq20-hybrid-gpu-repeated-imports.jsonl)
