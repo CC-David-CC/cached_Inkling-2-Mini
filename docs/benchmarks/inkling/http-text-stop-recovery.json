@@ -1,0 +1,1 @@
+{"host": "llm-60", "pack": "SQ-10", "capacity": 8192, "draft": false, "stop_http_status": 409, "error": "Worker profile does not support full-vocabulary Min-P", "recovery_text": "ORANGE\nBLUE", "recovery_snapshot": "99258637699fcd8b3824237e0cb30a3c9bed913992e9b9093b5a8989a0a3910d", "recovery_seconds": 0.44182547996751964}
