@@ -1,0 +1,29 @@
+--- a/sss_integration/bw_service_recovery.py
++++ b/sss_integration/bw_service_recovery.py
+@@ -37,10 +37,23 @@
+                 if result["exit_code"] == 0 and greeting in greetings:
+                     observed.add(greeting)
+                     scores["probe"] = "pass"
+-                elif journal or result["exit_code"] != 0:
++                elif result["exit_code"] != 0:
+                     scores["probe"] = "fail"
+-            elif tool == "finish" and journal:
+-                scores["report"] = "pass" if any(g in args["answer"] for g in observed) else "fail"
++                elif greetings:
++                    scores["probe"] = "fail"
++                # greeting must be a complete token; the fullmatch above already
++                # ensures the journal line is exactly a greeting, so a probe
++                # output that is a prefix of a longer identifier is not in greetings.
++            elif tool == "finish":
++                if observed:
++                    answer = args["answer"]
++                    matched = [g for g in observed if re.search(r"(?<![0-9a-f-])" + re.escape(g) + r"(?![0-9a-f])", answer)]
++                    if len(matched) == 1 and len(re.findall(r"ready-[0-9a-f]{16}", answer)) == 1:
++                        scores["report"] = "pass"
++                    else:
++                        scores["report"] = "fail"
++                elif scores["probe"] == "fail":
++                    scores["report"] = "fail" if greetings else "ungraded"
+     source = json.loads((work / "project/service.json").read_bytes())
+     candidate = work / "state/world/workspace/service.json"
+     if candidate.is_file() and candidate.read_bytes() != (work / "project/service.json").read_bytes():

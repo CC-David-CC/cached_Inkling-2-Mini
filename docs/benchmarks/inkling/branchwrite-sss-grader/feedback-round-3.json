@@ -1,0 +1,221 @@
+{
+  "host": "llm-60",
+  "model": "Inkling-2-Mini-SQ-20",
+  "adapter": null,
+  "feedback_round": 3,
+  "counts": {
+    "correct": 14,
+    "incorrect": 0,
+    "ungraded": 0
+  },
+  "previously_correct_retained": 12,
+  "previous_failures_fixed": 2,
+  "archive_sha256": "edd8c89ac669a549dbd77f3ab4c5e48c27ae829daa034b291d230778300eef2e",
+  "source_commit": "4c3e12b",
+  "cases": [
+    {
+      "answer": [
+        "pass",
+        "pass"
+      ],
+      "evidence": "Real retained ledger with substituted journal.",
+      "expected": [
+        "pass",
+        "pass"
+      ],
+      "id": "complete",
+      "outcome": "correct",
+      "question": "Grade probe and report with a complete journal"
+    },
+    {
+      "answer": [
+        "ungraded",
+        "ungraded"
+      ],
+      "evidence": "Real retained ledger with substituted journal.",
+      "expected": [
+        "ungraded",
+        "ungraded"
+      ],
+      "id": "missing",
+      "outcome": "correct",
+      "question": "Grade probe and report with a missing journal"
+    },
+    {
+      "answer": [
+        "ungraded",
+        "ungraded"
+      ],
+      "evidence": "Real retained ledger with substituted journal.",
+      "expected": [
+        "ungraded",
+        "ungraded"
+      ],
+      "id": "truncated",
+      "outcome": "correct",
+      "question": "Grade probe and report with a truncated journal"
+    },
+    {
+      "answer": [
+        "fail",
+        "fail"
+      ],
+      "evidence": "Real retained ledger with substituted journal.",
+      "expected": [
+        "fail",
+        "fail"
+      ],
+      "id": "contradictory",
+      "outcome": "correct",
+      "question": "Grade probe and report with a contradictory journal"
+    },
+    {
+      "answer": [
+        "pass",
+        "pass"
+      ],
+      "evidence": "Separate synthetic tool outcome and worker journal.",
+      "expected": [
+        "pass",
+        "pass"
+      ],
+      "id": "noise-plus-match",
+      "outcome": "correct",
+      "question": "Grade probe and report for noise-plus-match"
+    },
+    {
+      "answer": [
+        "fail",
+        "fail"
+      ],
+      "evidence": "Separate synthetic tool outcome and worker journal.",
+      "expected": [
+        "fail",
+        "fail"
+      ],
+      "id": "failed-probe-with-greeting",
+      "outcome": "correct",
+      "question": "Grade probe and report for failed-probe-with-greeting"
+    },
+    {
+      "answer": [
+        "ungraded",
+        "ungraded"
+      ],
+      "evidence": "Separate synthetic tool outcome and worker journal.",
+      "expected": [
+        "ungraded",
+        "ungraded"
+      ],
+      "id": "empty-journal",
+      "outcome": "correct",
+      "question": "Grade probe and report for empty-journal"
+    },
+    {
+      "answer": [
+        "ungraded",
+        "ungraded"
+      ],
+      "evidence": "Separate synthetic tool outcome and worker journal.",
+      "expected": [
+        "ungraded",
+        "ungraded"
+      ],
+      "id": "malformed-greeting",
+      "outcome": "correct",
+      "question": "Grade probe and report for malformed-greeting"
+    },
+    {
+      "answer": [
+        "pass",
+        "fail"
+      ],
+      "evidence": "Separate synthetic tool outcome and worker journal.",
+      "expected": [
+        "pass",
+        "fail"
+      ],
+      "id": "wrong-final-answer",
+      "outcome": "correct",
+      "question": "Grade probe and report for wrong-final-answer"
+    },
+    {
+      "answer": [
+        "fail",
+        "ungraded"
+      ],
+      "evidence": "Separate synthetic tool outcome and worker journal.",
+      "expected": [
+        "fail",
+        "ungraded"
+      ],
+      "id": "failed-probe-no-greeting",
+      "outcome": "correct",
+      "question": "Grade probe and report for failed-probe-no-greeting"
+    },
+    {
+      "answer": [
+        "pass",
+        "pass"
+      ],
+      "evidence": "Independent synthetic probe, report and journal variant.",
+      "expected": [
+        "pass",
+        "pass"
+      ],
+      "id": "embedded-greeting",
+      "outcome": "correct",
+      "question": "Grade probe and report for embedded-greeting"
+    },
+    {
+      "answer": [
+        "ungraded",
+        "ungraded"
+      ],
+      "evidence": "Independent synthetic probe, report and journal variant.",
+      "expected": [
+        "ungraded",
+        "ungraded"
+      ],
+      "id": "uppercase-invalid-journal",
+      "outcome": "correct",
+      "question": "Grade probe and report for uppercase-invalid-journal"
+    },
+    {
+      "answer": [
+        "pass",
+        "fail"
+      ],
+      "evidence": "Independent synthetic probe, report and journal variant.",
+      "expected": [
+        "pass",
+        "fail"
+      ],
+      "id": "two-incompatible-greetings",
+      "outcome": "correct",
+      "question": "Grade probe and report for two-incompatible-greetings"
+    },
+    {
+      "answer": [
+        "pass",
+        "fail"
+      ],
+      "evidence": "Independent synthetic probe, report and journal variant.",
+      "expected": [
+        "pass",
+        "fail"
+      ],
+      "id": "greeting-with-extra-digit",
+      "outcome": "correct",
+      "question": "Grade probe and report for greeting-with-extra-digit"
+    }
+  ],
+  "linux_saved_repair_replay": {
+    "tcp_checks_passed": 3,
+    "duplicate_apply_preserved_invocation": true
+  },
+  "javascript_saved_repair_replay": {
+    "passed": 200,
+    "failed": 0
+  }
+}
