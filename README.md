@@ -591,6 +591,8 @@ In the station test, adding a fresh rank-4 residual to a frozen rank-4 parent
 gave 15/54 correct. Compressing the sum back to rank 4 gave 14/54 and changed
 11 answer texts. [Rank transitions](docs/benchmarks/inkling/adapter-transitions.csv)
 
+![Correct answers, gains and regressions by optimizer step](docs/benchmarks/inkling/failure-only-rounds.png)
+
 In the separate failure-only training run, optimizer step 11 first reached
 53/54. At the final measured step (16), 41 of the 42 examples used for
 training were correct. All 12 examples still outside training were correct.
