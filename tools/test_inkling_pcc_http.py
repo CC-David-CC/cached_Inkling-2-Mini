@@ -5,8 +5,30 @@ import json
 from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
+import struct
+from urllib.parse import urlencode
 import uuid
 import sys
+
+
+def verify_export(port, key, receipt):
+    query = urlencode({k: receipt[k] for k in ('model_contract_id', 'execution_profile_id')})
+    url = f"http://127.0.0.1:{port}/cow/cache/checkpoint/{receipt['snapshot']}?{query}"
+    request = Request(url, headers={'Authorization': 'Bearer ' + key})
+    digest = hashlib.sha256()
+    size = 0
+    with urlopen(request, timeout=60) as response:
+        assert response.headers.get_content_type() == 'application/x-cow-checkpoint'
+        length, = struct.unpack('!I', response.read(4))
+        envelope = json.loads(response.read(length))
+        manifest = envelope['manifest']
+        while chunk := response.read(1024 * 1024):
+            digest.update(chunk)
+            size += len(chunk)
+    assert manifest['logits_count'] == 200058
+    assert size == manifest['state_bytes'] + 4 * manifest['logits_count']
+    assert digest.hexdigest() == manifest['payload_sha256'] == receipt['payload_sha256']
+    print(f"Verified {size} exported checkpoint bytes against the generation receipt")
 
 
 def main():
@@ -20,6 +42,8 @@ def main():
     parser.add_argument('--adapter', type=Path)
     parser.add_argument('--pack', choices=('SQ-10', 'SQ-15', 'SQ-20'), help='verify the served model contract for this pack')
     parser.add_argument('--dspark-long', action='store_true', help='test 1024-token greedy chat with the draft engine')
+    parser.add_argument('--verify-export', action='store_true',
+                        help='Stream and verify the generated full checkpoint from a --cache-transfer server')
     args = parser.parse_args()
     if args.dspark_long:
         args.chat = True
@@ -130,6 +154,9 @@ def main():
             assert answer['answer']['text'].strip() == '4', answer
         print(json.dumps(dict(result='restart matched', generated=generated, forward=forward,
                               counters=answer['answer']['counter_deltas'], payload=answer['receipt']['payload_sha256'])))
+
+    if args.verify_export:
+        verify_export(args.port, key, answer['receipt'])
 
 
 if __name__ == '__main__':
