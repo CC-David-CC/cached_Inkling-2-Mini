@@ -1,0 +1,29 @@
+{
+  "parent_tokens": 127612,
+  "pack": "SQ-20",
+  "drafting": false,
+  "reference": "Independent greedy walks from full child checkpoints",
+  "restores": [
+    {
+      "snapshot": "0a73edf4da5c5f2727b324d925ee5958078b45a62a4c79ffe4e60f947a905865",
+      "exact_steps": 128,
+      "logits_per_step": 200058,
+      "final_row_sha256": "ea3c9000c2364b898507f8d145da3c6c44db9497a8bdf8b6cdb900f3cb5bbefd",
+      "restore_forward_tokens": 0
+    },
+    {
+      "snapshot": "9051dc0849bcee3a33cfbaeb0bd06e41a83bc1018168388c38ddc75e3312e82a",
+      "exact_steps": 128,
+      "logits_per_step": 200058,
+      "final_row_sha256": "71e7068782ec0c36adc25d67a79c51eccf57a0598a39abf2eedbf0f55bc536c6",
+      "restore_forward_tokens": 0
+    },
+    {
+      "snapshot": "0a73edf4da5c5f2727b324d925ee5958078b45a62a4c79ffe4e60f947a905865",
+      "exact_steps": 128,
+      "logits_per_step": 200058,
+      "final_row_sha256": "ea3c9000c2364b898507f8d145da3c6c44db9497a8bdf8b6cdb900f3cb5bbefd",
+      "restore_forward_tokens": 0
+    }
+  ]
+}
