@@ -8,6 +8,10 @@ context. GPU count is a runtime setting for later trials.
 
 ## Measured performance
 
+![Client ask latency, generation throughput and generation milliseconds per token for two serial and two overlapping 130k-register transcription requests](docs/benchmarks/inkling/branchwrite-sq20-130k-long-copy.png)
+
+On llm-60, serial asks for two different 32-line excerpts took 11.93 seconds summed. The overlapping pair finished in 11.83 seconds from first ask to last answer. All four produced the correct 353-token transcription for their respective question. [Per-request measurements](docs/benchmarks/inkling/branchwrite-sq20-130k-long-copy.jsonl)
+
 ### DSpark on a 64k-token register
 
 ![Generation rate and combined prefill and generation time with DSpark](docs/benchmarks/inkling/dspark-64k-generation.png)
