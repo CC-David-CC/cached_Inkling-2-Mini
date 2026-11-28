@@ -80,17 +80,21 @@ def main():
     key = (args.runtime / 'pcc-http.key').read_text().strip()
 
     fixture = json.loads(args.fixture.read_text()) if args.mode == 'read' else None
-    if expected_contract is not None or fixture is not None:
-        request = Request(f'http://127.0.0.1:{args.port}/cow/info',
-                          headers={'Authorization': 'Bearer ' + key})
-        with urlopen(request, timeout=10) as response:
-            info = json.load(response)
-        if expected_contract is not None and info['model_contract_id'] != expected_contract:
-            raise ValueError('Selected pack or adapter differs from the serving endpoint')
-        if fixture is not None:
-            for field in ('model_contract_id', 'execution_profile_id'):
-                if info[field] != fixture['answer']['receipt'][field]:
-                    raise ValueError(f'Restart endpoint differs from write fixture in {field}')
+    request = Request(f'http://127.0.0.1:{args.port}/cow/info',
+                      headers={'Authorization': 'Bearer ' + key})
+    with urlopen(request, timeout=10) as response:
+        instance = response.headers.get('X-COW-Server-Instance')
+        info = json.load(response)
+    if not instance:
+        raise ValueError('Restart verification requires a server reporting its instance ID')
+    if expected_contract and info['model_contract_id'] != expected_contract:
+        raise ValueError('Selected pack or adapter differs from the serving endpoint')
+    if fixture is not None:
+        if not fixture.get('server_instance') or fixture['server_instance'] == instance:
+            raise ValueError('Restart verification requires a fixture from another server instance')
+        for field in ('model_contract_id', 'execution_profile_id'):
+            if info[field] != fixture['answer']['receipt'][field]:
+                raise ValueError(f'Restart endpoint differs from write fixture in {field}')
 
     def call(path, payload):
         request = Request(f'http://127.0.0.1:{args.port}/cow/{path}',
@@ -148,7 +152,7 @@ def main():
             assert 0 < counters['drafts_accepted'] <= counters['draft_nodes']
         elif args.chat and not long_copy:
             assert answer['answer']['text'].strip() == '4', answer
-        fixture = dict(branch=right, revision=right_revision, answer=answer)
+        fixture = dict(server_instance=instance, branch=right, revision=right_revision, answer=answer)
         if args.prompt_tokens is None:
             fixture['root'] = right_root
         args.fixture.write_text(json.dumps(fixture))

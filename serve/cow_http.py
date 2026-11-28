@@ -264,6 +264,7 @@ def make_server(adapter,host='127.0.0.1',port=0,api_key=None,*,text_adapter=None
         text_adapter.grammar_registry=router
     # Startup supplies the already validated active profile. Never publish the
     # profile itself: it also carries host paths, build inputs and model files.
+    server_instance = uuid.uuid4().hex
     description = None
     if connection_info is not None:
         keys = {'model_contract_id', 'execution_profile_id', 'eos_tokens'}
@@ -286,10 +287,12 @@ def make_server(adapter,host='127.0.0.1',port=0,api_key=None,*,text_adapter=None
     active_stops_lock=threading.Lock()
     class Handler(BaseHTTPRequestHandler):
         def log_message(self,*args): pass
-        def json(self,code,value):
+        def json(self,code,value, *, include_instance=False):
             raw=json.dumps(plain(value),allow_nan=False).encode()
             try:
                 self.send_response(code);self.send_header('Content-Type','application/json')
+                if include_instance:
+                    self.send_header('X-COW-Server-Instance', server_instance)
                 self.send_header('Content-Length',str(len(raw)));self.end_headers();self.wfile.write(raw)
             except _SOCKET_ERRORS:
                 return False
@@ -410,7 +413,7 @@ def make_server(adapter,host='127.0.0.1',port=0,api_key=None,*,text_adapter=None
                     return self.json(400, dict(error='Connection info takes no query parameters'))
                 if description is None:
                     return self.json(503, dict(error='Connection discovery is not configured'))
-                return self.json(200, description)
+                return self.json(200, description, include_instance=True)
             if path == '/cow/capabilities':
                 if urlsplit(self.path).query:
                     return self.json(400, dict(error='Capabilities take no query parameters'))

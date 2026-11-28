@@ -49,12 +49,15 @@ def main():
         )
     key = (args.runtime / 'pcc-http.key').read_text().strip()
 
-    if expected_contract:
-        request = Request(f'http://127.0.0.1:{args.port}/cow/info',
-                          headers={'Authorization': 'Bearer ' + key})
-        with urlopen(request, timeout=10) as response:
-            if json.load(response)['model_contract_id'] != expected_contract:
-                raise ValueError('Serving endpoint differs from the requested vision model contract')
+    request = Request(f'http://127.0.0.1:{args.port}/cow/info',
+                      headers={'Authorization': 'Bearer ' + key})
+    with urlopen(request, timeout=10) as response:
+        instance = response.headers.get('X-COW-Server-Instance')
+        info = json.load(response)
+    if not instance:
+        raise ValueError('Restart verification requires a server reporting its instance ID')
+    if expected_contract and info['model_contract_id'] != expected_contract:
+        raise ValueError('Selected pack or adapter differs from the serving endpoint')
 
     def operation():
         return 'op-' + uuid.uuid4().hex
@@ -99,7 +102,7 @@ def main():
             fork = post('fork', dict(name=branch + '-restart', snapshot=receipt['snapshot'],
                                      source_branch=branch, operation_id=operation()))
             response = answer(branch, receipt['branch']['revision'], color)
-            results[case_id] = dict(color=color, fork=fork, response=response, root=receipt['snapshot'])
+            results[case_id] = dict(server_instance=instance, color=color, fork=fork, response=response, root=receipt['snapshot'])
             print(f'{case_id}: {response["answer"]["text"]}')
         assert len({record['root'] for record in results.values()}) == len(results)
         args.fixture.write_text(json.dumps(results))
@@ -107,6 +110,8 @@ def main():
         fixtures = json.loads(args.fixture.read_text())
         if set(fixtures) != {case_id for case_id, *_ in image_cases()}:
             raise ValueError('Restart fixture must contain all four vision cases')
+        if any(not f.get('server_instance') or f['server_instance'] == instance for f in fixtures.values()):
+            raise ValueError('Restart verification requires fixtures from another server instance')
         for case_id, fixture in fixtures.items():
             fork, expected = fixture['fork'], fixture['response']
             if expected_contract and expected['receipt']['model_contract_id'] != expected_contract:

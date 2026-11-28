@@ -48,6 +48,17 @@ class ConnectionInfoTests(unittest.TestCase):
         self.assertEqual(info, dict(schema=1, service="context-cow", **self.info(),
                                    capabilities=dict(text=True, inline_grammars=False)))
 
+    def test_instance_header_distinguishes_server_lifetimes(self):
+        def instance(base):
+            request = Request(base + "/cow/info", headers={"Authorization": "Bearer fixture-secret"})
+            with urlopen(request, timeout=3) as response:
+                return response.headers["X-COW-Server-Instance"]
+        first = self.start(self.info())
+        identifier = instance(first)
+        self.assertRegex(identifier, r"^[0-9a-f]{32}$")
+        self.assertEqual(instance(first), identifier)
+        self.assertNotEqual(instance(self.start(self.info())), identifier)
+
     def test_wrong_key_and_foreign_query_cannot_discover(self):
         base = self.start(self.info())
         self.assertEqual(self.get(base, key="wrong")[0], 401)
