@@ -74,6 +74,11 @@ With a native 250,000-token parent pinned on llm-60, three distinct register loo
 
 ![Native request time and generation rate for three paired 250k-context lookups](docs/benchmarks/inkling/warm-250k-native-draft.png)
 
+On llm-60, Cached generated 1,024 tokens from a 1,400-record inventory prompt at 281–284 tokens/s with DSpark and 120 tokens/s with drafting off. Each mode served the same prompt twice on a fresh SQ-20 server with all experts in VRAM. The repeated request finished in 4.98 s with DSpark and 9.76 s undrafted. All four token sequences matched. [Raw HTTP measurements](docs/benchmarks/inkling/sq20-inventory-1024.jsonl)
+
+![First visible text, completed request time and generation rate on the inventory prompt](docs/benchmarks/inkling/sq20-inventory-1024.png)
+
+
 Launch undrafted text with `--greedy-text-stops` for checkpointed stop strings at effort zero. This opt-in uses a distinct execution profile. In a live SQ-10 HTTP test on llm-60, a prepared two-line request with a newline stop returned only the first line. Cached consumed four tokens including the delimiter and published the resulting checkpoint. [Live stop receipt](docs/benchmarks/inkling/http-greedy-stop.json) [Original failure and recovery](docs/benchmarks/inkling/http-text-stop-recovery.json)
 
 For a reproducible next turn after a text stop, also enable `--serial-followup`. On llm-60 at 8,192-token capacity, a fresh server reopened a copy of the stopped branch and answered the follow-up with the same tokens and child payload SHA-256 as the uninterrupted server. Batched follow-up produced the same text with differing child payload hashes. [Restart comparison](docs/benchmarks/inkling/http-stop-followup-restart.json)
