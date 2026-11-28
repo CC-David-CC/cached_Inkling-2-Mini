@@ -290,6 +290,12 @@ In a separate restart check, a fresh process restored both saved suffixes and th
 
 [Download the allocation and timing measurements](docs/benchmarks/inkling/sq20-sibling-storage.csv)
 
+With two HTTP clients sharing this parent, all six distinct lookups returned the expected labels in both submission modes. Across three matched pairs per mode, median time until both answers returned was 1.49 s for simultaneous submission and 1.75 s for sequential submission. Each answer generated six tokens. A single model worker handled the requests, and every request reused the resident parent.
+
+![Elapsed time for three matched question pairs submitted sequentially or together](docs/benchmarks/inkling/sq20-two-client-pairs.png)
+
+[Download per-request and pair timings](docs/benchmarks/inkling/sq20-two-client-pairs.csv)
+
 ### Concurrent requests
 
 The native concurrency sweep used independent 4,097-token prompts and 256
