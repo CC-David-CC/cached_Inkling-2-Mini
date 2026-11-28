@@ -24,7 +24,11 @@ for ax, title in zip(axes, ('Time to read the prompt (s)', 'Generation (output t
     ax.set(title=title, xlabel='Input tokens (thousands)', xticks=[65.536,131.072,250],
            xticklabels=['65.5','131.1','250'], ylim=(0,None))
     ax.spines[['right','top']].set_visible(False)
-axes[1].legend(frameon=False)
-axes[1].text(.98, .91, '250k DSpark: out of VRAM', transform=axes[1].transAxes, ha='right', fontsize=9)
-fig.suptitle('llm-60 · SQ-10 · 4 GiB GPU expert pool · 512 output tokens per run')
+fallback = json.loads((base / 'dspark-250k-2gib.json').read_text())
+for ax, metric in zip(axes, ('prefill_s', 'generated_tps')):
+    ax.scatter(fallback['prompt'] / 1000, fallback[metric], marker='D',
+               color='#ae612a', label='DSpark, 2 GiB pool', zorder=3)
+axes[1].legend(frameon=False, loc='upper right')
+axes[1].text(.98, .46, '250k DSpark at 4 GiB: out of VRAM', transform=axes[1].transAxes, ha='right', fontsize=9)
+fig.suptitle('llm-60 · SQ-10 · 4 GiB pool unless labeled · 512 output tokens per run')
 fig.savefig(base/'dspark-context.png',dpi=160)
