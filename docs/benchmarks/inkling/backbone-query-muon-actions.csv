@@ -1,0 +1,16 @@
+domain,case,base_pass,trained_pass,base_failed_checks,trained_failed_checks
+coding,python.sum_empty,1,1,,
+coding,python.binary_search,1,1,,
+coding,python.stable_unique,1,1,,
+coding,shell.quoted_filename,1,1,,
+coding,shell.failure_status,1,1,,
+coding,python.double,1,1,,
+linux,inspect,0,0,result,read_only result configuration worker
+linux,mode,1,1,,
+linux,configure,0,0,worker,worker
+linux,stop,1,1,,
+linux,backup,1,1,,
+linux,restart,1,1,,
+linux,inspect_worker,0,0,result,result
+linux,deploy,1,1,,
+linux,rollback,1,1,,
