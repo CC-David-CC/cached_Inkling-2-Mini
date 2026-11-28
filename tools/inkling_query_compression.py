@@ -2,7 +2,7 @@
 import argparse
 import hashlib,json,torch
 from pathlib import Path
-from safetensors.torch import load_file
+from safetensors.torch import load, load_file
 from safetensors import safe_open
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('target_weights', type=Path)
@@ -10,8 +10,9 @@ parser.add_argument('adapters', nargs=2, type=Path, metavar='ADAPTER')
 args = parser.parse_args()
 adapters = args.adapters
 a=[];b=[]
-for path in adapters:
-    factors=load_file(path)
+first_adapter_bytes = adapters[0].read_bytes()
+first_adapter_sha256 = hashlib.sha256(first_adapter_bytes).hexdigest()
+for factors in (load(first_adapter_bytes), load_file(adapters[1])):
     prefix='base_model.model.model.llm.layers.0.attn.wq_du.lora_'
     a.append(factors[prefix+'A.weight'])
     b.append(factors[prefix+'B.weight'])
@@ -21,7 +22,10 @@ def digest(t):return hashlib.sha256(t.contiguous().view(torch.uint8).numpy().tob
 parent=(base.float()+b[0]@a[0]).bfloat16()
 target=(parent.float()+b[1]@a[1]).bfloat16()
 with safe_open(adapters[1], framework='pt') as f:
-    if (f.metadata() or {}).get('parent_projection_sha256') != digest(parent):
+    metadata = f.metadata() or {}
+    if metadata.get('parent_adapter_sha256') != first_adapter_sha256:
+        raise ValueError('Second adapter requires a different first-round adapter file')
+    if metadata.get('parent_projection_sha256') != digest(parent):
         raise ValueError('Second adapter requires a different merged parent')
 # Rank-8 update: compute its singular values via an 8x8 core.
 q,r=torch.linalg.qr(torch.cat(b,dim=1).double())
