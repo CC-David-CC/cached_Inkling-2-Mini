@@ -217,6 +217,10 @@ class InklingBackend(NativeBackend):
             self._import_suffix.restype = C.c_size_t
         self._suffix_size = getattr(self.lib, 'ctt_suffix_size', None)
         self._export_suffix = getattr(self.lib, 'ctt_export_suffix', None)
+        if self.profile.get('suffix_checkpoints') and any(
+            symbol is None for symbol in (self._suffix_size, self._export_suffix, self._import_suffix)
+        ):
+            raise IntegrityError('Suffix checkpoints require an Inkling bridge built with parent-suffix support')
         if self._suffix_size is not None and self._export_suffix is not None:
             self._suffix_size.argtypes = [C.c_void_p, C.c_int]
             self._suffix_size.restype = C.c_size_t
