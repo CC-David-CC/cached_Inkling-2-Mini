@@ -662,6 +662,14 @@ python tools/inkling_pcc_serve.py "$runtime" --pack SQ-20-Backbone-Muon-Q0
 
 The optional `--export` keeps the verified adapter at a new filename in an existing directory. Both optimizers support it.
 
+To test a second fixed-rank training round, supply the first-round export as the parent. The test folds its unit-scale update into the frozen BF16 query projection and initializes a fresh rank-4 adapter. The second export records the SHA-256 of its parent adapter and merged projection.
+
+```bash
+python tools/test_inkling_backbone_restart.py /path/to/official-checkpoint --optimizer muon \
+  --parent-adapter ./muon-query.safetensors --text 'A Linux process has a process identifier.' \
+  --pad-multiple 16 --export ./muon-round2.safetensors
+```
+
 ### Output-head LoRA
 
 The Inkling CUDA bridge can capture the frozen model's final normalized

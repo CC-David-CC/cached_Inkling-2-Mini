@@ -1,0 +1,51 @@
+{
+  "host": "llm-60",
+  "rank": 4,
+  "optimizer": "factorwise Muon",
+  "text": "A Linux process has a process identifier.",
+  "pad_multiple": 16,
+  "unpadded_result": "CUDA backward failed; synchronized reproduction reported CUBLAS_STATUS_INTERNAL_ERROR in BF16 strided batched GEMM",
+  "records": [
+    {
+      "phase": "direct",
+      "parent_adapter_sha256": "dc515fc187511939715983661ee04c6e31b1da1aaccc1ca6702a5f3025a590a8",
+      "parent_projection_sha256": "0dadf2565555056f3ea9b1744aed395e0c6b78be8d3174cd83974c420e2d96d3"
+    },
+    {
+      "phase": "direct",
+      "step": 1,
+      "loss": 4.197480201721191,
+      "changed_b": 12288
+    },
+    {
+      "phase": "direct",
+      "step": 2,
+      "loss": 4.197480201721191,
+      "changed_b": 12288
+    },
+    {
+      "phase": "resume",
+      "parent_adapter_sha256": "dc515fc187511939715983661ee04c6e31b1da1aaccc1ca6702a5f3025a590a8",
+      "parent_projection_sha256": "0dadf2565555056f3ea9b1744aed395e0c6b78be8d3174cd83974c420e2d96d3"
+    },
+    {
+      "phase": "resume",
+      "step": 2,
+      "loss": 4.197480201721191,
+      "changed_b": 12288
+    },
+    {
+      "optimizer": "muon",
+      "resume_exact": true,
+      "export_exact": true,
+      "export": "round2.safetensors"
+    }
+  ],
+  "second_export_sha256": "a3518c55955766a896d766275c27fcd3951a4efdf2444cf21eec061df9608df2",
+  "second_merge": {
+    "parent_adapter_sha256": "a3518c55955766a896d766275c27fcd3951a4efdf2444cf21eec061df9608df2",
+    "parent_projection_sha256": "e2cfd7b25d3e13f3abc0d7e09e143147f7a0e52e3afe33713c03f11e56bd89d8",
+    "changed_round2": 31511,
+    "base_rejected": true
+  }
+}
