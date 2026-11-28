@@ -1,0 +1,19 @@
+{
+  "model": "Inkling-2-Mini-SQ-20",
+  "inference_host": "llm-60",
+  "capacity_tokens": 16384,
+  "checkpoint_medium": "tmpfs",
+  "store_bytes_before_restart": 1568953315,
+  "invocations": [
+    "b63ee068d8a14d9dbdd5ba472f45d1a5",
+    "be5586ba56ae409a9ba30c0b2d29c08f"
+  ],
+  "preserved_actions": 5,
+  "subsequent_tools": [
+    "create_file",
+    "run_shell",
+    "finish"
+  ],
+  "verified": true,
+  "result_artifact": "c89eae053191d7b460e3c2c6d0b85a569019abf2860385b3da8b84b3b990c7b3"
+}
