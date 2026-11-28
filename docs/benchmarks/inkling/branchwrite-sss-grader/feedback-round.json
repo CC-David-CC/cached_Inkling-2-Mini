@@ -1,0 +1,100 @@
+{
+  "artifacts": [],
+  "frame": "program",
+  "result_artifact": "596b6bdb4a97649a21e0b3693de57147b3950ce0cb8eb5235933a1595dc8f6d5",
+  "status": "complete",
+  "verified": true,
+  "exposed_cases": [
+    "truncated",
+    "contradictory"
+  ],
+  "real_ledger": {
+    "complete": [
+      "pass",
+      "pass"
+    ],
+    "missing": [
+      "ungraded",
+      "ungraded"
+    ],
+    "truncated": [
+      "ungraded",
+      "ungraded"
+    ],
+    "contradictory": [
+      "fail",
+      "fail"
+    ]
+  },
+  "additional_cases": {
+    "noise-plus-match": {
+      "expected": [
+        "pass",
+        "pass"
+      ],
+      "actual": [
+        "pass",
+        "pass"
+      ],
+      "passed": true
+    },
+    "failed-probe-no-greeting": {
+      "expected": [
+        "fail",
+        "ungraded"
+      ],
+      "actual": [
+        "fail",
+        "fail"
+      ],
+      "passed": false
+    },
+    "failed-probe-with-greeting": {
+      "expected": [
+        "fail",
+        "fail"
+      ],
+      "actual": [
+        "fail",
+        "fail"
+      ],
+      "passed": true
+    },
+    "empty-journal": {
+      "expected": [
+        "ungraded",
+        "ungraded"
+      ],
+      "actual": [
+        "ungraded",
+        "ungraded"
+      ],
+      "passed": true
+    },
+    "malformed-greeting": {
+      "expected": [
+        "ungraded",
+        "ungraded"
+      ],
+      "actual": [
+        "ungraded",
+        "ungraded"
+      ],
+      "passed": true
+    },
+    "wrong-final-answer": {
+      "expected": [
+        "pass",
+        "fail"
+      ],
+      "actual": [
+        "pass",
+        "fail"
+      ],
+      "passed": true
+    }
+  },
+  "scope": "sss_integration/bw_service_recovery.py",
+  "inference_host": "llm-60",
+  "archive": "b26467c8bd52c34fe6e194fc17b8fa3774d48174a031aeb12348e91e5aad190f"
+}
