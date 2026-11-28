@@ -24,3 +24,9 @@ uv venv --python 3.14 "$client/venv"
 uv pip install --python "$client/venv/bin/python" "$client/source"
 export PATH="$client/venv/bin:$PATH"
 ```
+
+## Decisions across the two live runs
+
+The earlier SQ-20 runtime and the clean portable build each recorded six completed tool calls in this order. Both read the failed unit journal, read `worker.py`, read `service.json`, replaced the configuration, ran `python3 worker.py --check`, and finished. Each shell command returned zero. The model had explicit instructions to inspect the journal and run the check.
+
+Both exported archives matched the published `fix.bw` byte for byte. Applying that archive to the clean-build incident's original project reproduced its entire repaired directory. The decision comparison covers tool names, targets, order and command results. Token usage and model logits were not measured in this comparison.
