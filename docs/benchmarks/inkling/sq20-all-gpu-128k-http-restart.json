@@ -1,0 +1,28 @@
+{
+  "host": "llm-60",
+  "pack": "SQ-20",
+  "prompt_tokens": 131072,
+  "capacity": 133120,
+  "storage": "tmpfs",
+  "placement": {
+    "write": {
+      "gpu_experts": 3072,
+      "host_experts": 0
+    },
+    "read": {
+      "gpu_experts": 3072,
+      "host_experts": 0
+    }
+  },
+  "result": "restart matched",
+  "generated": 5,
+  "forward": 5,
+  "counters": {
+    "consumed_tokens": 5,
+    "forward_tokens": 5,
+    "resident_parent_restores": 0,
+    "resident_child_restores": 0,
+    "checkpoint_import_bytes": 4466573312
+  },
+  "payload": "d902e57a033d13403aae581f2e46fa94f0ec2d4125a8d817d9f4b91b0ac79193"
+}
