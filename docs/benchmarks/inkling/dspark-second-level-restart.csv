@@ -1,0 +1,8 @@
+fixture,second_level_children_replaced,status,draft_nodes,emitted,writer_exact_rows,restored_exact_rows,logits_per_row,state_bytes
+register,1,passed,3,2,4,4,200058,357807104
+register_prefix_256,2,passed,7,2,4,4,200058,57738240
+python_expression,1,passed,7,2,4,4,200058,110797824
+python_function,1,passed,7,2,4,4,200058,109753344
+short_ids_1,0,depth_not_reached,,,,,,
+short_ids_2,0,depth_not_reached,,,,,,
+short_ids_3,0,depth_not_reached,,,,,,
