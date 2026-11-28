@@ -37,6 +37,19 @@ def main():
             weights_sha256=PACK_HASHES[args.pack or 'SQ-20'])
     key = (args.runtime / 'pcc-http.key').read_text().strip()
 
+    fixture = json.loads(args.fixture.read_text()) if args.mode == 'read' else None
+    if expected_contract is not None or fixture is not None:
+        request = Request(f'http://127.0.0.1:{args.port}/cow/info',
+                          headers={'Authorization': 'Bearer ' + key})
+        with urlopen(request, timeout=10) as response:
+            info = json.load(response)
+        if expected_contract is not None and info['model_contract_id'] != expected_contract:
+            raise ValueError('Selected pack or adapter differs from the serving endpoint')
+        if fixture is not None:
+            for field in ('model_contract_id', 'execution_profile_id'):
+                if info[field] != fixture['answer']['receipt'][field]:
+                    raise ValueError(f'Restart endpoint differs from write fixture in {field}')
+
     def call(path, payload):
         request = Request(f'http://127.0.0.1:{args.port}/cow/{path}',
                           json.dumps(payload).encode(),
@@ -98,7 +111,6 @@ def main():
         args.fixture.write_text(json.dumps(fixture))
         print(f'HTTP create and generate passed with {len(answer["answer"]["tokens"])} tokens')
     else:
-        fixture = json.loads(args.fixture.read_text())
         revision = fixture['revision'] if 'revision' in fixture else fixture['root']['receipt']['branch']['revision']
         answer = generate(fixture['branch'], revision)
         expected = fixture['answer']
