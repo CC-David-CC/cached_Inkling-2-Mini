@@ -20,8 +20,21 @@ with tempfile.TemporaryDirectory() as directory:
     if before.returncode == 0 or b'AssertionError' not in before.stderr:
         raise RuntimeError('Source did not reproduce the expected failing test')
     fixed = root / 'fixed'
-    subprocess.run(['branchwrite', 'apply', str(here / 'fix.bw'), '--source', str(source),
-                    '--destination', str(fixed), '--sha256', receipt['archive_sha256']], check=True)
+    command = ['branchwrite', 'apply', str(here / 'fix.bw'), '--source', str(source),
+               '--destination', str(fixed), '--sha256', receipt['archive_sha256']]
+    script = source / 'secure_report.sh'
+    original = script.read_bytes()
+    for content, mode in [(original + b'# edited', 0o664), (original, 0o600)]:
+        script.write_bytes(content)
+        script.chmod(mode)
+        rejection = subprocess.run(command, capture_output=True)
+        if rejection.returncode == 0 or b'immutable project baseline' not in rejection.stderr + rejection.stdout:
+            raise RuntimeError('Expected baseline rejection', rejection)
+        if fixed.exists() or script.read_bytes() != content or stat.S_IMODE(script.stat().st_mode) != mode:
+            raise RuntimeError('Rejected apply modified workspace')
+    script.write_bytes(original)
+    script.chmod(0o664)
+    subprocess.run(command, check=True)
     subprocess.run([sys.executable, 'check.py'], cwd=fixed, check=True)
     payload = bytes(range(256))
     for case in receipt['external_checks']:
