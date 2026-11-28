@@ -1,0 +1,49 @@
+{
+  "artifacts": [],
+  "frame": "program",
+  "result_artifact": "e1246287515c0ce8a079fede5a5ace8be268481825662c3eba1cd33c8893f2bb",
+  "status": "complete",
+  "verified": true,
+  "source_commit": "4c3e12b0e41bea2377d8105913ee7e7b7d5c22a6",
+  "source_path": "sss_integration/bw_service_recovery.py",
+  "scope": "extracted module plus check.py",
+  "inference_host": "llm-60",
+  "model": "Inkling-2-Mini-SQ-20",
+  "baseline": {
+    "complete": [
+      "pass",
+      "pass"
+    ],
+    "missing": [
+      "ungraded",
+      "ungraded"
+    ],
+    "truncated": [
+      "fail",
+      "fail"
+    ],
+    "contradictory": [
+      "fail",
+      "fail"
+    ]
+  },
+  "candidate": {
+    "complete": [
+      "pass",
+      "pass"
+    ],
+    "missing": [
+      "ungraded",
+      "ungraded"
+    ],
+    "truncated": [
+      "ungraded",
+      "ungraded"
+    ],
+    "contradictory": [
+      "fail",
+      "fail"
+    ]
+  },
+  "archive_sha256": "ac0cf540122042966eda066aff6fafb25f9867c52e21e039aa36692a3b33c000"
+}
