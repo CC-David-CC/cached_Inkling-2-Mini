@@ -14,8 +14,14 @@ static void check(bool ok, const std::string& message) {
 
 int main(int argc, char** argv) try {
     using namespace ink2;
-    const bool wrapped = argc == 5 && std::string(argv[4]) == "--wrapped";
-    check(argc == 4 || wrapped, "usage: check_parent_suffix MODEL write|read FIXTURE [--wrapped]");
+    check(argc >= 4, "usage: check_parent_suffix MODEL write|read FIXTURE [--wrapped] [--gpu-experts]");
+    bool wrapped = false, gpu_experts = false;
+    for (int i = 4; i < argc; ++i) {
+        const std::string flag(argv[i]);
+        if (flag == "--wrapped") wrapped = true;
+        else if (flag == "--gpu-experts") gpu_experts = true;
+        else throw std::runtime_error("unknown argument: " + flag);
+    }
     std::string mode = argv[2];
     check(mode == "write" || mode == "read", "invalid fixture mode");
     BackendOpts opts;
@@ -25,12 +31,18 @@ int main(int argc, char** argv) try {
     opts.enable_dspark = false;
     opts.kv_dtype_auto = false;
     opts.kv_offload = "off";
-    opts.vram_experts_gb = 3;
+    opts.vram_experts_gb = gpu_experts ? 20 : 3;
     InkModelFile model;
     std::string error;
     check(model.open(argv[1], error, false, ""), error);
     auto backend = make_cuda_backend();
     check(backend->init(model, opts, error), error);
+    if (gpu_experts) {
+        const auto stats = backend->stats();
+        check(stats.total_experts > 0 && stats.vram_experts_loaded == stats.total_experts &&
+              stats.ram_experts_loaded == 0, "GPU expert residency requirement failed");
+        std::cout << "GPU-resident experts: " << stats.vram_experts_loaded << '\n';
+    }
     check(backend->alloc_slot(0, opts.max_ctx, opts.kv_dtype, error), error);
     std::vector<float> logits(model.m.c.vocab_unpadded);
     check(logits.size() == 200058, "unexpected vocabulary");
