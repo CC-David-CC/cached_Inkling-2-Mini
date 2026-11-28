@@ -1,0 +1,25 @@
+mode,trial,schedule,pair_seconds,answer_count,checkpoint_import_bytes,resident_parent_restores
+Draft off,1,parallel,1.51935503189452,2,0,2
+Draft off,2,serial,1.7986612250097096,2,0,2
+Draft off,3,serial,1.8024732219055295,2,0,2
+Draft off,4,parallel,1.514107601949945,2,0,2
+Draft off,5,parallel,1.5161614220123738,2,0,2
+Draft off,6,serial,1.8274846309795976,2,0,2
+Draft off,7,serial,1.8200052010361105,2,0,2
+Draft off,8,parallel,1.5519874910824,2,0,2
+DSpark,1,parallel,1.6155813310761005,2,0,2
+DSpark,2,serial,1.9206031810026616,2,0,2
+DSpark,3,serial,1.9329090099781752,2,0,2
+DSpark,4,parallel,1.616637707920745,2,0,2
+DSpark,5,parallel,1.6208419010508806,2,0,2
+DSpark,6,serial,1.9508061539381742,2,0,2
+DSpark,7,serial,1.9654244428966194,2,0,2
+DSpark,8,parallel,1.6911663541104645,2,0,2
+DFlash2,1,parallel,3.3060710430145264,2,0,2
+DFlash2,2,serial,3.692284903023392,2,0,2
+DFlash2,3,serial,3.5985839220229536,2,0,2
+DFlash2,4,parallel,3.2390922207850963,2,0,2
+DFlash2,5,parallel,3.249209698056802,2,0,2
+DFlash2,6,serial,3.6777307821903378,2,0,2
+DFlash2,7,serial,3.6779101609718055,2,0,2
+DFlash2,8,parallel,3.3061239970847964,2,0,2

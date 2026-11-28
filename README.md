@@ -84,6 +84,10 @@ Two warm requests submitted together finished in 9.64–9.69 s versus 10.37–10
 
 ![Time to finish two inventory requests and time to first visible text](docs/benchmarks/inkling/sq20-inventory-pair.png)
 
+For two short lookups on a shared 1,000-record document, submitting both together took a median 1.52 s undrafted, 1.62 s with DSpark and 3.28 s with resident DFlash2. All 48 measured requests reused the parent with zero checkpoint bytes imported. [Per-pair measurements](docs/benchmarks/inkling/sq20-shared-document-pairs.csv)
+
+![Time to finish two short lookups on one cached document](docs/benchmarks/inkling/sq20-shared-document-pairs.png)
+
 On three warm repeats per mode, the local HTTP client saw p95 gaps of 8.36 ms between visible updates with drafting off and 29.42 ms with DSpark. DSpark delivered many updates together. [Stream timing chart](docs/benchmarks/inkling/sq20-stream-cadence.png) · [Per-event gaps](docs/benchmarks/inkling/sq20-stream-cadence.csv)
 
 
