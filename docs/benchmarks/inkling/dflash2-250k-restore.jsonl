@@ -1,0 +1,6 @@
+{"trial": 0, "positions": 250000, "prompt_positions": 249872, "verify_sha256": false, "checkpoint_bytes": 4608000000, "restore_s": 0.913543283008039, "extra_peak_torch_cuda_bytes": 0, "bf16_bits_exact": true}
+{"trial": 0, "positions": 250000, "prompt_positions": 249872, "verify_sha256": true, "checkpoint_bytes": 4608000000, "restore_s": 2.7907500660512596, "extra_peak_torch_cuda_bytes": 0, "bf16_bits_exact": true}
+{"trial": 1, "positions": 250000, "prompt_positions": 249872, "verify_sha256": true, "checkpoint_bytes": 4608000000, "restore_s": 2.788556046085432, "extra_peak_torch_cuda_bytes": 0, "bf16_bits_exact": true}
+{"trial": 1, "positions": 250000, "prompt_positions": 249872, "verify_sha256": false, "checkpoint_bytes": 4608000000, "restore_s": 0.9009195219259709, "extra_peak_torch_cuda_bytes": 0, "bf16_bits_exact": true}
+{"trial": 2, "positions": 250000, "prompt_positions": 249872, "verify_sha256": false, "checkpoint_bytes": 4608000000, "restore_s": 0.8986368509940803, "extra_peak_torch_cuda_bytes": 0, "bf16_bits_exact": true}
+{"trial": 2, "positions": 250000, "prompt_positions": 249872, "verify_sha256": true, "checkpoint_bytes": 4608000000, "restore_s": 2.805305043933913, "extra_peak_torch_cuda_bytes": 0, "bf16_bits_exact": true}
