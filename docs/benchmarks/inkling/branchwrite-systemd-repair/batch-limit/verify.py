@@ -29,6 +29,6 @@ with RuntimeLog(work / "state/ledger", read_only=True) as log:
                  for tool, args, out in observations if tool == "run_shell"
                  and args.get("command") == "cat /run/branchwrite/health" and out["exit_code"] == 0]
     if not any(re.fullmatch(r"ready-[0-9a-f]{16}", greeting) and greeting in journal
-               and greeting in answer for greeting in greetings for answer in answers):
+               and set(re.findall(r"\bready-[\w-]+", answer)) == {greeting} for greeting in greetings for answer in answers):
         raise ValueError("Final answer lacks an observed greeting from the repaired worker")
 print(json.dumps({"result_artifact": result["result_artifact"], "greetings": greetings, "verified": True}))

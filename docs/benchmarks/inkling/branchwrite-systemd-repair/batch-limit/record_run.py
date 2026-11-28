@@ -1,5 +1,6 @@
 """Record independently graded decisions for one batch-limit recovery attempt."""
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -55,13 +56,15 @@ def archive(work, run_id):
         cases.append(dict(id="live-health", question="Report the fresh worker greeting.",
                           answer=None, outcome="ungraded", evidence=(work / "model.log").read_text().splitlines()[-3:]))
     else:
-        greetings = [s for s in (work / "service.log").read_text().splitlines() if s.startswith("ready-")]
+        journal_path = work / "service.log"
+        journal = journal_path.read_text().splitlines() if journal_path.is_file() else []
+        greetings = [s for s in journal if re.fullmatch(r"ready-[0-9a-f]{16}", s)]
         if not greetings:
             cases.append(dict(id="live-health", question="Report the fresh worker greeting.",
                               answer=final, outcome="ungraded", evidence="No independent worker greeting recorded"))
         else:
             cases.append(dict(id="live-health", question="Report the fresh worker greeting.",
-                          answer=final, expected=greetings[-1], outcome="correct" if greetings[-1] in final else "incorrect",
+                          answer=final, expected=greetings[-1], outcome="correct" if set(re.findall(r"\bready-[\w-]+", final)) == {greetings[-1]} else "incorrect",
                           evidence={"service_greetings": greetings}))
     context = {"task": launch["bindings"]["task"]["value"], "project": {
         p.name: p.read_text() for p in project.iterdir() if p.is_file()}, "actions": actions}
