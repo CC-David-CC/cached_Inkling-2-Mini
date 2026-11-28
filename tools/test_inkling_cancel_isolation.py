@@ -15,6 +15,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('runtime', type=Path)
     parser.add_argument('--port', type=int, default=18061)
+    parser.add_argument('--trial-reference', help='append a shared reference to both prompts for an isolated run')
     args = parser.parse_args()
     key = (args.runtime / 'pcc-http.key').read_text().strip()
 
@@ -23,6 +24,8 @@ def main():
         return urlopen(Request(f'http://127.0.0.1:{args.port}/cow/' + path, None if payload is None else json.dumps(payload).encode(), headers), timeout=30)
 
     def setup(prompt, limit):
+        if args.trial_reference:
+            prompt += '\nTrial reference: ' + args.trial_reference
         messages = [dict(role='user', content=prompt)]
         branch = uid()
         with call('text/create', dict(branch=branch, messages=messages, stream=False, operation_id=uid())) as r:
