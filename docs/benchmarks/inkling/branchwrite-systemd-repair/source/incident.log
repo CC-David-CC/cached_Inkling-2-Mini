@@ -1,0 +1,7 @@
+Started systemd-repair.b71zpRkb.service - [systemd-run] /usr/bin/python3 /home/dflanag3/inkling-measurements/systemd-repair.b71zpRkb/project/worker.py.
+Traceback (most recent call last):
+  File "/home/dflanag3/inkling-measurements/systemd-repair.b71zpRkb/project/worker.py", line 11, in <module>
+    raise ValueError("unsupported mode; allowed modes are serve and drain")
+ValueError: unsupported mode; allowed modes are serve and drain
+systemd-repair.b71zpRkb.service: Main process exited, code=exited, status=1/FAILURE
+systemd-repair.b71zpRkb.service: Failed with result 'exit-code'.
