@@ -20,6 +20,18 @@ cp "$template" "$runtime/tokenizer/chat_template.jinja"
 
 This run exercised inference through the native checkpoint test. The HTTP checks covered startup and status. The host already had a working GPU driver and CUDA compiler.
 
+### Fresh Python environment
+
+A separate CPython 3.14.4 environment installed all 13 packages in `requirements-cow-server.txt`. Dependency checks and the HTTP launcher's help command passed. The following test run passed all 27 CPU tests, covering authenticated discovery, capability reporting, persisted operation recovery, and cancellation before launch or during root publication.
+
+```bash
+PYTHONPATH=experimental/branching_context/src:experimental/branching_context/tests/implementation \
+  python -m unittest serve.test_cow_connection_info serve.test_cow_capabilities \
+  serve.test_cow_persisted_operation_status serve.test_cow_root_cancel_publication
+```
+
+Fresh-machine provisioning of CUDA and model assets remains open.
+
 ### Cross-build logit comparison
 
 Using the clean checkout's Python backend, load each native bridge in turn with SQ-20, one GPU, default capacity 8,192, and drafting off. Consume 4,097 token IDs given by `100 + i % 1000` starting at zero, capture the complete next-token logit row, then consume token 197 and capture the next row. Each row contains 200,058 float32 values. Comparing their little-endian bytes found zero differences at either position. [Measured row digests](cross-build-logits.json)
