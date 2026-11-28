@@ -16,3 +16,5 @@ python3 "$bench/compare.py" > comparisons.csv
 ```
 
 The worker measures prefill and generation separately, outside the score capture calls. The comparison checks every float32 bit pattern and reports the largest absolute score difference and the winning token at each frontier (as a pairwise equality flag). Generated-token equality compares hashes over all 512 token IDs. DSpark timing and score differences can vary between runs.
+
+Run `python3 "$bench/ranking.py"` in the same output directory to compare the final next-token rankings and probabilities at temperature 1 with no sampling filters. All four runs assigned token 149884 more than 99.99999% probability. Comparing undrafted to drafted workers, seven of the top ten tokens kept the same rank, and nine or ten appeared in both top-ten lists. The largest total variation distance was 1.77 × 10⁻⁸. This measures one highly predictable position at the end of the register continuation. [Pairwise ranking results](../dspark-64k-ranking.csv)
