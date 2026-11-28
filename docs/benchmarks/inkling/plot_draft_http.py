@@ -7,21 +7,31 @@ import matplotlib.pyplot as plt
 
 folder = Path(__file__).resolve().parent
 records = [json.loads(line) for line in (folder / 'draft-http-matched.jsonl').read_text().splitlines()]
-fig, axes = plt.subplots(1, 3, figsize=(12, 4.1), layout='constrained')
+fig, axes = plt.subplots(1, 4, figsize=(15.5, 4.1), layout='constrained')
 modes = [('off', 'Draft off', '#326b8b'), ('dspark', 'DSpark', '#85549b'), ('dflash2', 'DFlash2\nstaged', '#267556'),
          ('resident', 'DFlash2\nresident', '#c27730')]
 for ax, (metric, title) in zip(axes, [('end_to_end_tps', 'End-to-end tokens/s'),
                                       ('ttft_ms', 'First visible token (ms)'),
-                                      ('tpot_ms', 'Generation ms/token')]):
+                                      ('tpot_ms', 'Generation ms/token'),
+                                      ('acceptance', 'Accepted draft nodes (%)')]):
     for i, (mode, name, color) in enumerate(modes):
         rows = [r for r in records if r['mode'] == mode and r['trial'] > 0]
+        if metric == 'acceptance':
+            rows = [r for r in rows if r['counts'].get('draft_nodes', 0) > 0]
         if not rows:
             ax.text(i, 0, 'n/a', ha='center', va='bottom')
             continue
-        values = [1000/r['decode_tps'] if metric == 'tpot_ms' else r[metric] for r in rows]
+        if metric == 'acceptance':
+            values = [100 * r['counts']['drafts_accepted'] / r['counts']['draft_nodes'] for r in rows]
+        elif metric == 'tpot_ms':
+            values = [1000 / r['decode_tps'] for r in rows]
+        else:
+            values = [r[metric] for r in rows]
         value = median(values)
         ax.bar(i, value, width=.58, color=color)
         ax.text(i, value, f'{value:.1f}', ha='center', va='bottom')
+    if metric == 'acceptance':
+        ax.set_ylim(0, 100)
     ax.set_xticks(range(len(modes)), [mode[1] for mode in modes])
     ax.set_title(title, fontsize=11)
     ax.spines[['top','right']].set_visible(False)
