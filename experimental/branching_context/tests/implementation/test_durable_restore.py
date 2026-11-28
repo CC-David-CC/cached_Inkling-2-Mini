@@ -84,6 +84,25 @@ class DurableRestoreControlTests(unittest.TestCase):
         self.assertEqual(receipt['consumed'], 2)
         self.assertEqual(self.model.cache[self.sid].frontier, (1., 2.))
 
+    def test_disk_read_attests_payload_for_repeated_native_parent_checks(self):
+        from unittest import mock
+        from context_time_travel import digest_attestation
+
+        state = b'native-state'
+        sha = self.persist(state)
+        manifest = self.model.checkpoint_manifest(self.sid)
+        expected_raw = hashlib.sha256(state).digest()
+        with mock.patch.object(hashlib, 'sha256', wraps=hashlib.sha256) as compute:
+            owner = self.model._read_checkpoint_payload(manifest)
+            self.assertEqual(digest_attestation.verified_checkpoint_digest(owner), sha)
+            self.assertEqual(digest_attestation.restore_payload_digest(owner.blob), expected_raw)
+            compute.assert_called_once_with(state)
+        path = self.model.checkpoint_directory / (sha + '.state')
+        with path.open('r+b') as stream:
+            stream.write(b'X')
+        with self.assertRaises(IntegrityError):
+            self.model._read_checkpoint_payload(manifest)
+
     def test_cumulative_suffix_read_checks_canonical_ancestry_before_import(self):
         from context_time_travel.store import _json_bytes
 

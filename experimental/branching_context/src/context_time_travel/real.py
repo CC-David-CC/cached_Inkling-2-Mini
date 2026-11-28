@@ -20,7 +20,7 @@ from types import MappingProxyType
 from .oracle import FreshOracle
 from .store import Store, IntegrityError, InvalidOperation, _stage, _sync_dir, _json_bytes, _decode, _private_directory
 from . import controller
-from .digest_attestation import _attest_factory_result, checkpoint_export_scope, verified_checkpoint_digest
+from .digest_attestation import _attest_factory_result, checkpoint_export_scope, exported_payload_digest, verified_checkpoint_digest
 from .input_spans import InputHistory
 from .vision_execution import RESUME_CONTRACT, POSITION_CONVENTION, input_binding, validate_boundary
 
@@ -1835,15 +1835,18 @@ class BranchingModel:
                 frontier = stream.read(width)
                 if len(state) != size or len(frontier) != width or stream.read(1):
                     raise IntegrityError('Checkpoint payload corruption')
-            digest = hashlib.sha256(state)
-            digest.update(frontier)
-            if digest.hexdigest() != sha:
-                raise IntegrityError('Checkpoint payload corruption')
             logits = struct.unpack('<'+str(self.backend.vocab_size)+'f',frontier)
             if not all(map(math.isfinite, logits)):
                 raise IntegrityError('Nonfinite checkpoint frontier')
-            return Checkpoint(manifest['model_contract_id'],manifest['execution_profile_id'],manifest['consumed'],
-                state,logits,sha,manifest['input_identity'],schedule)
+            # Certify the immutable disk-read bytes once for both whole-checkpoint
+            # verification and subsequent native parent/suffix binding checks.
+            with checkpoint_export_scope():
+                exported_payload_digest(state)
+                owner = Checkpoint.create(manifest['model_contract_id'], manifest['execution_profile_id'],
+                                          manifest['consumed'], state, logits, manifest['input_identity'], schedule)
+            if owner.checksum != sha:
+                raise IntegrityError('Checkpoint payload corruption')
+            return owner
         except (OSError,KeyError,TypeError,ValueError) as error:
             raise IntegrityError('Invalid or incomplete checkpoint') from error
 

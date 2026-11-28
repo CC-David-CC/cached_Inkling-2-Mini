@@ -64,6 +64,8 @@ This restart check also passed with a 250,000-token document, SQ-10, serial foll
 
 Opening the saved generation source took 18.90 of 19.78 seconds with a resident parent and 19.84 of 20.80 seconds after restart. This timer covers checkpoint materialization and lease acquisition. It does not isolate device transfer. Generating four output tokens took about 0.10 seconds in each case. Both child payloads reproduced the earlier SHA-256. [Timed receipts](docs/benchmarks/inkling/http-stop-250k-timed.json)
 
+Reusing the verified SHA-256 of each immutable disk-read payload reduced worker time in the same test from 19.78 to 7.47 seconds resident and from 20.80 to 8.31 seconds after restart. Each disk read still validates the complete payload. Both runs matched the prior snapshot, child digest and output tokens. These are single before/after measurements. [Updated receipts](docs/benchmarks/inkling/http-stop-250k-single-hash.json)
+
 ![Time to durable BranchWrite answers with 250k-token parents](docs/benchmarks/inkling/branchwrite-250k-serving.png)
 
 The register lookups and SQLite query used separate parents. Reading the document happened before timing began. Each bar covers one complete request, including child checkpoint publication. [SQL timings](docs/benchmarks/inkling/branchwrite-250k-sql.csv)
