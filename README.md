@@ -38,7 +38,9 @@ With a 4 GiB expert pool, the undrafted 250,000-token run read the register in 1
 
 Reducing the GPU expert pool to 2 GiB let DSpark finish the same 250k prompt. Prefill took 225.81 seconds and generation took 9.06 seconds (56.5 tokens/s). All 512 token IDs matched the 4 GiB undrafted control. Total native time was 234.87 seconds versus 148.38 seconds. Both drafting mode and expert placement changed between these two successful runs. [2 GiB DSpark measurements](docs/benchmarks/inkling/dspark-250k-2gib.json)
 
-The two successful 250k runs matched all 200,058 logits immediately after prefill. After 512 identical generated IDs, all 200,058 final logits differed bitwise (maximum absolute difference 1.652). Both final rows still selected token 13. This qualifies greedy token agreement on this prompt. Applications requiring exact continuation logits should use the validated undrafted profile. [Frontier comparison](docs/benchmarks/inkling/dspark-250k-frontiers.csv)
+At a matched 2 GiB pool, undrafted prefill took 225.32 seconds and generation took 11.66 seconds (43.9 tokens/s). DSpark improved decode speed by 28.7% and saved 2.11 seconds overall on this single 512-token sample. Both undrafted pool sizes produced identical prefill and final logit hashes. [Undrafted 2 GiB control](docs/benchmarks/inkling/off-250k-2gib.json)
+
+All three successful 250k runs matched all 200,058 logits immediately after prefill. After 512 identical generated IDs, all 200,058 final logits differed bitwise (maximum absolute difference 1.652). Both final rows still selected token 13. This qualifies greedy token agreement on this prompt. Applications requiring exact continuation logits should use the validated undrafted profile. [Frontier comparison](docs/benchmarks/inkling/dspark-250k-frontiers.csv)
 
 ![Prefill speed across a 250,000-token document](docs/benchmarks/inkling/llm60-250k-prefill.png)
 
