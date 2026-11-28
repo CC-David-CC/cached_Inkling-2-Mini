@@ -526,11 +526,11 @@ class InklingBackend(NativeBackend):
             if not self.model:
                 raise RuntimeError('Inkling backend is closed')
             tokens = self.lib.ctt_model_work(self.model)
-            counters = dict(consumed_tokens=tokens, forward_tokens=tokens)
+            counters = dict(consumed_tokens=tokens, forward_tokens=tokens,
+                            checkpoint_import_bytes=self.stats['checkpoint_import_bytes'])
             if self.context_capacity > 8192:
                 counters.update(resident_parent_restores=self.stats.get('resident_parent_restores', 0),
-                                resident_child_restores=self.stats.get('resident_child_restores', 0),
-                                checkpoint_import_bytes=self.stats['checkpoint_import_bytes'])
+                                resident_child_restores=self.stats.get('resident_child_restores', 0))
             if self.draft:
                 if self._drafts_accepted is not None:
                     counters["drafts_accepted"] = self._drafts_accepted(self.model)
