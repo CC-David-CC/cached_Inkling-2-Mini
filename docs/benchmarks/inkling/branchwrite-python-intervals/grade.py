@@ -21,3 +21,4 @@ for length in range(4):
         actual = merge(supplied)
         counts['correct' if actual == expected and supplied == list(case) else 'incorrect'] += 1
 print(json.dumps(counts))
+sys.exit(bool(counts['incorrect']))
