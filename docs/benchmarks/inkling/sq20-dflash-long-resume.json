@@ -1,0 +1,18 @@
+{
+  "prompt_tokens": 12628,
+  "cut_after": 33,
+  "resumed_tokens": 991,
+  "full_tokens": 1024,
+  "token_sha256_json_array": "ce595221b6171de26b874883d255d3bd54cfe437b989b8f399d4259b60afbbff",
+  "visible_text_sha256_utf8": "4e577923744c6c0a3d7adbd3cdd109f8916a5b2769da9ce1fec1085fa3a50208",
+  "resume_counters": {
+    "consumed_tokens": 991,
+    "forward_tokens": 991,
+    "checkpoint_import_bytes": 586547200,
+    "resident_parent_restores": 0,
+    "resident_child_restores": 0,
+    "draft_nodes": 882,
+    "drafts_accepted": 865
+  },
+  "store": "tmpfs"
+}
