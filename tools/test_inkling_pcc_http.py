@@ -37,6 +37,13 @@ def verify_export(port, key, receipt):
     return frontier_digest.hexdigest()
 
 
+def verify_copy(source, answer, limit):
+    assert len(answer['tokens']) == limit, 'Copy stopped before the requested token cap'
+    text = answer['text']
+    if not text or not source.startswith(text):
+        raise AssertionError('Visible answer differs from the requested verbatim prefix')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('runtime', type=Path)
@@ -102,8 +109,8 @@ def main():
 
     messages = [{'role': 'user', 'content': 'What is 2 + 2? Reply with just the number.'}]
     if long_copy:
-        messages[0]['content'] = ('Copy every line verbatim. Start with the first line.\n' +
-                                  '\n'.join(f'Item {i}: the sample value is {i}.' for i in range(1, 501)))
+        source = '\n'.join(f'Item {i}: the sample value is {i}.' for i in range(1, 501))
+        messages[0]['content'] = 'Copy every line verbatim. Start with the first line.\n' + source
     namespace = 'text/'  if args.chat else ''
 
     def create(branch):
@@ -134,7 +141,7 @@ def main():
         answer = generate(left, left_root['receipt']['branch']['revision'])
         assert 1 <= len(answer['answer']['tokens']) <= limit, answer
         if long_copy:
-            assert len(answer['answer']['tokens']) == limit
+            verify_copy(source, answer['answer'], limit)
         if args.dspark_long:
             counters = answer['answer']['counter_deltas']
             assert 0 < counters['drafts_accepted'] <= counters['draft_nodes']
@@ -158,7 +165,7 @@ def main():
         if args.prompt_tokens is not None:
             assert answer['answer']['counter_deltas']['checkpoint_import_bytes'] > 0, answer
         if long_copy:
-            assert len(answer['answer']['tokens']) == limit
+            verify_copy(source, answer['answer'], limit)
         if args.dspark_long:
             counters = answer['answer']['counter_deltas']
             assert 0 < counters['drafts_accepted'] <= counters['draft_nodes']
