@@ -4,7 +4,7 @@ This local PCC fork targets Thinking Machines Lab's Inkling 2 Mini. The
 initial profile uses one RTX PRO 6000 Blackwell, one request and an 8,192-token
 context. GPU count is a runtime setting for later trials.
 
-[Training, serving and cache qualification matrix](docs/benchmarks/inkling/qualification.md)
+[Operating defaults and next milestones](docs/benchmarks/inkling/qualification.md#operating-defaults-and-next-milestones) · [Training, serving and cache qualification matrix](docs/benchmarks/inkling/qualification.md)
 
 ## Measured performance
 

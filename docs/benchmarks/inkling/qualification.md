@@ -4,6 +4,26 @@ Results cover the RTX PRO 6000 Blackwell on llm-60 unless a row identifies anoth
 
 S³ hosts the [coding and Linux qualification suite](https://github.com/CC-David-CC/sss/tree/0550f59/examples/coding-linux). Run `bash examples/coding-linux/replay.sh` from S³ to replay three saved coding fixes and three user-service recovery scenarios. For a fresh model score, use the task cards and independent graders. Each coding grader can export per-input outcomes for retention comparisons.
 
+## Operating defaults and next milestones
+
+For supervised coding, use base SQ-20 on llm-60, one worker, greedy direct constrained generation, drafting off, and fast restore verification. Use the read-only grant for inspections and the exact-answer check when the host knows the expected value. For edits, keep a pinned checkout, retain the action ledger, and independently run behavioral checks on the exported patch. The [BranchWrite client](https://github.com/CC-David-CC/BranchWrite/tree/442cb5e) and [S³ Linux fixtures](https://github.com/CC-David-CC/sss/tree/4c8b5ab/sss/suites) are versioned separately.
+
+| Workload | Starting profile | Evidence and limits |
+|---|---|---|
+| llm-60, repeated questions | One worker and one warm parent. Use full restore verification for audits. | Warm 131k SQ-10 parent reuse passed. At 250k, three lookups reproduced the output IDs across processes but their child checkpoint hashes differed. |
+| llm-60, independent requests | Add a second resident replica when both answers are ready to run. | On two 128-token requests the trained SQ-20 profile delivered 100.3 aggregate tokens/s concurrently and 92.1 sequentially. Each answer took longer under contention. [Measurements](backbone-muon-two-streams.jsonl) |
+| llm-49, single request | Base SQ-20 for ordinary contexts. Use SQ-10 for the qualified 128k restart path. | SQ-20 fit all experts for the matched 6k workload. DSpark is an option for unconstrained text. [Timings](gpu-comparison.csv) |
+| llm-79, AMD | Evaluation host pending its own installation and workload checks. | The CUDA qualification on llm-49 and llm-60 covers those hosts only. |
+| Adapter development | Keep the exact merged parent for each fixed-rank round. Evaluate each candidate before promotion. | Round two gained one Linux answer and lost one Python answer at an unchanged 4/8. [Paired results](backbone-query-round2-retention.csv) |
+
+### Proposed acceptance gates
+
+1. **Daily coding and inspection.** From a fresh client checkout, run a real issue through patch selection, restart, export, and independent grading. Exercise a live incorrect inspection answer and require either a verified correction or an explicit unsuccessful result. Record both passing and failing cases.
+2. **Long-context replay.** For the 250k workload, compare the entire child frontier and checkpoint after restart. For DFlash2, restore both target state and drafter state, then compare the continuation against uninterrupted generation. Record restore bytes, latency, and peak memory.
+3. **Portability and training.** Reproduce provisioning on a fresh machine. Qualify llm-79 separately if AMD serving is needed. For wider QLoRA or a new adapter, require train, save, resume, serve, and paired coding and Linux retention checks before changing the default.
+
+## Detailed results
+
 ![Short coding and Linux answers by pack and grading rule](quant-short-answers.png)
 
 ![SQL and chmod fixtures passed by weight pack and runtime](executable-quant-pilot.png)
