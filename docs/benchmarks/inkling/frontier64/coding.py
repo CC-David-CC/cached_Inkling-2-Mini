@@ -1,11 +1,21 @@
-import hashlib, heapq, json, math, struct, sys
+import argparse
+import hashlib
+import heapq
+import json
+import math
+import struct
 from pathlib import Path
 from tokenizers import Tokenizer
 from context_time_travel.backend_registry import load_backend
 from context_time_travel.inkling_backend import runtime_profile
 
-runtime = Path(sys.argv[1])
-case = sys.argv[2]
+parser = argparse.ArgumentParser(description="Capture coding frontiers every 16 generated tokens.")
+parser.add_argument("runtime", type=Path)
+parser.add_argument("case", choices=("off1", "off2", "dspark1", "dspark2"))
+parser.add_argument("--tokens", type=int, choices=(128, 768), default=128)
+args = parser.parse_args()
+runtime = args.runtime.resolve()
+case = args.case
 prompt = """# Python 3. Implement a stable topological sort. Nodes whose dependencies are satisfied should appear in input order. Raise ValueError on a cycle.
 def stable_toposort(dependencies):
 """
@@ -20,7 +30,7 @@ output = []
 try:
     with backend.lease() as lease:
         backend.consume(lease, ids)
-        for chunk in range(8):
+        for _ in range(args.tokens // 16):
             with backend.generate_request(lease, 16) as stream:
                 output.extend(stream)
             scores = backend.logits(lease)
