@@ -1,0 +1,25 @@
+{
+  "inference_host": "llm-60",
+  "capacity": 16384,
+  "client_restart": true,
+  "server_restart": false,
+  "first_step_budget": 100,
+  "resume_step_budget": 220,
+  "completed_action_prefix": 5,
+  "subsequent_tools": [
+    "create_file",
+    "run_shell",
+    "finish"
+  ],
+  "before": {
+    "correct": 1,
+    "incorrect": 0,
+    "ungraded": 2
+  },
+  "after": {
+    "correct": 3,
+    "incorrect": 0,
+    "ungraded": 0
+  },
+  "result_artifact": "3a797c5d38fdd0484b46ac07ed0b8eb2672e65755afb5f00166978d04fbdce27"
+}

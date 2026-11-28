@@ -18,21 +18,41 @@ import json,time,shutil
 from pathlib import Path
 world=Path('state/world/workspace')
 request=world/'deploy.request'
-for _ in range(2400):
+while True:
     if request.is_file() and request.read_text().strip()=='deploy':
         data=(world/'service.json').read_bytes()
-        if json.loads(data)=={'mode':'serve','name':'report-worker','batch_limit':32}:
+        try:
+            config = json.loads(data)
+        except ValueError:
+            config = None
+        if config == {'mode':'serve','name':'report-worker','batch_limit':32} and type(config['batch_limit']) is int:
             shutil.copytree('project','staged')
             Path('staged/service.json').write_bytes(data)
             Path('staged').rename('published')
             print('Published verified configuration on explicit request',flush=True)
             break
     time.sleep(.05)
-else: raise SystemExit('No accepted deployment request')
 PY
 watcher=$!
 model_status=0
 branchwrite code project --state state --connection "$connection" --thinking off --instructions compact-finish-request --read OPERATIONS.md --read worker.py --edit service.json --create deploy.request --test-command 'cat /run/branchwrite/health' --task 'Restore the report worker using its operations guide. Return the exact greeting from the recovered instance.' --max-steps "${BW_FIXTURE_MAX_STEPS:-320}" > model.log 2>&1 || model_status=$?
+if [[ -n ${BW_FIXTURE_RESUME_STEPS:-} ]] && python3 - model.log <<'PYRESUME'
+import json
+import sys
+from pathlib import Path
+lines = Path(sys.argv[1]).read_text().splitlines()
+try:
+    status = json.loads(lines[-1]).get("status")
+except (IndexError, ValueError, AttributeError):
+    status = None
+sys.exit(status != "step_budget_exhausted")
+PYRESUME
+then
+    cp model.log before-resume.log
+    python3 "$here/record_run.py" "$d" "${d##*/}-before-resume"
+    model_status=0
+    branchwrite resume state --max-steps "$BW_FIXTURE_RESUME_STEPS" >> model.log 2>&1 || model_status=$?
+fi
 journalctl --user -u "$unit" -o cat --no-pager > service.log
 python3 "$here/record_run.py" "$d" "${d##*/}"
 if (( model_status )); then exit "$model_status"; fi
