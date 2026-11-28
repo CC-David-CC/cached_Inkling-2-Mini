@@ -602,6 +602,11 @@ register, the step-11 adapter scored 21/24 against the base model's 22/24.
 It fixed neither base miss and lost one previously correct answer.
 [Fresh-register paired outcomes](docs/benchmarks/inkling/fresh-register-paired.csv)
 [Per-round exposure and correctness](docs/benchmarks/inkling/failure-only-exposure.csv)
+
+Compare two local archives from the same fixture with
+`python tools/compare_inkling_answers.py BEFORE AFTER`. The report counts
+changes in correctness and answer text, including ungraded outcomes.
+
 Both adapters passed the authenticated PCC HTTP launch, root creation and
 greedy generation test on llm-60. The endpoint receipts carried the expected
 adapter-specific model identity. The native regression also verified exact
