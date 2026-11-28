@@ -65,6 +65,8 @@ def main():
                         help='Place global KV in GPU memory, split automatically, or use host RAM')
     parser.add_argument('--require-gpu-experts', action='store_true',
                         help='Reject startup if the loaded Inkling model has any offloaded experts')
+    parser.add_argument('--native-expert-selection', action='store_true',
+                        help='Keep native cold-expert selection when STRATA_INK_EXACT is unset')
     parser.add_argument('--gpus', type=int, choices=(1, 2, 3), default=1)
     parser.add_argument('--dspark', action='store_true', help='experimental fused DSpark for greedy text requests')
     parser.add_argument('--dflash2', nargs=3, type=Path, metavar=('REFERENCE', 'DRAFT_DIR', 'TARGET'),
@@ -79,6 +81,9 @@ def main():
         parser.error('--ram-cache-gib must be positive')
     if args.suffix_checkpoints and (args.dspark or args.dflash2 or args.vision or args.capacity <= 8192 or args.gpus != 1):
         parser.error('Suffix checkpoints require undrafted single-GPU text with capacity above 8192')
+    if (args.pack == 'SQ-20' and args.gpus == 1 and not args.dspark and not args.dflash2
+            and not args.native_expert_selection):
+        os.environ.setdefault('STRATA_INK_EXACT', '1')
     if args.store is not None or args.persistent:
         serve(args, None)
     else:
