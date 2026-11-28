@@ -1,0 +1,35 @@
+{
+  "baseline": {
+    "count": 200,
+    "failed": 186,
+    "passed": 14
+  },
+  "profiles": {
+    "minimal": {
+      "verified": true,
+      "reopened_verified": true,
+      "same_result": true,
+      "result_artifact": "06a26afbbf987b6fce2a51d66f506d4af575384908e16f00cbc12a2687587bd4",
+      "generations": 5,
+      "generated_tokens": 233,
+      "oracle": {
+        "count": 200,
+        "failed": 0,
+        "passed": 200
+      }
+    },
+    "compact": {
+      "verified": true,
+      "reopened_verified": true,
+      "same_result": true,
+      "result_artifact": "db03e74616ab566de8b296c7cdb9f006cb0fe33128fa85fff637e1b6f0b00bc8",
+      "generations": 5,
+      "generated_tokens": 233,
+      "oracle": {
+        "count": 200,
+        "failed": 0,
+        "passed": 200
+      }
+    }
+  }
+}
