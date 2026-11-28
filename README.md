@@ -16,6 +16,12 @@ On llm-60, serial asks for two different 32-line excerpts took 11.93 seconds sum
 
 Both serial asks showed text within 0.53 seconds. The two overlapping asks showed text after 0.95 and 5.97 seconds respectively. [Client timings](docs/benchmarks/inkling/branchwrite-sq20-130k-first-visible.csv)
 
+### DSpark on the 1,024-token copy task
+
+![Generation rate and server request time for the verified copy](docs/benchmarks/inkling/sq20-dspark-copy-timing.png)
+
+Both streams produced identical tokens and final logits. The saved-prompt generate request included 0.32 seconds of checkpoint saving undrafted and 0.35 seconds with DSpark. Initial prompt creation and the subsequent HTTP checkpoint download were outside the request timer. [Receipt timings](docs/benchmarks/inkling/sq20-dspark-copy-timing.csv)
+
 ### DSpark on a 64k-token register
 
 ![Generation rate and combined prefill and generation time with DSpark](docs/benchmarks/inkling/dspark-64k-generation.png)
