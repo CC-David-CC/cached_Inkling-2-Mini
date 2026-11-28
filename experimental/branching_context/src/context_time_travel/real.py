@@ -1678,6 +1678,27 @@ class BranchingModel:
         path = self.checkpoint_directory/(manifest['payload_sha256']+'.state')
         size,width = manifest['state_bytes'],4*self.backend.vocab_size
         try:
+            from .digest_attestation import attested_owner_for_digest
+            owner = (attested_owner_for_digest(manifest['payload_sha256'])
+                     if self.profile.get('backend') == 'inkling-cuda' and manifest['schema'] == 1 else None)
+            if (owner is not None and type(owner.blob) is bytes and len(owner.blob) == size
+                    and len(owner.frontier) == self.backend.vocab_size
+                    and owner.checksum == manifest['payload_sha256']
+                    and verified_checkpoint_digest(owner) == owner.checksum):
+                # Compare every stored byte against the authenticated RAM checkpoint.
+                # startswith compares the chunk in place without slicing the parent.
+                with path.open('rb') as stream:
+                    for offset in range(0, size, 8 * 1024**2):
+                        length = min(8 * 1024**2, size - offset)
+                        chunk = stream.read(length)
+                        if len(chunk) != length or not owner.blob.startswith(chunk, offset):
+                            raise IntegrityError('Checkpoint payload corruption')
+                    if (stream.read(width) != struct.pack(f'<{self.backend.vocab_size}f', *owner.frontier)
+                            or stream.read(1)):
+                        raise IntegrityError('Checkpoint payload corruption')
+                    if not all(map(math.isfinite,owner.frontier)):
+                        raise IntegrityError('Nonfinite checkpoint frontier')
+                return manifest
             if path.stat().st_size != size+width or digest_file(path) != manifest['payload_sha256']:
                 raise IntegrityError('Checkpoint payload corruption')
             with path.open('rb') as stream:

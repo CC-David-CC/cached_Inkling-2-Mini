@@ -99,6 +99,17 @@ def restore_payload_digest(blob):
     return hashlib.sha256(blob).digest()
 
 
+def attested_owner_for_digest(checksum):
+    """Find a live immutable RAM reference for bytewise on-disk validation."""
+    with _LOCK:
+        for owner_ref, blob, frontier, expected, digest, _ in reversed(_OWNERS.values()):
+            if checksum == expected == digest:
+                owner = owner_ref()
+                if owner is not None and owner.blob is blob and owner.frontier is frontier:
+                    return owner
+    return None
+
+
 def verified_checkpoint_digest(owner):
     """Return the actual RAM digest, reusing only the exact certified owner."""
     key = id(owner)
