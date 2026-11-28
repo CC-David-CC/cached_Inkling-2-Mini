@@ -65,7 +65,10 @@ def train_step(parameters, features, raw, targets, cap):
 
 def equal_state(left, right):
     if isinstance(left, torch.Tensor):
-        return isinstance(right, torch.Tensor) and torch.equal(left, right)
+        if not isinstance(right, torch.Tensor) or left.dtype != right.dtype or left.shape != right.shape:
+            return False
+        return torch.equal(left.reshape(-1).contiguous().view(torch.uint8),
+                           right.reshape(-1).contiguous().view(torch.uint8))
     if isinstance(left, dict):
         return left.keys() == right.keys() and all(equal_state(left[key], right[key]) for key in left)
     if isinstance(left, (tuple, list)):
@@ -194,7 +197,8 @@ def main():
         return
     previous_b = initial[1].detach().clone()
     losses = [train_step(initial, features, raw, targets, cap) for _ in range(2)]
-    assert not torch.equal(initial[1], previous_b), 'LoRA update left B unchanged'
+    if torch.equal(initial[1], previous_b):
+        raise RuntimeError('LoRA update left B unchanged')
     a, b, optimizer = initial
     metadata = dict(optimizer=args.optimizer, steps=2, profile_id=profile_id,
                     base_sha256=base_sha256, torch_version=str(torch.__version__),
@@ -205,14 +209,16 @@ def main():
     save_training_checkpoint(checkpoint, dict(metadata=metadata, a=a.detach(), b=b.detach(),
                                               optimizer=optimizer.state_dict()))
     restored = torch.load(checkpoint, weights_only=True)
-    assert restored['metadata'] == metadata
+    if restored['metadata'] != metadata:
+        raise ValueError('Reloaded training metadata differs')
     resumed = initialize(raw.shape[1], args.optimizer)
     restore_parameters(resumed, restored)
     losses.append(train_step(initial, features, raw, targets, cap))
     resume_loss = train_step(resumed, features, raw, targets, cap)
-    assert resume_loss == losses[-1]
-    assert all(torch.equal(initial[i], resumed[i]) for i in (0, 1))
-    assert equal_state(initial[2].state_dict(), resumed[2].state_dict())
+    if resume_loss != losses[-1] or not equal_state(initial[:2], resumed[:2]):
+        raise RuntimeError('Resumed loss or LoRA factors differ')
+    if not equal_state(initial[2].state_dict(), resumed[2].state_dict()):
+        raise RuntimeError('Resumed optimizer state differs')
 
     metadata = dict(metadata, steps=len(losses))
     save_training_checkpoint(args.output / 'step-3.pt',
