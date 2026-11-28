@@ -110,11 +110,15 @@ def restore_parameters(parameters, checkpoint):
 
 
 def parent_factors(payload, vocab, device, base_sha256=MODEL_SHA256):
+    if len(payload) < HEAD_ADAPTER_HEADER.size:
+        raise ValueError("Truncated parent adapter header")
     magic, rank, base = HEAD_ADAPTER_HEADER.unpack_from(payload)
     if (magic != HEAD_ADAPTER_MAGIC or base.hex() != base_sha256 or not 1 <= rank <= 16 - RANK
             or len(payload) != HEAD_ADAPTER_HEADER.size + rank * (HEAD_WIDTH + vocab) * 4):
         raise ValueError('Invalid parent adapter or combined rank exceeds the serving limit')
     weights = torch.frombuffer(bytearray(payload[HEAD_ADAPTER_HEADER.size:]), dtype=torch.float32).to(device)
+    if not torch.isfinite(weights).all():
+        raise ValueError("Parent adapter contains nonfinite weights")
     split = rank * HEAD_WIDTH
     return weights[:split].reshape(rank, HEAD_WIDTH), weights[split:].reshape(vocab, rank)
 

@@ -3,11 +3,10 @@ import argparse
 import ctypes
 import hashlib
 import json
-import numpy as np
 from pathlib import Path
 
 from inkling_train_head import (HEAD_ADAPTER_HEADER, HEAD_ADAPTER_MAGIC, MODEL_SHA256,
-                               initialize, load_backend, runtime_profile, torch, train_step)
+                               initialize, load_backend, parent_factors, runtime_profile, torch, train_step)
 from record_inkling_answers import record
 from tokenizers import Tokenizer
 
@@ -111,12 +110,9 @@ def main():
         x, raw, targets = torch.stack(x).cuda(), torch.stack(raw).cuda(), torch.tensor(targets, device='cuda')
         if args.practice_from:
             payload = args.practice_from.read_bytes()
-            header = HEAD_ADAPTER_HEADER.pack(HEAD_ADAPTER_MAGIC, 4, bytes.fromhex(MODEL_SHA256))
-            assert payload.startswith(header)
-            weights = torch.from_numpy(np.frombuffer(payload[len(header):], dtype=np.float32).copy()).cuda()
-            split = 4 * x.shape[1]
-            parent_a = weights[:split].reshape(4, -1)
-            parent_b = weights[split:].reshape(raw.shape[1], 4)
+            parent_a, parent_b = parent_factors(payload, raw.shape[1], raw.device)
+            if parent_a.shape[0] != 4:
+                raise ValueError("Station practice requires a rank-four parent")
             parent_scores = raw + (x @ parent_a.T) @ parent_b.T
             factors = initialize(raw.shape[1], 'adamw')
             losses = [train_step(factors, x, parent_scores, targets, cap) for _ in range(8)]
