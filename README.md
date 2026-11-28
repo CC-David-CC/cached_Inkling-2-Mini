@@ -18,6 +18,8 @@ With a 4 GiB GPU expert pool, DSpark generated 512 tokens at 147.3 tokens/s. Dra
 
 Two additional workers per mode reproduced all 512 output IDs. Before generation, all four agreed bit for bit on all 200,058 next-token scores. After generation the two undrafted workers still agreed exactly. The two DSpark workers chose the same next token but differed on every score, with a maximum absolute difference of 0.651. These timings and scores cover one prompt on llm-60. [Per-worker measurements](docs/benchmarks/inkling/dspark-64k-frontier-runs.jsonl) · [All pairwise score comparisons](docs/benchmarks/inkling/dspark-64k-frontiers.csv) · [Reproduce with the original token IDs](docs/benchmarks/inkling/frontier64/README.md)
 
+At 131,072 input tokens on llm-60 with the same SQ-10 hybrid profile, two fresh workers read the register in 63.67 and 63.65 seconds. The undrafted worker generated 512 tokens in 7.56 seconds (67.8 tokens/s). DSpark generated the identical token IDs in 4.46 seconds (114.9 tokens/s). One run per mode, native timings after model load. [128k timings and counters](docs/benchmarks/inkling/dspark-128k-generation.jsonl)
+
 ### Reading a 250,000-token document on llm-60
 
 ![Prefill speed across a 250,000-token document](docs/benchmarks/inkling/llm60-250k-prefill.png)
