@@ -33,16 +33,27 @@
          raise ValueError("Candidate configuration differs from the requested repair")
 --- a/docs/benchmarks/inkling/branchwrite-systemd-repair/replay.sh
 +++ b/docs/benchmarks/inkling/branchwrite-systemd-repair/replay.sh
-@@ -33,7 +33,7 @@
+@@ -22,7 +22,7 @@
+ }
+ trap cleanup EXIT
+ cp -r "$here/source" "$work/project"
+-if "$live"; then rm "$work/project/incident.log"; fi
++rm "$work/project/incident.log"
+ chmod 0664 "$work/project/"*
+ # Publishing the complete repaired directory activates the same service definition.
+ systemd-run --user --unit="${unit%.service}" --path-property="PathExists=$work/repaired" \
+@@ -33,15 +33,15 @@
      sleep 0.1
  done
  systemctl --user is-failed --quiet "$unit"
 -journalctl --user -u "$unit" -o cat --no-pager | grep -F 'ValueError: unsupported mode'
+-archive="$here/fix.bw"
+-digest=4937e463599a5f94cd430131ad07032bfb10442d6a5c21c49ddf376a0503a4c4
 +journalctl --user -u "$unit" -o cat --no-pager | grep -F 'ValueError: timeout_ms must be a positive integer'
- archive="$here/fix.bw"
- digest=4937e463599a5f94cd430131ad07032bfb10442d6a5c21c49ddf376a0503a4c4
++archive="$here/timeout/fix.bw"
++digest=53ecdd7f4ee137f31fb471515443d759223cb272cf053797d988a0901378d3d3
  if "$live"; then
-@@ -41,7 +41,7 @@
+     export BW_USER_JOURNAL_UNIT="$unit"
      branchwrite code "$work/project" --connection "$connection" --state "$work/state" \
          --thinking off --instructions compact-finish-request --max-steps 256 \
          --read worker.py --edit service.json --test-command 'python3 worker.py --check' \
