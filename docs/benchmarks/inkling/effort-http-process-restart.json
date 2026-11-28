@@ -1,0 +1,20 @@
+{
+  "model": "SQ-10",
+  "host": "llm-60",
+  "effort": 0.99,
+  "store": "tmpfs",
+  "tokens": 72,
+  "cut": 8,
+  "visible": "391",
+  "reasoning_chars": 191,
+  "control_sha256": {
+    "tokens": "96f52d8ed0ea6d8f6bde3515799da2f155b8df2ea048c6685f44c04ab03cb80b",
+    "text": "a934c244755c66aebb0d6f9f5687038ffae8f00b00b28b4e17521016393f38b9",
+    "reasoning_content": "af13745d39506279ce7abeae0c8ad3541935fd1b19fbd75e848ba362204007be"
+  },
+  "resumed_sha256": {
+    "tokens": "96f52d8ed0ea6d8f6bde3515799da2f155b8df2ea048c6685f44c04ab03cb80b",
+    "text": "a934c244755c66aebb0d6f9f5687038ffae8f00b00b28b4e17521016393f38b9",
+    "reasoning_content": "af13745d39506279ce7abeae0c8ad3541935fd1b19fbd75e848ba362204007be"
+  }
+}
