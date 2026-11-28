@@ -5,6 +5,7 @@ import hashlib
 import json
 import threading
 import unittest
+from unittest.mock import patch
 
 import test_durable_restore as fixtures
 from context_time_travel.execution_receipt import tokens_digest, schedule_digest
@@ -94,6 +95,14 @@ class ResidentRequestCancellationTests(unittest.TestCase):
         self.assertEqual(self.backend.captures, 0)
         self.assertEqual(set(self.model.store.objects.iterdir()), objects)
         self.assertEqual(self.model.snapshot_bytes(self.sid), source)
+
+    def test_serial_followup_keeps_root_prefill_batched(self):
+        self.model.profile['execution']['followup_prefill'] = 'single-token'
+        tokens = (1, 1, 0, 1)
+        with patch.object(self.backend, 'consume', wraps=self.backend.consume) as consume:
+            snapshot = self.model.create(tokens)
+        self.assertEqual([tuple(call.args[1]) for call in consume.call_args_list], [tokens])
+        self.assertEqual(tuple(self.model.history(snapshot)), tokens)
 
     def test_completed_followup_consumes_all_inputs_in_profile_order(self):
         inputs = [1, 0, 1]
