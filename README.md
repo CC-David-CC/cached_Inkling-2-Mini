@@ -296,6 +296,10 @@ With two HTTP clients sharing this parent, all six distinct lookups returned the
 
 [Download per-request and pair timings](docs/benchmarks/inkling/sq20-two-client-pairs.csv)
 
+For longer Python answers (270 and 411 generated tokens), the two submissions together completed in a median 10.43 s, versus 10.88 s sequentially. All six pairs used a warm parent and reproduced the same programs. Executable tests exposed defects in both initial programs. Two rounds of targeted feedback corrected the observed failures. [Repair qualification](docs/benchmarks/inkling/qualification.md)
+
+![Time and throughput for two Python answers on a shared document](docs/benchmarks/inkling/sq20-coding-pairs.png)
+
 ### Concurrent requests
 
 The native concurrency sweep used independent 4,097-token prompts and 256
