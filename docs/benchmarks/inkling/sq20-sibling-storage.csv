@@ -1,0 +1,3 @@
+checkpoint_format,parent_allocated_bytes,first_child_added_bytes,second_child_added_bytes,pair_seconds,output_tokens_per_answer
+full,4353998848,4354850816,4354850816,10.222251722123474,6
+suffix,4353998848,9748480,9748480,1.7990832799114287,6

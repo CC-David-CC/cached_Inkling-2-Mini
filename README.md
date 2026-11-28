@@ -280,6 +280,16 @@ Four fresh engine processes restored the same 4,097-token checkpoint with the OS
 
 [Download the four restore trials](docs/benchmarks/inkling/checkpoint-restore.csv)
 
+### Two questions on a shared 128k document
+
+On a single RTX PRO 6000, Cached kept one 4.06 GiB parent checkpoint for a 127,612-token document. Each answer added 9.30 MiB with the suffix-enabled bridge. The full-checkpoint bridge added 4,153 MiB per answer. Both builds used SQ-20, FP16 KV, greedy decoding and a tmpfs store. Both returned the same six tokens per question with zero parent import bytes. Timing covers one pair of sequential requests per build, after document prefill.
+
+In a separate restart check, a fresh process restored both saved suffixes and then revisited the first. All 200,058 FP32 logits matched the live frontier on each restore, with zero forward tokens. After consuming token 501, all logits matched the continuation from the corresponding full child checkpoint.
+
+![Checkpoint storage added per answer and elapsed time for two warm requests](docs/benchmarks/inkling/sq20-sibling-storage.png)
+
+[Download the allocation and timing measurements](docs/benchmarks/inkling/sq20-sibling-storage.csv)
+
 ### Concurrent requests
 
 The native concurrency sweep used independent 4,097-token prompts and 256
