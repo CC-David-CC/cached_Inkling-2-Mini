@@ -35,7 +35,7 @@ def verify(work, unit):
     expected = json.loads((work / "project/service.json").read_bytes())
     expected["mode"] = "serve"
     actual = json.loads((work / "state/world/workspace/service.json").read_bytes())
-    if actual != expected:
+    if json.dumps(actual, sort_keys=True) != json.dumps(expected, sort_keys=True):
         raise ValueError("Candidate configuration differs from the requested repair")
 
 

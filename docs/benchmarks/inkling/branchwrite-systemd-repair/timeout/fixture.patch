@@ -29,7 +29,7 @@
 -    expected["mode"] = "serve"
 +    expected["timeout_ms"] = 250
      actual = json.loads((work / "state/world/workspace/service.json").read_bytes())
-     if actual != expected:
+     if json.dumps(actual, sort_keys=True) != json.dumps(expected, sort_keys=True):
          raise ValueError("Candidate configuration differs from the requested repair")
 --- a/docs/benchmarks/inkling/branchwrite-systemd-repair/replay.sh
 +++ b/docs/benchmarks/inkling/branchwrite-systemd-repair/replay.sh
