@@ -78,13 +78,17 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('checkpoint', type=Path)
     parser.add_argument('--optimizer', choices=('adamw', 'muon'), required=True)
+    parser.add_argument('--export', type=Path, metavar='FILE',
+                        help='Keep the verified safetensors adapter at a new path.')
     parser.add_argument('--worker', nargs=2, metavar=('PHASE', 'DIRECTORY'), help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.worker:
         phase, directory = args.worker
         run_steps(args.checkpoint, args.optimizer, Path(directory), phase)
         return
-    with tempfile.TemporaryDirectory() as directory:
+    if args.export and (args.export.exists() or not args.export.parent.is_dir()):
+        parser.error('--export requires a new filename in an existing directory')
+    with tempfile.TemporaryDirectory(dir=args.export.parent if args.export else None) as directory:
         work = Path(directory)
         for phase in ('direct', 'resume'):
             subprocess.run([sys.executable, __file__, *sys.argv[1:], '--worker', phase, directory], check=True)
@@ -96,7 +100,11 @@ def main():
         export = str(work / 'adapter_model.safetensors')
         save_file(factors, export)
         assert equal_state(load_file(export), factors)
-        print(json.dumps(dict(optimizer=args.optimizer, resume_exact=True, export_exact=True)))
+        result = dict(optimizer=args.optimizer, resume_exact=True, export_exact=True)
+        if args.export:
+            os.link(export, args.export)
+            result['export'] = str(args.export)
+        print(json.dumps(result))
 
 
 if __name__ == '__main__':

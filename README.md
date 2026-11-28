@@ -648,8 +648,10 @@ The training fixture loads the official mixed checkpoint at revision `c9d0283`. 
 
 ```bash
 python tools/test_inkling_backbone_restart.py /path/to/official-checkpoint --optimizer adamw
-python tools/test_inkling_backbone_restart.py /path/to/official-checkpoint --optimizer muon
+python tools/test_inkling_backbone_restart.py /path/to/official-checkpoint --optimizer muon --export ./muon-query.safetensors
 ```
+
+The optional `--export` keeps the verified adapter at a new filename in an existing directory. Both optimizers support it.
 
 ### Output-head LoRA
 
