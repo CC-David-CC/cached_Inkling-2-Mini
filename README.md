@@ -20,6 +20,10 @@ Two additional workers per mode reproduced all 512 output IDs. Before generation
 
 At 131,072 input tokens on llm-60 with the same SQ-10 hybrid profile, two fresh workers read the register in 63.67 and 63.65 seconds. The undrafted worker generated 512 tokens in 7.56 seconds (67.8 tokens/s). DSpark generated the identical token IDs in 4.46 seconds (114.9 tokens/s). One run per mode, native timings after model load. All 200,058 scores matched after prefill. After generation, 200,056 scores differed bitwise with a maximum absolute difference of 0.689. Both workers still selected the same next token. [128k timings and counters](docs/benchmarks/inkling/dspark-128k-generation.jsonl) · [Full score comparisons](docs/benchmarks/inkling/dspark-128k-frontiers.csv)
 
+![Two native 64k trials per mode on the RTX 4090 and RTX PRO 6000](docs/benchmarks/inkling/cached-64k-hosts.png)
+
+On llm-49 the matched SQ-10 RTX 4090 workers read 65,536 tokens in 36.57–36.64 seconds. Generation reached 74.5 tokens/s undrafted and 137.2–137.6 with DSpark. Each worker generated 512 tokens. [RTX 4090 timings](docs/benchmarks/inkling/llm49-64k-frontier-runs.jsonl) · [Within-host score comparisons](docs/benchmarks/inkling/llm49-64k-frontiers.csv)
+
 ### Reading a 250,000-token document on llm-60
 
 ![Prefill speed across a 250,000-token document](docs/benchmarks/inkling/llm60-250k-prefill.png)
