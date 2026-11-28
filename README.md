@@ -540,6 +540,8 @@ visible answer `4` before and after restart with the same numerical payload
 SHA-256. The counter recorded three generated tokens and two appended
 assistant framing tokens.
 
+The published 128k restart result below uses SQ-10. To qualify SQ-20 on llm-60, select `--pack SQ-20`, keep `--require-gpu-experts`, and use a separate empty store and fixture. Check the native load log for 3,072 GPU experts and zero host experts on both launches. A passing SQ-10 run qualifies only that pack.
+
 For the filled 128k token-ID test, start a worker with a persistent store on a filesystem with room for checkpoints. Use the same runtime, store, port and environment for both launches:
 
 ```bash
