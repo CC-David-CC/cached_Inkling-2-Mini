@@ -650,12 +650,16 @@ class BranchingModel:
                     raise InvalidOperation('Native request cannot resume this controller policy')
             payloads=held.enter_context(self._input_artifacts(ids,artifacts,reencode)) if mixed_delta else None
             restored_base = {} if capture_suffix else None
+            restore_started = time.monotonic()
             with self._generation_source(snapshot, restored_base) as (lease, _, schedule):
+                source_restore_seconds = time.monotonic() - restore_started
                 check_cancelled()
+                input_started = time.monotonic()
                 if ids:
                     if mixed_delta:self.backend.consume_inputs(lease,ids.spans,embeddings=payloads)
                     else:self._consume_request_text(lease, ids, check_cancelled)
                     schedule = self._completed_schedule(schedule,prompt_history)
+                input_seconds = time.monotonic() - input_started
                 generation_started = time.monotonic()
                 check_cancelled()
                 outputs = []
@@ -685,6 +689,7 @@ class BranchingModel:
                                                      consumed_history, schedule, restored_base)
                 state_save_seconds = time.monotonic() - save_started
         return dict(**compact, snapshot=sid,tokens=outputs,generation_seconds=generation_seconds,
+                    source_restore_seconds=source_restore_seconds, input_seconds=input_seconds,
                     state_save_seconds=state_save_seconds,
                     request_seconds=time.monotonic()-started)
 

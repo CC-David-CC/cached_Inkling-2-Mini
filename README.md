@@ -60,6 +60,10 @@ For a reproducible next turn after a text stop, also enable `--serial-followup`.
 
 This restart check also passed with a 250,000-token document, SQ-10, serial follow-up and suffix checkpoints. After the first answer stopped at a newline, the uninterrupted and restarted workers each consumed 24 follow-up tokens and produced the same answer tokens and child payload SHA-256. The warm request imported 4,620,288 bytes and the fresh process imported 8,369,176,576 bytes. Worker request times were 19.85 and 20.83 seconds. The default 64 GiB RAM pool budget worked; explicit 1 and 12 GiB budgets failed during root preparation. [250k restart receipts](docs/benchmarks/inkling/http-stop-250k-restart.json)
 
+![Worker time for a 250k document follow-up before and after restart](docs/benchmarks/inkling/http-stop-250k-timed.png)
+
+Opening the saved generation source took 18.90 of 19.78 seconds with a resident parent and 19.84 of 20.80 seconds after restart. This timer covers checkpoint materialization and lease acquisition. It does not isolate device transfer. Generating four output tokens took about 0.10 seconds in each case. Both child payloads reproduced the earlier SHA-256. [Timed receipts](docs/benchmarks/inkling/http-stop-250k-timed.json)
+
 ![Time to durable BranchWrite answers with 250k-token parents](docs/benchmarks/inkling/branchwrite-250k-serving.png)
 
 The register lookups and SQLite query used separate parents. Reading the document happened before timing began. Each bar covers one complete request, including child checkpoint publication. [SQL timings](docs/benchmarks/inkling/branchwrite-250k-sql.csv)
