@@ -1,0 +1,33 @@
+{
+  "rank4_vs_rank8_bf16_differences": 242,
+  "elements": 7077888,
+  "singular_values": [
+    0.0017971830386344686,
+    0.001280929726410185,
+    0.0012133323782812686,
+    0.0010335606247193116,
+    1.6875491241753246e-06,
+    1.6189887552847901e-06,
+    9.830729658389885e-07,
+    5.535323273259011e-07
+  ],
+  "round1_changed": 41741,
+  "round1_survived_sequential": 22672,
+  "sequential_sha256": "e2cfd7b25d3e13f3abc0d7e09e143147f7a0e52e3afe33713c03f11e56bd89d8",
+  "one_shot": [
+    {
+      "rank": 4,
+      "discarded_frobenius_fraction": 0.0009537762749807377,
+      "bf16_different_from_sequential": 23559,
+      "exactly_retained_among_surviving_round1": 18182,
+      "sha256": "834cacca7dcc59f4df5eb22173a9cedf3f95f3ad0b74411e6da27e42a754117d"
+    },
+    {
+      "rank": 8,
+      "discarded_frobenius_fraction": 0.0,
+      "bf16_different_from_sequential": 23531,
+      "exactly_retained_among_surviving_round1": 18184,
+      "sha256": "6d201bfc51c3875c68de5e283ee11f1ae709777b2e49e05fff2505d23b61f1aa"
+    }
+  ]
+}
