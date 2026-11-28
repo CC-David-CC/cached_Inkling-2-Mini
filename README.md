@@ -74,7 +74,7 @@ With a native 250,000-token parent pinned on llm-60, three distinct register loo
 
 ![Native request time and generation rate for three paired 250k-context lookups](docs/benchmarks/inkling/warm-250k-native-draft.png)
 
-On llm-60, Cached generated 1,024 tokens from a 1,400-record inventory prompt at 281–284 tokens/s with DSpark and 120 tokens/s with drafting off. Each mode served the same prompt twice on a fresh SQ-20 server with all experts in VRAM. The repeated request finished in 4.98 s with DSpark and 9.76 s undrafted. All four token sequences matched. [Raw HTTP measurements](docs/benchmarks/inkling/sq20-inventory-1024.jsonl)
+On llm-60, Cached generated 1,024 tokens from a 1,400-record inventory prompt at 281–284 tokens/s with DSpark and 120 tokens/s with drafting off. Each mode served the same prompt twice on a fresh SQ-20 server with all experts in VRAM. The repeated request finished in 4.98 s with DSpark and 9.76 s undrafted. GPU-resident DFlash2 reached 102 tokens/s on the repeat and finished in 12.55 s. All six token sequences matched. [Raw HTTP measurements](docs/benchmarks/inkling/sq20-inventory-1024.jsonl)
 
 ![First visible text, completed request time and generation rate on the inventory prompt](docs/benchmarks/inkling/sq20-inventory-1024.png)
 
