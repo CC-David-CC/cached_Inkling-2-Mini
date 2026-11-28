@@ -1,0 +1,9 @@
+domain,case,round1_correct,sequential_correct,compressed_correct,round1_to_sequential_tokens_changed,sequential_to_compressed_tokens_changed
+coding,sorted,1,1,1,0,0
+coding,alias,1,1,1,0,0
+coding,closure,0,0,0,1,1
+coding,generator,1,0,0,1,0
+linux,umask,0,0,0,1,1
+linux,link,1,1,1,0,0
+linux,pipeline,0,1,1,1,0
+linux,timer,0,0,0,0,0
