@@ -1,0 +1,16 @@
+{
+  "inference_host": "llm-60",
+  "capacity_tokens": 16384,
+  "first_step_budget": 119,
+  "resume_step_budget": 160,
+  "preserved_actions": 6,
+  "subsequent_tools": [
+    "run_shell",
+    "finish"
+  ],
+  "service_invocation": "2d7726caadf542b39636f1a24a7bc816",
+  "publication_inode_preserved": true,
+  "client_restarted": true,
+  "server_restarted": false,
+  "result_artifact": "9bda2295a307a7d4e9bf5e5ffd1fd28517babcaa48cd49e49d5468f3c7a09330"
+}

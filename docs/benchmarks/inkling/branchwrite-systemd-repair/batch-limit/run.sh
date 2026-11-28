@@ -50,6 +50,11 @@ PYRESUME
 then
     cp model.log before-resume.log
     python3 "$here/record_run.py" "$d" "${d##*/}-before-resume"
+    if [[ -d "$d/published" ]]; then
+        systemctl --user is-active --quiet "$unit"
+        systemctl --user show "$unit" --property=InvocationID --value > invocation-before-resume
+        stat -c '%d:%i' "$d/published" > publication-before-resume
+    fi
     model_status=0
     branchwrite resume state --max-steps "$BW_FIXTURE_RESUME_STEPS" >> model.log 2>&1 || model_status=$?
 fi
@@ -57,3 +62,10 @@ journalctl --user -u "$unit" -o cat --no-pager > service.log
 python3 "$here/record_run.py" "$d" "${d##*/}"
 if (( model_status )); then exit "$model_status"; fi
 python3 "$here/verify.py" "$d"
+if [[ -f invocation-before-resume ]]; then
+    systemctl --user is-active --quiet "$unit"
+    systemctl --user show "$unit" --property=InvocationID --value > invocation-after-resume
+    stat -c '%d:%i' "$d/published" > publication-after-resume
+    cmp invocation-before-resume invocation-after-resume
+    cmp publication-before-resume publication-after-resume
+fi
