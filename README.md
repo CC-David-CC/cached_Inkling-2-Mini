@@ -620,10 +620,10 @@ Start a separate Inkling vision profile with Pillow installed and the pinned
 vision tower in the runtime directory.
 
 ```bash
-python tools/inkling_pcc_serve.py /mnt/fast_cache/inkling --vision --port 18062
+python tools/inkling_pcc_serve.py /mnt/fast_cache/inkling --vision --port 18062 --persistent
 ```
 
-The default vision store is `pcc-vision-http-store`. Use `/cow/namespace`,
+With `--persistent`, the runtime’s vision store survives server restart. Omitting the storage option uses a temporary RAM store for that process. Use `/cow/namespace`,
 `/cow/images`, `/cow/text/prepare`, and `/cow/text/answer` for a prepared
 image question. The service binds image inputs to the normalized bytes,
 encoder profile, and embedding digest. It accepts PNG and JPEG uploads and
@@ -631,7 +631,7 @@ uses the same private bearer token as the text service. New image questions
 currently use a new prepared prompt.
 
 Run `tools/test_inkling_pcc_vision_http.py RUNTIME FIXTURE write`, restart the
-vision service with the same store, then run the test in `read` mode.
+vision service with the same store, then run the test in `read` mode. For an adapter qualification run, pass the same `--pack SQ-20 --adapter /path/to/adapter.iklora` to the server and to both test phases. The test checks the model identity and all four image cases. Image-based LoRA training and live image serving with a trained adapter are still awaiting end-to-end qualification.
 
 ### Layer-0 Muon query adapter on SQ-20
 
