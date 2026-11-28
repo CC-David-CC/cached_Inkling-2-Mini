@@ -16,13 +16,14 @@ def main():
     parser.add_argument('runtime', type=Path)
     parser.add_argument('store', type=Path)
     parser.add_argument('phase', choices=('write', 'read'))
+    parser.add_argument('--pack', choices=('SQ-10', 'SQ-15', 'SQ-20'), default='SQ-10')
     parser.add_argument('--parent-tokens', type=int, default=128)
     parser.add_argument('--output-tokens', type=int, default=1)
     args = parser.parse_args()
     capacity = args.parent_tokens + 2 + args.output_tokens
     if min(args.parent_tokens, args.output_tokens) < 1 or capacity > MAX_CONTEXT_TOKENS:
         parser.error(f'Positive parent and output lengths plus the two-token child must fit in {MAX_CONTEXT_TOKENS} tokens')
-    profile = runtime_profile(args.runtime.resolve(), pack='SQ-10', capacity=max(16384, capacity))
+    profile = runtime_profile(args.runtime.resolve(), pack=args.pack, capacity=max(16384, capacity))
     backend = load_backend(profile)
     try:
         model = BranchingModel(args.store, backend, profile)
@@ -86,7 +87,7 @@ def main():
         assert model.cache[answer['snapshot']].checksum == saved['result_hash']
         assert 0 < len(answer['tokens']) <= args.output_tokens
         assert backend.work_counters()['consumed_tokens'] - before_generate['consumed_tokens'] == len(answer['tokens'])
-        print(json.dumps(dict(parent_tokens=len(parent_history), suffix_bytes=suffix_bytes,
+        print(json.dumps(dict(pack=args.pack, parent_tokens=len(parent_history), suffix_bytes=suffix_bytes,
                               exact_continuation_logits=backend.vocab_size, saved_tokens_replayed=0,
                               requested_tokens=args.output_tokens, generated_tokens=len(answer['tokens']),
                               final_payload_sha256=saved['result_hash'],
