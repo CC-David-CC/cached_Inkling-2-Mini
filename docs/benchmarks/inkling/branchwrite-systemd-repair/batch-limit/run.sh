@@ -34,3 +34,4 @@ watcher=$!
 branchwrite code project --state state --connection "$connection" --thinking off --instructions compact-finish-request --read OPERATIONS.md --read worker.py --edit service.json --create deploy.request --test-command 'cat /run/branchwrite/health' --task 'Restore the report worker using its operations guide. Return the exact greeting from the recovered instance.' --max-steps 320 > model.log 2>&1
 journalctl --user -u "$unit" -o cat --no-pager > service.log
 python3 "$here/verify.py" "$d"
+python3 "$here/record_run.py" "$d" "${d##*/}"
