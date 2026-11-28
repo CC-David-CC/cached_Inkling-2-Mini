@@ -20,9 +20,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for key in ('runtime', 'repo', 'out'):
         parser.add_argument(key, type=Path)
-    parser.add_argument('--practice-from', type=Path,
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--practice-from', type=Path,
                         help='prior rank-four output adapter used as a frozen parent')
-    parser.add_argument('--evaluate', type=Path, help='evaluate an existing adapter only')
+    mode.add_argument('--evaluate', type=Path, help='evaluate an existing adapter only')
     args = parser.parse_args()
     args.out.mkdir(exist_ok=False)
     corrections = args.repo/'training/wrong_but_corrected/shared-document-128k'
@@ -67,7 +68,7 @@ def main():
                     cases.append(dict(id=case['id'], question=case['user'], answer=answer, expected=expected,
                                       evidence=f"Station {case['id'][8:]} has label {expected}.", tokens=ids,
                                       outcome='correct' if success else 'incorrect', training='chosen' in case))
-                    if name == 'base' and 'chosen' in case:
+                    if adapter is None and 'chosen' in case:
                         reset()
                         for target in encode(expected + '<|end_message|>'):
                             hidden, raw = backend.head_features(lease, suffix)
@@ -85,7 +86,7 @@ def main():
         summary[name] = counts
         (args.out/'scores.json').write_text(json.dumps(summary, indent=2))
         print(run, counts, flush=True)
-        if name != 'base':
+        if adapter is not None:
             continue
         x, raw, targets = zip(*train)
         x, raw, targets = torch.stack(x).cuda(), torch.stack(raw).cuda(), torch.tensor(targets, device='cuda')
