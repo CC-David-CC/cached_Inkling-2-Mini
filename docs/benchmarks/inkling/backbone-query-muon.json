@@ -40,5 +40,60 @@
     "optimizer buffers"
   ],
   "optimizer_metadata_and_loss_equal": true,
-  "safetensors_export_byte_exact": true
+  "safetensors_export_byte_exact": true,
+  "native_serving_probe": {
+    "engine": "Cached native bridge, SQ-20, drafting off",
+    "process_order": [
+      "base",
+      "merged",
+      "base"
+    ],
+    "input_token_batches": [
+      [
+        275,
+        371,
+        1300,
+        590,
+        270,
+        321
+      ],
+      [
+        501
+      ]
+    ],
+    "vocabulary_size": 200058,
+    "merge": {
+      "target": "model.llm.layers.0.attn.wq_du.weight",
+      "shape": [
+        3072,
+        2304
+      ],
+      "base_sha256": "429ac03103fe7c46ba2027aa4e4fd650431beecb9f2473c9f14ed092af60a5a4",
+      "official_matches_sq20": true,
+      "rank": 4,
+      "scale": 1.0,
+      "elements": 7077888,
+      "changed_bf16": 41741,
+      "merged_sha256": "0dadf2565555056f3ea9b1744aed395e0c6b78be8d3174cd83974c420e2d96d3"
+    },
+    "frontiers": [
+      {
+        "frontier": 0,
+        "changed_logits": 200042,
+        "max_abs": 0.009230494499206543,
+        "base_argmax": 236,
+        "trained_argmax": 236,
+        "base_recovered_exact": true
+      },
+      {
+        "frontier": 1,
+        "changed_logits": 200039,
+        "max_abs": 0.0075168609619140625,
+        "base_argmax": 225,
+        "trained_argmax": 225,
+        "base_recovered_exact": true
+      }
+    ],
+    "adapter_sha256": "dc515fc187511939715983661ee04c6e31b1da1aaccc1ca6702a5f3025a590a8"
+  }
 }
