@@ -1,0 +1,33 @@
+{
+  "metadata": {
+    "model": "Inkling-2-Mini-SQ-20",
+    "engine": "Cached",
+    "adapter": null,
+    "settings": {
+      "thinking": "off",
+      "capacity": 32768,
+      "max_steps": 256
+    },
+    "scoring": "Configuration equality and live systemd replay checks"
+  },
+  "case": {
+    "id": "repair-timeout-type",
+    "expected": {
+      "mode": "serve",
+      "name": "report-worker",
+      "timeout_ms": 250
+    },
+    "answer": {
+      "mode": "serve",
+      "name": "report-worker",
+      "timeout_ms": 250
+    },
+    "outcome": "correct",
+    "question": "Recover the failed report worker while preserving the configured duration and unrelated settings.",
+    "evidence": "Live unit journal read verified in tool ledger. Published repair served three TCP health probes. Duplicate apply preserved invocation."
+  },
+  "archive_sha256": "53ecdd7f4ee137f31fb471515443d759223cb272cf053797d988a0901378d3d3",
+  "run_result_artifact": "141f0799d7af9ff654c6f1e67725bdafe7954d8cbb3b58334a7a35518a5d3bbf",
+  "inference_host": "llm-60",
+  "deployment": "operator-configured systemd path unit"
+}
