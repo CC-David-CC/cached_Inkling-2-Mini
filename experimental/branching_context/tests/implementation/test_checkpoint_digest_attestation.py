@@ -48,6 +48,21 @@ class CheckpointDigestAttestationTests(unittest.TestCase):
             self.assertEqual(digest_attestation.restore_payload_digest(blob), expected)
             compute.assert_called_once_with(blob)
 
+    def test_full_verification_rehashes_even_inside_export_scope(self):
+        blob = b'full-checkpoint'
+        with digest_attestation.checkpoint_export_scope():
+            raw = digest_attestation.exported_payload_digest(blob)
+            owner = Checkpoint.create('model', 'profile', 1, blob, (1.,))
+            self.addCleanup(digest_attestation.set_restore_verification, 'fast')
+            digest_attestation.set_restore_verification('full')
+            with mock.patch.object(digest_attestation.hashlib, 'sha256',
+                                   wraps=digest_attestation.hashlib.sha256) as compute:
+                for _ in range(2):
+                    self.assertEqual(checkpoint_digest(owner), owner.checksum)
+                    self.assertEqual(digest_attestation.restore_payload_digest(blob), raw)
+                self.assertEqual(compute.call_args_list, [mock.call(blob)] * 4)
+            self.assertIsNone(digest_attestation.attested_owner_for_digest(owner.checksum))
+
     def test_prepared_publish_and_pool_handoff_reuse_verified_owner_digest(self):
         """The same prepared owner crosses writer validation and pool admission."""
         durable_fixtures.DurableRestoreControlTests.setUp(self)

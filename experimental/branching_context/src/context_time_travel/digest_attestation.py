@@ -18,6 +18,15 @@ _OWNERS = OrderedDict()
 
 
 _export = threading.local()
+_restore_verification = 'fast'
+
+
+def set_restore_verification(mode):
+    """Select the server-wide digest policy before starting worker threads."""
+    if mode not in ('fast', 'full'):
+        raise ValueError('Expected fast or full restore verification')
+    global _restore_verification
+    _restore_verification = mode
 
 
 @contextmanager
@@ -40,10 +49,10 @@ def exported_payload_digest(blob):
     return digest.digest()
 
 
-def _compute_digest(blob, frontier):
+def _compute_digest(blob, frontier, *, reuse_export=True):
     state_identity = blob if isinstance(blob, bytes) else blob.identity
     payload = getattr(_export, 'payload', None)
-    if payload is not None and blob is payload[0]:
+    if reuse_export and payload is not None and blob is payload[0]:
         digest = payload[1].copy()
     else:
         digest = hashlib.sha256(state_identity)
@@ -91,7 +100,7 @@ def _remember(owner, digest):
 
 def restore_payload_digest(blob):
     """Reuse a scoped export hash only for the very same immutable bytes."""
-    if type(blob) is bytes:
+    if _restore_verification == 'fast' and type(blob) is bytes:
         with _LOCK:
             for owner_ref, payload, _, _, _, raw_digest in reversed(_OWNERS.values()):
                 if payload is blob and raw_digest is not None and owner_ref() is not None:
@@ -101,6 +110,8 @@ def restore_payload_digest(blob):
 
 def attested_owner_for_digest(checksum):
     """Find a live immutable RAM reference for bytewise on-disk validation."""
+    if _restore_verification == 'full':
+        return None
     with _LOCK:
         for owner_ref, blob, frontier, expected, digest, _ in reversed(_OWNERS.values()):
             if checksum == expected == digest:
@@ -112,6 +123,8 @@ def attested_owner_for_digest(checksum):
 
 def verified_checkpoint_digest(owner):
     """Return the actual RAM digest, reusing only the exact certified owner."""
+    if _restore_verification == 'full':
+        return _compute_digest(owner.blob, owner.frontier, reuse_export=False)
     key = id(owner)
     with _LOCK:
         entry = _OWNERS.get(key)

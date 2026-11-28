@@ -76,7 +76,11 @@ def main():
     parser.add_argument('--dflash2-resident', action='store_true', help='keep DFlash2 target embedding and head on GPU')
     parser.add_argument('--vision', action='store_true')
     parser.add_argument('--port', type=int, default=18061, help='TCP port (0 selects an available port)')
+    parser.add_argument('--restore-verification', choices=('fast', 'full'), default='fast',
+                        help='Reuse verified immutable RAM owners (fast) or recompute checkpoint digests (full)')
     args = parser.parse_args()
+    from context_time_travel.digest_attestation import set_restore_verification
+    set_restore_verification(args.restore_verification)
     if not 0 <= args.port <= 65535:
         parser.error('--port must be between 0 and 65535')
     if args.ram_cache_gib is not None and args.ram_cache_gib <= 0:
@@ -157,6 +161,7 @@ def serve(args, temporary):
 
             signal.signal(signal.SIGTERM, stop)
             print(json.dumps({'event': 'ready', 'address': server.server_address, 'store': str(directory),
+                              'restore_verification': args.restore_verification,
                               'storage': 'temporary RAM' if temporary else 'persistent',
                               'ram_cache_bytes': ram_bytes, 'store_limit_bytes': store_bytes}), flush=True)
             server.serve_forever()

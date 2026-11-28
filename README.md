@@ -418,6 +418,8 @@ absolute-position image embedding rows. Its histories also bind the original
 image, encoder profile, and exact embedding bytes. The Strata chat baseline
 and the PCC token service have separate launchers.
 
+The PCC launcher defaults to `--restore-verification fast`. A live, previously verified immutable RAM checkpoint can reuse its digest. Disk payload validation still reads every byte. Choose `--restore-verification full` to recompute the SHA-256 during checkpoint validation, including RAM cache hits. The startup record reports the selected mode. Both modes use the same checkpoint identities, so you can write a checkpoint in fast mode and reopen it in full mode.
+
 The [upstream README](README-PCC.md) records earlier PCC model results. Those
 results apply to their documented profiles.
 
