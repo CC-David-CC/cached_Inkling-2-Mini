@@ -1,0 +1,3 @@
+stage,logits,unequal_float_bits,max_abs_diff,same_argmax
+prefill,200058,0,0.0,True
+final,200058,200056,0.688603401184082,True
