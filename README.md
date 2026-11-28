@@ -38,6 +38,8 @@ With a 4 GiB expert pool, the undrafted 250,000-token run read the register in 1
 
 Reducing the GPU expert pool to 2 GiB let DSpark finish the same 250k prompt. Prefill took 225.81 seconds and generation took 9.06 seconds (56.5 tokens/s). All 512 token IDs matched the 4 GiB undrafted control. Total native time was 234.87 seconds versus 148.38 seconds. Both drafting mode and expert placement changed between these two successful runs. [2 GiB DSpark measurements](docs/benchmarks/inkling/dspark-250k-2gib.json)
 
+The two successful 250k runs matched all 200,058 logits immediately after prefill. After 512 identical generated IDs, all 200,058 final logits differed bitwise (maximum absolute difference 1.652). Both final rows still selected token 13. This qualifies greedy token agreement on this prompt. Applications requiring exact continuation logits should use the validated undrafted profile. [Frontier comparison](docs/benchmarks/inkling/dspark-250k-frontiers.csv)
+
 ![Prefill speed across a 250,000-token document](docs/benchmarks/inkling/llm60-250k-prefill.png)
 
 One SQ-10 worker processed 250,000 station-register tokens in **138.53 seconds** (1,805 input tokens/s). The native counter confirmed the full input length, and the backend returned 200,058 logits at the frontier. Timing starts after model load and tokenization. The run used a 262,144-token window, FP16 device KV, a 4 GiB GPU expert pool, forced GPU expert computation and drafting off. This prefill run measured input processing only. [Prefill timings](docs/benchmarks/inkling/llm60-250k-prefill.csv)
