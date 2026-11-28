@@ -17,7 +17,7 @@
 --- a/docs/benchmarks/inkling/branchwrite-systemd-repair/verify_diagnosis.py
 +++ b/docs/benchmarks/inkling/branchwrite-systemd-repair/verify_diagnosis.py
 @@ -19,12 +19,12 @@
-             if plan[4].get("command") != "cat /run/branchwrite/unit-journal":
+             if not reads_journal(plan[4].get("command")):
                  continue
              output = log.read_artifact(Artifact(*result["stdout"]))
 -            if unit.encode() in output and b"ValueError: unsupported mode" in output:
