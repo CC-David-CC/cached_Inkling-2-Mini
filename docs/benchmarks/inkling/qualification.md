@@ -16,6 +16,15 @@ For supervised coding, use base SQ-20 on llm-60, one worker, greedy direct const
 | llm-79, AMD | Evaluation host pending its own installation and workload checks. | The CUDA qualification on llm-49 and llm-60 covers those hosts only. |
 | Adapter development | Keep the exact merged parent for each fixed-rank round. Evaluate each candidate before promotion. | Round two gained one Linux answer and lost one Python answer at an unchanged 4/8. [Paired results](backbone-query-round2-retention.csv) |
 
+### Live coding and Linux control
+
+| Task | Result | Evidence |
+|---|---|---|
+| Repair an invalid batch limit in the Ubuntu guest on llm-49 | Pass for this supervised service workflow | Before BranchWrite resumed, S³ had credited observation of the failure. After resume it also credited repair, deployment request, health probe and report. The guest journal recorded the original configuration error and the service-generated readiness marker after deployment. |
+| Repair the adapter lineage check on llm-60 | Failed autonomous repair | Base SQ-20 resumed from a RAM checkpoint. At 32k it exceeded context. At 64k it exhausted its step allowance with the compression tool unchanged. A 64k retry with missing-dependency feedback also ended unchanged. Both 64k runs executed 11 project commands after resume. |
+
+A separate [reviewed fix](https://github.com/CC-David-CC/cached_Inkling-2-Mini/commit/7facf366cf90093f7eb2a02a6c5920829dda68b1) rejected a swapped first-round adapter with identical tensors and reproduced the original valid output byte for byte. The autonomous coding result remains a failure.
+
 ### Proposed acceptance gates
 
 1. **Daily coding and inspection.** From a fresh client checkout, run a real issue through patch selection, restart, export, and independent grading. Exercise a live incorrect inspection answer and require either a verified correction or an explicit unsuccessful result. Record both passing and failing cases.
