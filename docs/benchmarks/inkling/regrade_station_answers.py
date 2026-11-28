@@ -40,3 +40,31 @@ for run in runs:
         gains += passed and not base
         losses += base and not passed
     print(f"{run},{correct},{gains},{losses}")
+
+with (directory / "failure-only-paired-answers.csv").open() as source:
+    practice = list(csv.DictReader(source))
+if len(practice) != len(expected) or {row["station"] for row in practice} != expected.keys():
+    raise ValueError("Failure-only evaluation must cover each original station exactly once")
+if any(row["expected"] != expected[row["station"]] for row in practice):
+    raise ValueError("Failure-only ground truth differs from the original register")
+
+base_correct = {row["station"] for row in records
+                if row["stations-v1-base"].strip().lower().strip(" .") == expected[row["station"]]}
+previous = base_correct
+print("optimizer_step,correct,original_successes_retained,gains_since_previous,losses_since_previous")
+with (directory / "failure-only-rounds.csv").open() as source:
+    summaries = list(csv.DictReader(source))
+steps = [int(summary["optimizer_step"]) for summary in summaries]
+answer_steps = sorted(int(key.removeprefix("step_")) for key in practice[0] if key.startswith("step_"))
+if steps != answer_steps:
+    raise ValueError("Optimizer steps differ between answer and summary files")
+for step, summary in zip(steps, summaries):
+    correct_now = {row["station"] for row in practice
+                   if row[f"step_{step}"].strip().lower().strip(" .") == expected[row["station"]]}
+    gains, losses = len(correct_now - previous), len(previous - correct_now)
+    measured = (len(correct_now), len(correct_now - base_correct), gains, losses)
+    columns = ("correct_of_54", "original_misses_fixed", "gained", "lost")
+    if measured != tuple(int(summary[column]) for column in columns):
+        raise ValueError(f"Step {step} summary differs from paired answers")
+    print(f"{step},{len(correct_now)},{len(correct_now & base_correct)},{gains},{losses}")
+    previous = correct_now
