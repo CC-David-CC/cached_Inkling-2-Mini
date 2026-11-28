@@ -13,6 +13,7 @@ from threading import RLock
 from .digest_attestation import exported_payload_digest, restore_payload_digest
 from .checkpoint_cache import CheckpointCache
 from .input_spans import InputHistory
+from . import min_p
 from .real import NativeBackend, digest_file
 from .store import IntegrityError, InvalidOperation
 
@@ -47,7 +48,7 @@ def model_contract_id(vision=False, adapter_sha256=None, weights_sha256=MODEL_SH
     return hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
 
 
-def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None, capacity=8192, grammar=False, draft=False, gpus=1, pack="SQ-20", dflash2=None, dflash2_resident=False, kv_offload="off", serial_followup=False):
+def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None, capacity=8192, grammar=False, draft=False, gpus=1, pack="SQ-20", dflash2=None, dflash2_resident=False, kv_offload="off", serial_followup=False, greedy_text_stops=False):
     if pack not in PACK_HASHES:
         raise ValueError('Unknown Inkling pack')
     weights = PACK_HASHES[pack]
@@ -104,6 +105,11 @@ def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None, 
         if dflash2_resident:
             execution["dflash2_target_placement"] = "gpu"
         extra["dflash2_assets"] = [str(Path(path).resolve(strict=True)) for path in dflash2]
+    if greedy_text_stops:
+        if vision or draft or dflash2:
+            raise ValueError('Greedy text stops require undrafted text')
+        execution.update(selected_token_protocol="consumed-selected-receipt-v1",
+                         sampling_protocol=min_p.GREEDY_PROTOCOL)
     if grammar:
         execution.update(selected_token_protocol="consumed-selected-receipt-v1",
                          grammar_tokenizer_sha256=GRAMMAR_TOKENIZER_SHA256)
@@ -288,6 +294,14 @@ class InklingBackend(NativeBackend):
         if token < 0:
             raise IntegrityError(self.lib.ctt_error().decode())
         return token
+
+    def sample_legal(self, lease, mask, temperature, min_p_value, draw):
+        if temperature != 0 or min_p_value != 0 or draw != 0:
+            raise InvalidOperation('Inkling selected-token sampling requires unfiltered greedy decoding')
+        token = self.select_greedy(lease)
+        if mask[token // 8] & (1 << (token % 8)):
+            return token
+        return min_p.choose(self.logits(lease), mask, temperature=0, min_p=0, draw53=0)["token"]
 
     def consume_generated(self, lease, ids):
         if len(ids) != 1:

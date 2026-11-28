@@ -53,6 +53,7 @@ def main():
     storage = parser.add_mutually_exclusive_group()
     storage.add_argument('--store', type=Path, help='persistent checkpoint and branch directory')
     storage.add_argument('--persistent', action='store_true', help='use the profile’s runtime checkpoint directory')
+    parser.add_argument('--greedy-text-stops', action='store_true', help='Enable checkpointed stop strings for undrafted greedy text')
     parser.add_argument('--serial-followup', action='store_true', help='Consume text generation request inputs one token at a time after loading the parent')
     parser.add_argument('--suffix-checkpoints', action='store_true', help='Save eligible text branches as parent-bound suffixes')
     parser.add_argument('--ram-cache-gib', type=int, help='resident checkpoint pool capacity in GiB')
@@ -88,7 +89,7 @@ def serve(args, temporary):
     runtime = args.runtime.resolve(strict=True)
     key = local_key(runtime / 'pcc-http.key')
     normalizer = CowImageNormalizer() if args.vision else None
-    profile = runtime_profile(runtime, vision=args.vision, capacity=args.capacity, serial_followup=args.serial_followup, draft=args.dspark, gpus=args.gpus, kv_offload=args.kv_offload, pack=args.pack, dflash2=args.dflash2, dflash2_resident=args.dflash2_resident, grammar=bool(args.grammar_store),
+    profile = runtime_profile(runtime, vision=args.vision, capacity=args.capacity, serial_followup=args.serial_followup, greedy_text_stops=args.greedy_text_stops, draft=args.dspark, gpus=args.gpus, kv_offload=args.kv_offload, pack=args.pack, dflash2=args.dflash2, dflash2_resident=args.dflash2_resident, grammar=bool(args.grammar_store),
                               normalizer_id=normalizer.identity if normalizer else None, adapter=args.adapter)
     store_name = 'pcc-vision-http-store' if args.vision else 'pcc-http-store'
     if args.pack != 'SQ-20':

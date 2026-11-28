@@ -1,0 +1,28 @@
+{
+  "host": "llm-60",
+  "capacity": 8192,
+  "pack": "SQ-10",
+  "max_tokens": 32,
+  "stop": "\n",
+  "answer": {
+    "snapshot": "e9f1ebeb571db592390f22e83f5ba370229522f4501e91416cd551df4061439f",
+    "tokens": [
+      145879,
+      145867,
+      146079,
+      198
+    ],
+    "grammar_complete": false,
+    "stopped": true,
+    "generation_seconds": 0.12656781706027687,
+    "state_save_seconds": 0.05248891608789563,
+    "request_seconds": 0.25304681598208845,
+    "counter_deltas": {
+      "consumed_tokens": 4,
+      "forward_tokens": 4
+    },
+    "capture_seconds": 0.022675039945170283,
+    "ram_reservation_bytes": 31976400,
+    "text": "ORANGE"
+  }
+}

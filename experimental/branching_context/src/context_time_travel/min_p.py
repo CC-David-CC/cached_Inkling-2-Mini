@@ -13,6 +13,7 @@ import struct
 from collections.abc import Mapping, Sequence
 
 
+GREEDY_PROTOCOL = "greedy-selected-token-v1"
 MIN_P_PROTOCOL = "full-vocab-min-p-u53-v1"
 SAMPLING_PROTOCOL_V2 = "full-vocab-min-p-u53-v2"
 DRY_PROTOCOL = "full-vocab-dry-min-p-u53-v3"
@@ -173,6 +174,11 @@ def adaptive_enabled(policy):
 
 
 def supports_policy(protocol, policy):
+    if protocol == GREEDY_PROTOCOL:
+        return (policy['temperature'] == 0 and policy['min_p'] == 0
+                and policy['top_k'] == 0 and policy['top_p'] == 1
+                and policy.get('repetition_penalty', 1) == 1 and not dry_enabled(policy)
+                and not mirostat_enabled(policy) and not adaptive_enabled(policy))
     if adaptive_enabled(policy):
         return protocol == SAMPLING_PROTOCOL_V7
     if mirostat_enabled(policy):
