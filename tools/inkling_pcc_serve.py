@@ -15,7 +15,7 @@ sys.path[:0] = [str(ROOT), str(ROOT / 'experimental/branching_context/src')]
 
 from context_time_travel.backend_registry import load_backend
 from context_time_travel.coordinator import ContextCoordinator
-from context_time_travel.inkling_backend import runtime_profile
+from context_time_travel.inkling_backend import QUERY_MUON_PACK, SERVING_PACK_HASHES, runtime_profile
 from context_time_travel.pools import PoolConfig
 from context_time_travel.real import BranchingModel
 from context_time_travel.store import Store
@@ -62,7 +62,7 @@ def main():
     parser.add_argument('--adapter', type=Path, help='trained Inkling head LoRA artifact')
     parser.add_argument('--grammar-store', type=Path, help='enable BranchWrite inline grammar registration')
     parser.add_argument('--capacity', type=int, default=8192, help='total prompt and generation token budget')
-    parser.add_argument('--pack', choices=('SQ-10', 'SQ-15', 'SQ-20'), default='SQ-20')
+    parser.add_argument('--pack', choices=tuple(SERVING_PACK_HASHES), default='SQ-20')
     parser.add_argument('--kv-offload', choices=('off', 'auto', 'on'), default='off',
                         help='Place global KV in GPU memory, split automatically, or use host RAM')
     parser.add_argument('--require-gpu-experts', action='store_true',
@@ -86,7 +86,7 @@ def main():
                      'Remove --dspark or --dflash2 to use --grammar-store.')
     if args.suffix_checkpoints and (args.dspark or args.dflash2 or args.vision or args.capacity <= 8192 or args.gpus != 1):
         parser.error('Suffix checkpoints require undrafted single-GPU text with capacity above 8192')
-    if (args.pack == 'SQ-20' and args.gpus == 1 and not args.dspark and not args.dflash2
+    if (args.pack in ('SQ-20', QUERY_MUON_PACK) and args.gpus == 1 and not args.dspark and not args.dflash2
             and not args.native_expert_selection):
         os.environ.setdefault('STRATA_INK_EXACT', '1')
     if args.grammar_store:

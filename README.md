@@ -631,6 +631,17 @@ currently use a new prepared prompt.
 Run `tools/test_inkling_pcc_vision_http.py RUNTIME FIXTURE write`, restart the
 vision service with the same store, then run the test in `read` mode.
 
+### Layer-0 Muon query adapter on SQ-20
+
+Cached serves the qualified rank-4 Muon query update as a separate weight pack. Building it requires the pinned SQ-20 base, NumPy, the calibrated PEFT export (SHA-256 `124e3ec997fedf1fd3ec37b218ffcffca602ead7a25cb6d0c064dfec79a247b1`), and 19.35 GB of additional storage. The builder verifies the final pack before publishing the file into the runtime directory.
+
+```bash
+python tools/inkling_merge_query.py "$runtime" /path/to/adapter_model.safetensors
+python tools/inkling_pcc_serve.py "$runtime" --pack SQ-20-Muon-Q0 --require-gpu-experts
+```
+
+Use `--pack SQ-20` to select the original model. Each pack has a distinct model contract and checkpoint namespace. The qualified merged profile uses single-GPU text with drafting off. The HTTP smoke test covers a five-token continuation after a server restart.
+
 ### Output-head LoRA
 
 The Inkling CUDA bridge can capture the frozen model's final normalized

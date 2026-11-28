@@ -1,0 +1,37 @@
+{
+  "pack": "SQ-20-Muon-Q0",
+  "prompt_ids": [
+    100,
+    101,
+    102
+  ],
+  "base": {
+    "exported_bytes": 6206952,
+    "logits_count": 200058,
+    "frontier_sha256": "17f0f0b3ce4d93049ade98aad6c0f214b4e7fe95a8fe2a2988da286ba3c1750b",
+    "payload_sha256": "40b5aa3f143d22911b2e924bad63e538e1d7ae0d63e484fdc03cd88565cc66bd"
+  },
+  "merged": {
+    "exported_bytes": 6206952,
+    "logits_count": 200058,
+    "frontier_sha256": "c1ae5a729c936eca6631ecac094cc988249063c762a8171e2c173edd81d10e98",
+    "payload_sha256": "250465de288d783ecd936161437e15d9d4e015dd8d2e54220e5a1960017ff45d"
+  },
+  "restarted": {
+    "result": "restart matched",
+    "generated": 5,
+    "forward": 5,
+    "counters": {
+      "consumed_tokens": 5,
+      "forward_tokens": 5,
+      "checkpoint_import_bytes": 4423680,
+      "resident_parent_restores": 0,
+      "resident_child_restores": 0
+    },
+    "payload": "250465de288d783ecd936161437e15d9d4e015dd8d2e54220e5a1960017ff45d"
+  },
+  "cross_pack_http_status": {
+    "base_reading_merged": 409,
+    "merged_reading_base": 409
+  }
+}

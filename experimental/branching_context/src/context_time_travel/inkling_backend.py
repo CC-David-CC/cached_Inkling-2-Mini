@@ -26,6 +26,8 @@ PACK_HASHES = {
     'SQ-15': '2ea32eed533afba257e2cbee7b073dc2c3da80fe55d1d2d794779b5498e30737',
     'SQ-20': MODEL_SHA256,
 }
+QUERY_MUON_PACK = 'SQ-20-Muon-Q0'
+SERVING_PACK_HASHES = {**PACK_HASHES, QUERY_MUON_PACK: '83232b9e80ec0627f51ffe79a33f6fb510de20b36c151e0409bdf08e2c40f432'}
 MAX_CONTEXT_TOKENS = 262144
 HEAD_WIDTH = 2304
 HEAD_ADAPTER_HEADER = struct.Struct('<8sI32s')
@@ -49,9 +51,11 @@ def model_contract_id(vision=False, adapter_sha256=None, weights_sha256=MODEL_SH
 
 
 def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None, capacity=8192, grammar=False, draft=False, gpus=1, pack="SQ-20", dflash2=None, dflash2_resident=False, kv_offload="off", serial_followup=False, greedy_text_stops=False):
-    if pack not in PACK_HASHES:
+    if pack not in SERVING_PACK_HASHES:
         raise ValueError('Unknown Inkling pack')
-    weights = PACK_HASHES[pack]
+    if pack == QUERY_MUON_PACK and (adapter or draft or dflash2 or vision or gpus != 1):
+        raise ValueError('The merged query adapter requires single-GPU undrafted text')
+    weights = SERVING_PACK_HASHES[pack]
     bridge = str(runtime / 'native-build/libinkling_pcc_bridge.so')
     build = {'sha256': {bridge: digest_file(bridge)}}
     if type(capacity) is not int or not 8192 <= capacity <= MAX_CONTEXT_TOKENS:
@@ -401,7 +405,7 @@ class InklingBackend(NativeBackend):
             if self.adapter_sha256 or self.vision_path:
                 raise IntegrityError('Unsupported DSpark model configuration')
         weights = profile['model_weights_sha256']
-        if (weights not in PACK_HASHES.values()
+        if (weights not in SERVING_PACK_HASHES.values()
                 or profile['model_contract_id'] != model_contract_id(bool(self.vision_path), self.adapter_sha256, weights)
                 or type(self.context_capacity) is not int or not 8192 <= self.context_capacity <= MAX_CONTEXT_TOKENS
                 or any(execution.get(key) != value for key, value in required.items() if key != 'capacity')
