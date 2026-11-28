@@ -1,0 +1,38 @@
+{
+  "host": "llm-60",
+  "pack": "SQ-20",
+  "prompt_tokens": 250000,
+  "capacity": 262144,
+  "control_tokens": [
+    100,
+    101,
+    102,
+    103,
+    104
+  ],
+  "control_payload_sha256": "746417e06f794fae082205dcb70d9403815f1e7d2ca72b69c9d0656592de4816",
+  "control_counters": {
+    "consumed_tokens": 5,
+    "forward_tokens": 5,
+    "checkpoint_import_bytes": 0,
+    "resident_parent_restores": 1,
+    "resident_child_restores": 0,
+    "draft_nodes": 7,
+    "drafts_accepted": 4
+  },
+  "fresh_reader": {
+    "result": "restart matched",
+    "generated": 5,
+    "forward": 5,
+    "counters": {
+      "consumed_tokens": 5,
+      "forward_tokens": 5,
+      "checkpoint_import_bytes": 8363606016,
+      "resident_parent_restores": 0,
+      "resident_child_restores": 0,
+      "draft_nodes": 7,
+      "drafts_accepted": 4
+    },
+    "payload": "746417e06f794fae082205dcb70d9403815f1e7d2ca72b69c9d0656592de4816"
+  }
+}
