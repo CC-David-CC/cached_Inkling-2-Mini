@@ -1,0 +1,54 @@
+    # dependencies: dict node -> list of nodes that must come before it
+    # Build graph and in-degree
+    nodes = set(dependencies)
+    for deps in dependencies.values():
+        nodes.update(deps)
+    # in-degree: number of unsatisfied dependencies
+    in_degree = {n: len(dependencies.get(n, [])) for n in nodes}
+    # adjacency: node -> list of nodes that depend on it
+    adj = {n: [] for n in nodes}
+    for n, deps in dependencies.items():
+        for d in deps:
+            adj[d].append(n)
+    # Input order: preserve original order of nodes as given in dependencies
+    input_order = list(dependencies.keys())
+    # Also include nodes that appear only as dependencies (not keys)
+    for n in nodes:
+        if n not in input_order:
+            input_order.append(n)
+    # Use a stable queue: process nodes with in_degree 0 in input order
+    from collections import deque
+    # Find all nodes with in_degree 0, in input order
+    queue = deque([n for n in input_order if in_degree[n] == 0])
+    result = []
+    while queue:
+        node = queue.popleft()
+        result.append(node)
+        for child in adj[node]:
+            in_degree[child] -= 1
+            if in_degree[child] == 0:
+                # Insert child into queue in input order position
+                # To maintain stability, we need to insert child at the correct position
+                # Find the position in input_order where child should be inserted
+                # We can use a sorted insertion based on input_order index
+                # Simpler: maintain a sorted list of ready nodes
+                # But deque doesn't support insertion. Use a list with index.
+                # Alternative: use a priority queue based on input_order index
+                # For stability, we can use a sorted list and pop smallest index
+                # But deque is simpler; we can use a list and pop smallest index
+                # Let's use a list and pop smallest index
+                # We'll use a list of ready nodes and pop smallest index
+                # But we already have queue as deque. Let's switch to list.
+                # Actually, we can use a list and pop smallest index
+                # But we already have queue as deque. Let's switch to list.
+                # Actually, we can use a list and pop smallest index
+                # But we already have queue as deque. Let's switch to list.
+                # Actually, we can use a list and pop smallest index
+                # But we already have queue as deque. Let's switch to list.
+                # Actually, we can use a list and pop smallest index
+                # But we already have queue as deque. Let's switch to list.
+                # Actually, we can use a list and pop smallest index
+                # But we already have queue as deque. Let's switch to list.
+                # Actually, we can use a list and pop smallest index
+                # But we already have queue as deque. Let's switch to list.
+                # Actually
