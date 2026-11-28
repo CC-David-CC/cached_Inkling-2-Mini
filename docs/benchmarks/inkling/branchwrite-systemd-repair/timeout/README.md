@@ -30,3 +30,9 @@ export PATH="$client/venv/bin:$PATH"
 The earlier SQ-20 runtime and the clean portable build each recorded six completed tool calls in this order. Both read the failed unit journal, read `worker.py`, read `service.json`, replaced the configuration, ran `python3 worker.py --check`, and finished. Each shell command returned zero. The model had explicit instructions to inspect the journal and run the check.
 
 Both exported archives matched the published `fix.bw` byte for byte. Applying that archive to the clean-build incident's original project reproduced its entire repaired directory. The decision comparison covers tool names, targets, order and command results. The [per-decision ledger counts](decision-tokens.csv) matched at every step. Each run consumed 260 output tokens over six model requests. Editing the file consumed 62 tokens and the finish action consumed 74. These counts exclude prompt processing. Cross-build logit equivalence remains untested.
+
+### Cost of discovering the journal
+
+![Generated token costs by action for three BranchWrite tool descriptions](decision-cost.png)
+
+All three runs produced the correct configuration. Only the latter two read the failed service journal. The final description yielded one finish request and the highest total output cost. Each bar represents one run. [Per-action ledger counts](journal-discovery-tokens.csv)
