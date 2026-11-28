@@ -55,6 +55,8 @@ def main():
     storage.add_argument('--persistent', action='store_true', help='use the profile’s runtime checkpoint directory')
     parser.add_argument('--greedy-text-stops', action='store_true', help='Enable checkpointed stop strings for undrafted greedy text')
     parser.add_argument('--serial-followup', action='store_true', help='Consume text generation request inputs one token at a time after loading the parent')
+    parser.add_argument('--cache-transfer', action='store_true',
+                        help='Enable authenticated export of saved checkpoints to matching execution profiles')
     parser.add_argument('--suffix-checkpoints', action='store_true', help='Save eligible text branches as parent-bound suffixes')
     parser.add_argument('--ram-cache-gib', type=int, help='resident checkpoint pool capacity in GiB')
     parser.add_argument('--adapter', type=Path, help='trained Inkling head LoRA artifact')
@@ -127,7 +129,7 @@ def serve(args, temporary):
             raise
 
     config = PoolConfig(gpus=(0,), ram_bytes=ram_bytes,
-                        disk_bytes=store_bytes,
+                        disk_bytes=store_bytes, cache_transfer=args.cache_transfer,
                         min_available_bytes=8 * 1024**3)
     coordinator = ContextCoordinator(directory, config, factory, input_preparer=preparer)
     try:
