@@ -1,0 +1,38 @@
+[
+  {
+    "payload": "3255a0967390c3fc6490eedd17036e49a011d402d25d08009aec5cacb0ec23be",
+    "state_sha256": "8ebeaeba81f81e85f3bbb15386f21f174fbc6bcfd3ab1a082ecf572fbad7c9cf",
+    "frontier_sha256": "c10c4b098d905a2f86d40106f9bbdf5015125292dac1139a602c161a3bc3501e",
+    "logits": 200058,
+    "argmax": 214,
+    "bitwise_different_logits": 0,
+    "max_absolute_delta": 0.0
+  },
+  {
+    "payload": "96c73a6afb89ee6bc9313fc5043d83108f3e2b65764bb5b6a02874f7acc3b5a7",
+    "state_sha256": "e213a5e2dcc70295f2deff9eb530f13bbe09055d7867f619efc4bae8c317d8c9",
+    "frontier_sha256": "3554ec7ce955e5c80d8c8ac704f36889c0368d754b9d5016613a867f36ddc037",
+    "logits": 200058,
+    "argmax": 214,
+    "bitwise_different_logits": 199963,
+    "max_absolute_delta": 0.004575252532958984
+  },
+  {
+    "payload": "be7f4f36f2f7765392e23b2b53e2cf341a14345e243780ad0a32f719ac7b23b1",
+    "state_sha256": "202dbe3ad217e89def56dcfa5409e5cf2884af70ff37edaecb5f57f2e31677d8",
+    "frontier_sha256": "eabbb812edcf006a6a91a9719afe67f2640d3c10c433b615b65068bdb816992b",
+    "logits": 200058,
+    "argmax": 214,
+    "bitwise_different_logits": 199984,
+    "max_absolute_delta": 0.003708958625793457
+  },
+  {
+    "payload": "831bd94a064dbc003840698ab47809974369e32a19dc69369bfa3584c758b239",
+    "state_sha256": "5dcfa3e0444588d2eaa0c213d7292acae9f59aa110ee35e145496f28c6990f88",
+    "frontier_sha256": "8db55a2d2ed9cd45b30dc1e990434efb0a659a6c15a8d5fe9552dca9c120d677",
+    "logits": 200058,
+    "argmax": 214,
+    "bitwise_different_logits": 199994,
+    "max_absolute_delta": 0.004869937896728516
+  }
+]
