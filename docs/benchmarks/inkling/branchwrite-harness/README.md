@@ -12,3 +12,5 @@ node grade.cjs "$PWD/after.cjs"
 ```
 
 The baseline exits 1 and the repair exits 0. See results.json for the scored runs. An earlier run with Node missing produced a correct patch but exhausted its workflow budget. A development run rejected reopen after the terminal worker source changed mid-run. The scored runs used stable worker code. The optional BW_NODE_EXECUTABLE points to an operator-supplied Node binary mounted read-only in the shell namespace. The tested binary's SHA-256 was ccacb2d6d87ba6d118b2bffc1ae33747a05cc5fc6b1f1ec4fc1d420b687e952d.
+
+A separate minimal-profile run executed a granted read-only Python kernel-release probe and reached verified completion. This exercises local diagnostics. Service mutation and rollback require separate qualification.
