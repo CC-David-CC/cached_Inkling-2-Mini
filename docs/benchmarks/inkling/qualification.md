@@ -198,3 +198,7 @@ A fresh llm-60 process reopened the persisted two-token SQ-20 suffix of a 1,023-
 ### All-GPU SQ-20 HTTP restart at 128k
 
 On llm-60 two sequential Cached processes each loaded all 3,072 SQ-20 experts on one RTX PRO 6000. The writer created a 131,072-token parent and forked a sibling. The reader reopened the tmpfs store, imported 4,466,573,312 bytes, and matched the uninterrupted sibling’s five generated tokens and complete numerical payload digest. Five forward steps were recorded. This test used the PCC HTTP token client with FP16 KV and drafting off. [Result and placement](sq20-all-gpu-128k-http-restart.json)
+
+### All-GPU SQ-20 sibling reuse at 128k
+
+A native worker on llm-60 held all 3,072 experts in VRAM and prefetched a synthetic 131,072-token parent once. Two distinct 18-token branches each had an uninterrupted continuation control. Switching B/A/B selected the resident 4,466,573,312-byte parent in 22.1–22.4 ms and imported 7,372,800 native suffix bytes per switch in 11.5–11.6 ms. The three continuations matched all 200,058 logits and forwarded one new token each. These timings cover the native backend in one process. [Per-switch timings and counters](sq20-128k-live-siblings.json)
