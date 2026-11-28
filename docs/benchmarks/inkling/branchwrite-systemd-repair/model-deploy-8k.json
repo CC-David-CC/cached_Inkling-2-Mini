@@ -1,0 +1,55 @@
+{
+  "model": "Inkling-2-Mini-SQ-20",
+  "inference_host": "llm-60",
+  "capacity": 8192,
+  "completed": false,
+  "service_greeting": "ready-1d73107a85de9475",
+  "actions": [
+    {
+      "tool": "run_shell",
+      "args": {
+        "command": "cat /run/branchwrite/unit-journal"
+      },
+      "stdout_sha256": "f185f531806fd49f577b7f266c69918d161a6d927534ba6a3f8c758ac79d5598"
+    },
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "service.json"
+      },
+      "stdout_sha256": "ad2b5db8c298e85f433c2c44976ff1de9aaafb7b7dd611f5eae1bfb6f940576c"
+    },
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "worker.py"
+      },
+      "stdout_sha256": "76ff18057d1b66f9904b2b1b5e7ccdd4de1f1798537b7e46411e4d9d042b258d"
+    },
+    {
+      "tool": "replace",
+      "args": {
+        "after": "{\"mode\":\"serve\",\"name\":\"report-worker\"}",
+        "before": "{\"mode\":\"serv\",\"name\":\"report-worker\"}",
+        "path": "service.json",
+        "source_sha256": "ad2b5db8c298e85f433c2c44976ff1de9aaafb7b7dd611f5eae1bfb6f940576c"
+      },
+      "stdout_sha256": "2ed074f2ce5414c5cebbb5bee5c2bf2e88cff7fdde315628d5ae1b82696fc07a"
+    },
+    {
+      "tool": "create_file",
+      "args": {
+        "content": "deploy",
+        "path": "deploy.request"
+      },
+      "stdout_sha256": "44f53a2a49f45bb1275855802f44c208ea78a2b437c27b775e1253a0c671fc25"
+    },
+    {
+      "tool": "run_shell",
+      "args": {
+        "command": "cat /run/branchwrite/health"
+      },
+      "stdout_sha256": "a262a6b129974db5935c93ec4cd43bcab411d2a2c9c8dcc03f97830c9f7a9431"
+    }
+  ]
+}
