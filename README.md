@@ -78,6 +78,8 @@ On llm-60, Cached generated 1,024 tokens from a 1,400-record inventory prompt at
 
 ![First visible text, completed request time and generation rate on the inventory prompt](docs/benchmarks/inkling/sq20-inventory-1024.png)
 
+With all SQ-20 experts on GPU and capacity set to 32,768 tokens, peak observed process memory reached 20.10 GiB undrafted, 21.17 GiB with DSpark and 25.01 GiB with resident DFlash2. [Speed versus VRAM](docs/benchmarks/inkling/sq20-inventory-vram.png) · [Sampling results](docs/benchmarks/inkling/sq20-inventory-vram.csv)
+
 Two warm requests submitted together finished in 9.64–9.69 s versus 10.37–10.43 s sequentially. One concurrent caller waited 4.83–5.08 s for first visible text. [Per-request timings](docs/benchmarks/inkling/sq20-inventory-pair.csv)
 
 ![Time to finish two inventory requests and time to first visible text](docs/benchmarks/inkling/sq20-inventory-pair.png)
