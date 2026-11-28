@@ -101,7 +101,7 @@ def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None, 
     if dflash2 is not None:
         if vision or adapter or grammar or draft or gpus != 1:
             raise ValueError("DFlash2 requires single-GPU unadapted text")
-        execution.update(draft="dflash2", state_format="inkling-cuda-dflash2-rows-v1")
+        execution.update(dflash2_init_order="target-first", draft="dflash2", state_format="inkling-cuda-dflash2-rows-v1")
         if dflash2_resident:
             execution["dflash2_target_placement"] = "gpu"
         extra["dflash2_assets"] = [str(Path(path).resolve(strict=True)) for path in dflash2]
@@ -391,7 +391,7 @@ class InklingBackend(NativeBackend):
         if execution['draft'] == 'dflash2':
             if self.adapter_sha256 or self.vision_path or devices != [0] or 'layer_split_devices' in execution:
                 raise IntegrityError('Unsupported DFlash2 model configuration')
-            required.update(draft='dflash2', state_format='inkling-cuda-dflash2-rows-v1')
+            required.update(dflash2_init_order='target-first', draft='dflash2', state_format='inkling-cuda-dflash2-rows-v1')
         if self.draft:
             required.update(draft='dspark', state_format='inkling-cuda-fp16-dspark-v1')
             if self.adapter_sha256 or self.vision_path:

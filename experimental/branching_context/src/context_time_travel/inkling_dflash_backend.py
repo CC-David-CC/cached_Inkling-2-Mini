@@ -3,10 +3,8 @@ from contextlib import contextmanager
 from io import BytesIO
 import struct
 
-import torch
 
 from .inkling_backend import InklingBackend
-from .inkling_dflash_loader import load_proposer
 from .store import IntegrityError
 
 
@@ -17,6 +15,11 @@ class DFlashBackend(InklingBackend):
     def __init__(self, profile):
         super().__init__(profile)
         try:
+            # Load the native target first: PyTorch import order affects its CUDA logits.
+            import torch
+            from .inkling_dflash_loader import load_proposer
+
+            self.torch = torch
             stage_target = profile['execution'].get('dflash2_target_placement', 'host') == 'host'
             self.propose = load_proposer(*profile['dflash2_assets'], device='cuda:0', stage_target=stage_target)
             self.rows = torch.empty((1, self.context_capacity, 9216), dtype=torch.bfloat16, device='cuda:0')
@@ -25,6 +28,7 @@ class DFlashBackend(InklingBackend):
             raise
 
     def consume(self, lease, ids):
+        torch = self.torch
         start = self.position(lease) + 1
         taps = self.consume_dflash_taps(lease, ids)
         rows = torch.frombuffer(taps, dtype=torch.float32).reshape(4, len(ids), 2304)
@@ -65,6 +69,7 @@ class DFlashBackend(InklingBackend):
         return counters
 
     def export(self, lease):
+        torch = self.torch
         size = self.lib.ctt_state_size(lease)
         if size == 0:
             raise IntegrityError('Missing DFlash2 target state')
@@ -85,6 +90,7 @@ class DFlashBackend(InklingBackend):
             return stream.getvalue()
 
     def restore(self, lease, blob, *, history=None, frontier=None):
+        torch = self.torch
         if len(blob) < self.header.size or not history:
             raise IntegrityError('Missing DFlash2 checkpoint')
         magic, size, count = self.header.unpack_from(blob)
