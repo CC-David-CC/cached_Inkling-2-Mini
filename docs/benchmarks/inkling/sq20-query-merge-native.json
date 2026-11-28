@@ -1,0 +1,42 @@
+{
+  "method": "BF16 round-to-nearest-even merge of a rank-4 layer-0 Muon query adapter into a temporary copy of SQ-20; three separate native processes, FP16 KV, drafting off",
+  "prompt_ids": [
+    275,
+    371,
+    1300,
+    590,
+    270,
+    321
+  ],
+  "continuation_id": 501,
+  "merge": {
+    "target": "model.llm.layers.0.attn.wq_du.weight",
+    "shape": [
+      3072,
+      2304
+    ],
+    "base_sha256": "429ac03103fe7c46ba2027aa4e4fd650431beecb9f2473c9f14ed092af60a5a4",
+    "official_matches_sq20": true,
+    "rank": 4,
+    "scale": 1.0,
+    "elements": 7077888,
+    "changed_bf16": 4653225,
+    "merged_sha256": "d3350fa67200baf71bd5529eabfc180355c4d918dcfdfc1fe6771708b0e13305"
+  },
+  "frontiers": [
+    {
+      "row": 0,
+      "changed_logits": 200049,
+      "vocab": 200058,
+      "base_recovered_exact": true,
+      "max_abs": 0.02111339569091797
+    },
+    {
+      "row": 1,
+      "changed_logits": 200055,
+      "vocab": 200058,
+      "base_recovered_exact": true,
+      "max_abs": 0.01474618911743164
+    }
+  ]
+}
