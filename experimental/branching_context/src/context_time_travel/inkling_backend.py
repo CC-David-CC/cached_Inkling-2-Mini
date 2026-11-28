@@ -259,9 +259,18 @@ class InklingBackend(NativeBackend):
                 model = load(os.fsencode(self.profile['model_path']), self.context_capacity, False, gpu_count)
             else:
                 model = load(os.fsencode(self.profile['model_path']), self.context_capacity)
-        if model and self.adapter_sha256:
+        if model:
             try:
-                self._attach_adapter(model)
+                if self.profile.get('require_gpu_experts'):
+                    check = getattr(self.lib, 'ctt_require_gpu_experts', None)
+                    if check is None:
+                        raise IntegrityError('Rebuild the Inkling bridge to verify GPU expert placement')
+                    check.argtypes = [C.c_void_p]
+                    check.restype = C.c_int
+                    if check(model):
+                        raise IntegrityError(self.lib.ctt_error().decode())
+                if self.adapter_sha256:
+                    self._attach_adapter(model)
             except BaseException:
                 self.lib.ctt_unload(model)
                 raise

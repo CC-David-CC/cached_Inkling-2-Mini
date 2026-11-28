@@ -63,6 +63,8 @@ def main():
     parser.add_argument('--pack', choices=('SQ-10', 'SQ-15', 'SQ-20'), default='SQ-20')
     parser.add_argument('--kv-offload', choices=('off', 'auto', 'on'), default='off',
                         help='Place global KV in GPU memory, split automatically, or use host RAM')
+    parser.add_argument('--require-gpu-experts', action='store_true',
+                        help='Reject startup if the loaded Inkling model has any offloaded experts')
     parser.add_argument('--gpus', type=int, choices=(1, 2, 3), default=1)
     parser.add_argument('--dspark', action='store_true', help='experimental fused DSpark for greedy text requests')
     parser.add_argument('--dflash2', nargs=3, type=Path, metavar=('REFERENCE', 'DRAFT_DIR', 'TARGET'),
@@ -109,6 +111,7 @@ def serve(args, temporary):
     directory = temporary or args.store or runtime / store_name
     ram_bytes = (args.ram_cache_gib * 1024**3 if args.ram_cache_gib is not None
                  else max(8 * 1024**3, args.capacity * 262144))
+    profile['require_gpu_experts'] = args.require_gpu_experts
     profile['ram_cache_bytes'] = ram_bytes
     profile['suffix_checkpoints'] = args.suffix_checkpoints
     store_bytes = max(16 * 1024**3, args.capacity * 524288)

@@ -348,6 +348,11 @@ A build from fresh public source checkouts on llm-60 produced native engine 0.1.
 
 ## PCC integration
 
+Use `--require-gpu-experts` on the PCC launcher when a serving profile requires every expert on the GPU. Rebuild the native bridge to enable this option. The worker checks the loaded expert counts before accepting requests. Context capacity and available KV memory are separate constraints.
+
+On llm-60, an isolated SQ-10 worker with 133,120-token capacity, FP16 KV, drafting off and `STRATA_INK_EXACT=1` loaded all 3,072 experts on one GPU. After consuming 131,072 synthetic prompt tokens, it exported 4,466,573,312 bytes of native state. Restoring the parent in the same process and consuming token 501 reproduced all 200,058 continuation logits bit for bit (FP32 SHA-256 `fdb37691b98699e674b8eb94e8c4995ad8acb55aa9445367f36c374a40866a17`). In a separate launcher test, a 7 GiB expert budget placed 453 experts in host RAM and the residency requirement rejected startup with the observed 2,619/3,072 GPU count.
+
+
 PCC's Inkling CUDA adapter stores per-visit full-attention and sliding-window
 KV, ShortConv state, and a separately stored full-vocabulary frontier. The
 pinned profile consumes canonical text token IDs at 8K context with FP16 KV,

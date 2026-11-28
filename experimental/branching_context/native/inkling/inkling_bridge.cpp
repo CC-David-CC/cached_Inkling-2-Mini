@@ -49,6 +49,21 @@ struct Lease {
 extern "C" {
 int ctt_supports_expert_vram_budget() { return 1; }
 
+int ctt_require_gpu_experts(void* handle) try {
+    const auto stats = static_cast<Model*>(handle)->backend->stats();
+    if (stats.total_experts == 0 || stats.ram_experts_loaded != 0 ||
+        stats.vram_experts_loaded != stats.total_experts) {
+        error = "Inkling requires all experts on GPU, observed " +
+                std::to_string(stats.vram_experts_loaded) + "/" +
+                std::to_string(stats.total_experts) + " on GPU";
+        return -1;
+    }
+    return 0;
+} catch (const std::exception& e) {
+    error = e.what();
+    return -1;
+}
+
 const char* ctt_error() { return error.c_str(); }
 
 static void* load_devices(const char* path, int capacity, bool dspark, int gpus, const char* kv_offload) try {
