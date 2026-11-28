@@ -1,0 +1,29 @@
+[
+  {
+    "child": "0fbe430e3fd876bd6f5e0589af2f71d98d51f2e7f45325a6a83ad3a0233819df",
+    "parent": "8478ff70f113bf94f8351fe961869167ebade3d8d54c1eb45e620b4e46b82042",
+    "block_bytes": 16384,
+    "matching_offset_bytes": 268517376,
+    "literal_bytes": 4200986088,
+    "blocks": 272797,
+    "reconstructed_payload_sha256": "66ff3d3d65ea16b82370c8e5e7534393b5a0a20f26f7b87cd81303b6c479117f"
+  },
+  {
+    "child": "17287742abcb12de422d8d893bbe9e9c32fb56ead637596664ae42e9ccc7d11a",
+    "parent": "8478ff70f113bf94f8351fe961869167ebade3d8d54c1eb45e620b4e46b82042",
+    "block_bytes": 16384,
+    "matching_offset_bytes": 268517376,
+    "literal_bytes": 4200986088,
+    "blocks": 272797,
+    "reconstructed_payload_sha256": "e21b10b4e4f28c5e25817a4bf8ae5fc5081f80f3b0cf8e9498f108ac97e61cfb"
+  },
+  {
+    "child": "8b435d7aa29ec931896c7a694959361415ec190a04ddbd626e78c04f6ac033be",
+    "parent": "8478ff70f113bf94f8351fe961869167ebade3d8d54c1eb45e620b4e46b82042",
+    "block_bytes": 16384,
+    "matching_offset_bytes": 268517376,
+    "literal_bytes": 4200986088,
+    "blocks": 272797,
+    "reconstructed_payload_sha256": "9e67bcc19c78bdb78ddf0d5a458fd1b62abbe812da49c9c8910473aa9de713ac"
+  }
+]
