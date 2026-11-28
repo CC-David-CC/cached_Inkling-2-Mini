@@ -117,5 +117,113 @@
       "base_reading_trained": 409,
       "trained_reading_base": 409
     }
+  },
+  "http_lifecycle": {
+    "host": "llm-60",
+    "pack": "SQ-20-Backbone-Muon-Q0",
+    "require_gpu_experts": true,
+    "cancel_with_queued_request": [
+      {
+        "trial": 0,
+        "state": "cancelled",
+        "durable": false,
+        "preserved_tip": "348422a01747747d67714cecd63ba0d6d424b732e2e2284ba8c17cfe10dde6d4",
+        "surviving_tokens": [
+          68107,
+          200010,
+          200006
+        ],
+        "surviving_payload": "54692cd82366d198adff9c76a3e1e2d771eed78349153dc2c21a3a8f070df0b9"
+      },
+      {
+        "trial": 1,
+        "state": "cancelled",
+        "durable": false,
+        "preserved_tip": "348422a01747747d67714cecd63ba0d6d424b732e2e2284ba8c17cfe10dde6d4",
+        "surviving_tokens": [
+          68107,
+          200010,
+          200006
+        ],
+        "surviving_payload": "54692cd82366d198adff9c76a3e1e2d771eed78349153dc2c21a3a8f070df0b9"
+      },
+      {
+        "trial": 2,
+        "state": "cancelled",
+        "durable": false,
+        "preserved_tip": "348422a01747747d67714cecd63ba0d6d424b732e2e2284ba8c17cfe10dde6d4",
+        "surviving_tokens": [
+          68107,
+          200010,
+          200006
+        ],
+        "surviving_payload": "54692cd82366d198adff9c76a3e1e2d771eed78349153dc2c21a3a8f070df0b9"
+      }
+    ],
+    "invalid_request_recovery": [
+      {
+        "rejected_status": [
+          {
+            "status": 409,
+            "error": "COW max_tokens must be a positive integer"
+          },
+          {
+            "status": 409,
+            "error": "Requested branch revision changed"
+          }
+        ],
+        "preserved_tip": "aa4f2d614728b15d6d37a18ddc3c28aa813a55ae323d9ade49342c1309f9128c",
+        "surviving_tokens": [
+          68014,
+          68025,
+          220,
+          16,
+          13
+        ],
+        "surviving_payload": "d7aa82149bd7d1bf74e22bffa2fb6ec11e608ee03ecd478679b929555d426e52"
+      },
+      {
+        "rejected_status": [
+          {
+            "status": 409,
+            "error": "COW max_tokens must be a positive integer"
+          },
+          {
+            "status": 409,
+            "error": "Requested branch revision changed"
+          }
+        ],
+        "preserved_tip": "c26b971a3eb5827d0a465b593526035afd74b01bb26b35d74fb810f83105e999",
+        "surviving_tokens": [
+          201,
+          68,
+          201,
+          201,
+          201
+        ],
+        "surviving_payload": "c152a3080d2a36f9e787c5e36d390d76587af7d916c2358d9030173ee6584017"
+      },
+      {
+        "rejected_status": [
+          {
+            "status": 409,
+            "error": "COW max_tokens must be a positive integer"
+          },
+          {
+            "status": 409,
+            "error": "Requested branch revision changed"
+          }
+        ],
+        "preserved_tip": "789d91d0a28d77bac796605ba2a1a8bcab313a749e9e4af1bfa85184fc44d8b3",
+        "surviving_tokens": [
+          236,
+          99,
+          68014,
+          68025,
+          220
+        ],
+        "surviving_payload": "2e5f3383d8cf206a74839d1ff5c61903a3ed67fcfd23c7b8baa4d617f6648fff"
+      }
+    ]
   }
 }
