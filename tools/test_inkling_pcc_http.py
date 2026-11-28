@@ -13,6 +13,7 @@ def main():
     parser.add_argument('fixture', type=Path)
     parser.add_argument('mode', choices=('write', 'read'))
     parser.add_argument('--port', type=int, default=18061)
+    parser.add_argument('--prompt-tokens', type=int, help='length of a deterministic token-ID prompt')
     parser.add_argument('--chat', action='store_true')
     parser.add_argument('--adapter', type=Path)
     parser.add_argument('--pack', choices=('SQ-10', 'SQ-15', 'SQ-20'), default='SQ-20')
@@ -20,6 +21,10 @@ def main():
     args = parser.parse_args()
     if args.dspark_long:
         args.chat = True
+    if args.prompt_tokens is not None and (args.chat or not 1 <= args.prompt_tokens <= 262139):
+        parser.error('--prompt-tokens requires token mode and space for five output tokens')
+    token_ids = ([100 + i % 1000 for i in range(args.prompt_tokens)]
+                 if args.prompt_tokens is not None else [100, 101, 102])
     limit = 1024 if args.dspark_long else 5
     expected_contract = None
     if args.adapter:
@@ -34,10 +39,12 @@ def main():
                           json.dumps(payload).encode(),
                           {'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json'})
         try:
-            with urlopen(request, timeout=60) as response:
+            with urlopen(request, timeout=600 if args.prompt_tokens else 60) as response:
                 result = json.load(response)
         except HTTPError as error:
             raise AssertionError(f'{path}: {error.code}: {error.read().decode()}') from error
+        if path == 'fork':
+            return result
         assert result['event'] == 'complete', result
         if expected_contract is not None:
             assert result['receipt']['model_contract_id'] == expected_contract, result
@@ -50,12 +57,12 @@ def main():
     namespace = 'text/'  if args.chat else ''
 
     def create(branch):
-        prompt = dict(messages=messages) if args.chat else dict(token_ids=[100, 101, 102])
+        prompt = dict(messages=messages) if args.chat else dict(token_ids=token_ids)
         return call(namespace + 'create', dict(branch=branch, **prompt,
                                                operation_id='op-' + uuid.uuid4().hex, stream=False))
 
     def generate(branch, revision):
-        prompt = dict(messages=messages) if args.chat else dict(rendered_token_ids=[100, 101, 102])
+        prompt = dict(messages=messages) if args.chat else dict(rendered_token_ids=token_ids)
         return call(namespace + 'generate', dict(branch=branch, revision=revision, max_tokens=limit,
                                                  **prompt, settings={'temperature': 0}, stream=False,
                                                  operation_id='op-' + uuid.uuid4().hex))
@@ -63,8 +70,17 @@ def main():
     if args.mode == 'write':
         suffix = uuid.uuid4().hex
         left, right = 'left-' + suffix, 'right-' + suffix
-        left_root, right_root = create(left), create(right)
-        assert left_root['receipt']['snapshot'] == right_root['receipt']['snapshot']
+        left_root = create(left)
+        if args.prompt_tokens is not None:
+            # Branch from the saved long parent without repeating its prefill and staging.
+            saved = left_root['receipt']['snapshot']
+            branch = call('fork', dict(name=right, snapshot=saved))
+            assert branch['tip'] == saved
+            right_revision = branch['revision']
+        else:
+            right_root = create(right)
+            assert left_root['receipt']['snapshot'] == right_root['receipt']['snapshot']
+            right_revision = right_root['receipt']['branch']['revision']
         answer = generate(left, left_root['receipt']['branch']['revision'])
         assert 1 <= len(answer['answer']['tokens']) <= limit, answer
         if args.dspark_long:
@@ -73,11 +89,15 @@ def main():
             assert 0 < counters['drafts_accepted'] <= counters['draft_nodes']
         elif args.chat:
             assert answer['answer']['text'].strip() == '4', answer
-        args.fixture.write_text(json.dumps(dict(branch=right, root=right_root, answer=answer)))
+        fixture = dict(branch=right, revision=right_revision, answer=answer)
+        if args.prompt_tokens is None:
+            fixture['root'] = right_root
+        args.fixture.write_text(json.dumps(fixture))
         print(f'HTTP create and generate passed with {len(answer["answer"]["tokens"])} tokens')
     else:
         fixture = json.loads(args.fixture.read_text())
-        answer = generate(fixture['branch'], fixture['root']['receipt']['branch']['revision'])
+        revision = fixture['revision'] if 'revision' in fixture else fixture['root']['receipt']['branch']['revision']
+        answer = generate(fixture['branch'], revision)
         expected = fixture['answer']
         assert answer['answer']['tokens'] == expected['answer']['tokens'], answer
         assert answer['receipt']['payload_sha256'] == expected['receipt']['payload_sha256'], answer
@@ -85,6 +105,8 @@ def main():
         generated = len(answer['answer']['tokens'])
         # The chat renderer appends exactly two assistant framing tokens.
         assert forward == generated + (2 if args.chat else 0), answer
+        if args.prompt_tokens is not None:
+            assert answer['answer']['counter_deltas']['checkpoint_import_bytes'] > 0, answer
         if args.dspark_long:
             assert len(answer['answer']['tokens']) == limit
             counters = answer['answer']['counter_deltas']

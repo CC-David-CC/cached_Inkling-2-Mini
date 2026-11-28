@@ -540,6 +540,21 @@ visible answer `4` before and after restart with the same numerical payload
 SHA-256. The counter recorded three generated tokens and two appended
 assistant framing tokens.
 
+For the filled 128k token-ID test, start a worker with a persistent store on a filesystem with room for checkpoints. Use the same runtime, store, port and environment for both launches:
+
+```bash
+STRATA_INK_EXACT=1 python tools/inkling_pcc_serve.py "$runtime" --pack SQ-10 \
+    --capacity 133120 --require-gpu-experts --ram-cache-gib 18 --store "$store" --port 18071
+```
+
+From a second shell, run the write phase, stop and restart that worker, then run the read phase. The fixture holds the expected reply and branch revision.
+
+```bash
+python tools/test_inkling_pcc_http.py "$runtime" "$fixture" write --port 18071 --prompt-tokens 131072
+# Restart the same worker before running the next command.
+python tools/test_inkling_pcc_http.py "$runtime" "$fixture" read --port 18071 --prompt-tokens 131072
+```
+
 ### PCC HTTP vision service
 
 Start a separate Inkling vision profile with Pillow installed and the pinned
