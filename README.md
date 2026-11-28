@@ -423,9 +423,7 @@ git init -q "$runtime/strata-source"
 git -C "$runtime/strata-source" remote add origin https://github.com/Niko1221/Strata
 git -C "$runtime/strata-source" fetch --depth=1 origin b28ca95e3e6847f2d5e317994f253b66716deeaa
 git -C "$runtime/strata-source" checkout --detach FETCH_HEAD
-for patch in portable-state dspark-checkpoint layer-split-checkpoint; do
-    git -C "$runtime/strata-source" apply "$bridge/$patch.patch"
-done
+bash tools/inkling_patch_native.sh "$runtime/strata-source" portable
 ln -s "$assets/Inkling-2-Mini-SQ-20.strata" "$runtime/"
 ln -s "$assets/tokenizer-source.json" "$runtime/"
 cmake -S "$runtime/strata-source/engine/src/inkling2" -B "$runtime/native-build" \
@@ -442,6 +440,8 @@ test_dir=$(mktemp -d /dev/shm/inkling-check.XXXXXXXX)
 ```
 
 #### Native parent-plus-suffix regression
+
+For a fresh source checkout, select the `suffix` profile with `tools/inkling_patch_native.sh` to apply the full suffix patch series. The `host-kv` profile requires its own source tree because both extensions modify the same native transfer code.
 
 For the experimental single-GPU FP16 KV exporter, start from the patched Strata checkout and build variables above. Use a dedicated build directory because the suffix patch extends the native backend interface. The fixture uses SQ-10, a 3 GiB GPU expert budget, and two processes on the same GPU. Set `weights` to the SQ-10 pack path.
 
