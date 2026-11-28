@@ -44,5 +44,19 @@
         "case": "inspect_worker"
       }
     ]
+  },
+  "supervised_linux_recovery": {
+    "fixture": "branchwrite-systemd-repair/batch-limit",
+    "execution_profile_id": "3952f21607adb33157a394e816c89a1869200883dd14e06f3d729f0550b2a9f3",
+    "resumed": true,
+    "sss_correct": 3,
+    "sss_total": 3,
+    "independent_verifier": {
+      "result_artifact": "3b72fe382a0dce597419ed088afab6dca47caaa56facff2bc567541ad10245cc",
+      "greetings": [
+        "ready-cd531d3e27284f3e"
+      ],
+      "verified": true
+    }
   }
 }
