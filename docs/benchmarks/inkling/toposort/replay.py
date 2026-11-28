@@ -13,9 +13,11 @@ def grade():
     from dspark1 import stable_toposort as drafted
     from off1 import stable_toposort as undrafted
 
+    from repair_effort01 import stable_toposort as repaired
+
     results = []
     for fixture in json.loads((DIRECTORY / "fixtures.json").read_text()):
-        for arm, function in (("off1", undrafted), ("dspark1", drafted)):
+        for arm, function in (("off1", undrafted), ("dspark1", drafted), ("repair_effort01", repaired)):
             try:
                 answer = function(fixture["input"])
             except Exception as exc:

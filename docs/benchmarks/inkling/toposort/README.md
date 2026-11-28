@@ -1,6 +1,6 @@
 # Stable topological sort replay
 
-Run `python3 replay.py > results.csv` here with Python 3. The replay first compiles the incomplete candidate and records its result once with an empty seed field. Each of 32 fresh interpreters then grades both complete functions against eight fixtures. The CSV includes the actual return value or exception class. The expected order for nodes present only in dependency lists follows their first appearance in those lists. This eighth fixture was added after inspecting the two functions.
+Run `python3 replay.py > results.csv` here with Python 3. The replay first compiles the incomplete candidate and records its result once with an empty seed field. Each of 32 fresh interpreters then grades the two original complete functions and the chat repair against eight fixtures. The CSV includes the actual return value or exception class. The expected order for nodes present only in dependency lists follows their first appearance in those lists. This eighth fixture was added after inspecting the two functions.
 
 The files off1.py and dspark1.py contain the first complete function from each 768-token greedy SQ-10 continuation on llm-60, including the function header supplied by the prompt. The native generation probe used 48 consecutive blocks of 16 tokens. [Prompt and generation settings](../frontier64/coding.py)
 
@@ -9,3 +9,5 @@ To regenerate a 768-token continuation, use the prepared SQ-10 environment from 
 A second fresh DSpark worker generated identical token IDs through token 160. Its cumulative token hash first differed at the 176-token check. At the same 768-token limit it was repeating comments under an unfinished `if` statement. Python raised `IndentationError` before any fixture could execute. The seven passing original fixtures above belong to the first DSpark completion. [Second DSpark continuation](dspark2-incomplete.txt)
 
 Three fresh workers timed only the 48 native generation calls, excluding model load, prefill, and score analysis between calls. At 768 tokens the undrafted worker reproduced off1 in 9.33 seconds and passed seven of eight fixtures at Python hash seed zero. The two new DSpark attempts took 6.89 and 7.38 seconds. The first failed to compile. The second parsed but returned None on all eight fixtures. Trial labels in the timing table identify these fresh workers. [Timings and decoded output hashes](generation-timing.csv)
+
+The undrafted chat repair used native reasoning effort 0.1 and the failing dependency-only example. It returned the function in 1,275 generated tokens (14.93 seconds) on llm-60. The replay runs this saved function on all eight fixtures under each of the same 32 hash seeds. [Generated repair](repair_effort01.py)
