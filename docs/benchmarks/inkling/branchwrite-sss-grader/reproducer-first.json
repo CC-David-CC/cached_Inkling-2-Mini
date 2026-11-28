@@ -1,0 +1,31 @@
+{
+  "task": "Fix the Linux service recovery grading regression reproduced by python3 check.py. A truncated journal lacks evidence to score a successful health probe or the final report. Preserve the other grades. Start by reading the reproducer, then use read_file on the implementation it imports. Once the failing decision is located, use the edit tool to change that decision and run the reproducer directly as the verification check. Keep check.py unchanged.",
+  "status": "step_budget_exhausted",
+  "verified": false,
+  "step_budget": 320,
+  "check_py_passed": true,
+  "independent": {
+    "complete": [
+      "pass",
+      "pass"
+    ],
+    "missing": [
+      "ungraded",
+      "ungraded"
+    ],
+    "truncated": [
+      "ungraded",
+      "ungraded"
+    ],
+    "contradictory": [
+      "ungraded",
+      "ungraded"
+    ]
+  },
+  "expected": {
+    "complete": "pass",
+    "missing": "ungraded",
+    "truncated": "ungraded",
+    "contradictory": "fail"
+  }
+}
