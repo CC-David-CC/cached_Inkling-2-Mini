@@ -11,3 +11,7 @@ A second fresh DSpark worker generated identical token IDs through token 160. It
 Three fresh workers timed only the 48 native generation calls, excluding model load, prefill, and score analysis between calls. At 768 tokens the undrafted worker reproduced off1 in 9.33 seconds and passed seven of eight fixtures at Python hash seed zero. The two new DSpark attempts took 6.89 and 7.38 seconds. The first failed to compile. The second parsed but returned None on all eight fixtures. Trial labels in the timing table identify these fresh workers. [Timings and decoded output hashes](generation-timing.csv)
 
 The undrafted chat repair used native reasoning effort 0.1 and the failing dependency-only example. It returned the function in 1,275 generated tokens (14.93 seconds) on llm-60. The replay runs this saved function on all eight fixtures under each of the same 32 hash seeds. [Generated repair](repair_effort01.py)
+
+![Generation time and fixture outcomes across six repair attempts](repair-effort.png)
+
+Each bar represents one generation from the same repair request. Two fresh effort-0.1 workers reproduced the same visible answer. The three runs at efforts 0.5 and 0.99 exhausted their budgets before emitting code. Their fixture counts are zero because there was no function to execute. [Per-run measurements and answer hashes](repair-effort.csv)
