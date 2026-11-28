@@ -77,6 +77,21 @@ class PeerCacheTests(unittest.TestCase):
         with self.assertRaisesRegex(IntegrityError,'model/execution identity'):peers.recover(self.target,self.snapshot)
         self.assertFalse((self.target.checkpoint_directory/(self.snapshot+'.json')).exists())
 
+    def test_direct_export_rejects_mismatched_profile_before_opening_payload(self):
+        from unittest.mock import patch
+        url, _ = self.serving()
+        path = (f"/cow/cache/checkpoint/{self.snapshot}?model_contract_id={'a' * 64}"
+                f"&execution_profile_id={'c' * 64}")
+        request = Request(url + path, headers={"Authorization": "Bearer private-test-token"})
+        with patch.object(self.outgoing, "_file", side_effect=AssertionError("opened payload")) as opened:
+            with self.assertRaises(HTTPError) as rejected:
+                urlopen(request)
+            with rejected.exception as response:
+                self.assertEqual(response.code, 409)
+                self.assertIn(b"Peer checkpoint identity differs", response.read())
+            opened.assert_not_called()
+        self.assert_released(self.outgoing)
+
     def test_stale_inventory_and_unreachable_peer_allow_existing_rebuild_path(self):
         _,peers=self.serving()
         # Leave the inventory hint but remove the source's optional image.
