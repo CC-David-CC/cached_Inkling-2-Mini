@@ -1,0 +1,9 @@
+{
+  "prompt_tokens": 27,
+  "snapshot": "8343ea1410c26eed0f5396ee73eadf90b37948a0960c354e991dc6b97dc35265",
+  "saved_profile": "42223aa00cb54a5bfe93663b886813508393fceefeaf5dd6ba4807dc05a673d0",
+  "live_profile": "006b613ec3d646af834075a51e8c5c9b85428f9dbd470e5d3aee231c63e409fd",
+  "verified_payload": "363412b78101012eebac72bd83144fd3b099fe41d80fed9766fc894a15cc791d",
+  "saved_profile_validation": "pass",
+  "live_profile_validation": "Checkpoint manifest incompatible"
+}
