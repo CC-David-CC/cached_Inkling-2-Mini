@@ -174,6 +174,10 @@ A CPU check using the production Inkling tokenizer and llguidance 1.9.1 examined
 | Four sequential sibling continuations on llm-60 | One parent import across four branches | On the same SQ-20 133,120-capacity profile and short Python prompt, the first continuation reused the exported child, the second imported 132,415,488 bytes, and the third and fourth each restored the resident parent with zero imported bytes. All four generated identical 186-token outputs, snapshots, frontier hashes and checkpoint payloads. The parent head stayed intact after each continuation. [Four-branch verification](four-sibling-result.json) |
 | Cold expert execution profile compatibility | Nine profile-validator checks on llm-60 | With the newer checkout, all three matching settings passed and all six mismatches between automatic, forced CPU and forced GPU settings were rejected. The older deployed profile generator produced one identity for all three. This checks profile validation against the actual bridge fingerprint. Numerical execution was outside this test. [Validation matrix](cold-lane-validation.csv) |
 
+![Single-request first-token latency, decode milliseconds per token, and completion time on llm-49 and llm-60](gpu-latency.png)
+
+The bars summarize two trials per setting. Decode milliseconds per token is the reciprocal of the recorded decode rate, scaled by 1,000. Full request time is the output token count divided by the end-to-end rate. [Per-trial data](gpu-comparison.csv)
+
 [Checkpoint regression](../../../tools/test_inkling_pcc.py) · [Vision regression](../../../tools/test_inkling_pcc_vision.py) · [Cancellation isolation](../../../tools/test_inkling_cancel_isolation.py) · [Trainer restart](../../../tools/test_inkling_training_restart.py) · [Adapter isolation](../../../tools/test_inkling_head_lora.py)
 
 ### Three P4s for short coding and Linux requests
