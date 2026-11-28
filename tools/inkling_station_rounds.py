@@ -50,10 +50,12 @@ def main():
             with backend.lease() as lease:
                 backend.consume(lease, prefix)
                 frontier = (ctypes.c_float * backend.vocab_size)(*backend.logits(lease))
-                assert backend.lib.ctt_pin_shared(lease)
+                if not backend.lib.ctt_pin_shared(lease):
+                    raise RuntimeError("Could not pin the shared station prompt")
 
                 def reset():
-                    assert backend.lib.ctt_reuse_shared(lease, len(prefix), frontier, len(frontier))
+                    if not backend.lib.ctt_reuse_shared(lease, len(prefix), frontier, len(frontier)):
+                        raise RuntimeError("Could not restore the shared station prompt")
 
                 for case in wrong + held:
                     suffix = encode('<|message_user|><|content_text|>' + case['user'] +

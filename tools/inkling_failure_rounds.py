@@ -59,10 +59,12 @@ def main():
     def pin(backend,lease):
         backend.consume(lease,prefix)
         frontier=(ctypes.c_float*backend.vocab_size)(*backend.logits(lease))
-        assert backend.lib.ctt_pin_shared(lease)
+        if not backend.lib.ctt_pin_shared(lease):
+            raise RuntimeError("Could not pin the shared station prompt")
         return frontier
     def reset(backend,lease,frontier):
-        assert backend.lib.ctt_reuse_shared(lease,len(prefix),frontier,len(frontier))
+        if not backend.lib.ctt_reuse_shared(lease,len(prefix),frontier,len(frontier)):
+            raise RuntimeError("Could not restore the shared station prompt")
     while True:
         assert used+eval_cost <= cap
         used += eval_cost
