@@ -399,7 +399,7 @@ class CowClientRecoveryServiceStartupCleanupTests(unittest.TestCase):
                                   return_value=[sys.executable, '-c', parent_code]):
                     with self.assertRaisesRegex(RecoveryFailure, 'Timed out waiting'):
                         recovery._start_service('synthetic', store, run_dir, 1,
-                            profile=None, timeout=.2, ram_gib=1, disk_gib=1, progress=progress)
+                            profile=None, timeout=3, ram_gib=1, disk_gib=1, progress=progress)
                 lines = (run_dir / 'server-1.stdout.log').read_text(encoding='utf-8').splitlines()
                 child_pid = json.loads(next(line for line in lines if 'owned_child_pid' in line))['owned_child_pid']
                 self.assertEqual(len(processes), 1)
