@@ -4,12 +4,15 @@ import heapq
 import json
 import math
 import struct
+import time
 from pathlib import Path
 from tokenizers import Tokenizer
 from context_time_travel.backend_registry import load_backend
 from context_time_travel.inkling_backend import runtime_profile
 
-parser = argparse.ArgumentParser(description="Capture coding frontiers every 16 generated tokens.")
+parser = argparse.ArgumentParser(
+    description="Capture coding frontiers every 16 generated tokens."
+)
 parser.add_argument("runtime", type=Path)
 parser.add_argument("case", choices=("off1", "off2", "dspark1", "dspark2"))
 parser.add_argument("--tokens", type=int, choices=(128, 768), default=128)
@@ -27,12 +30,15 @@ backend = load_backend(
     )
 )
 output = []
+generation_s = 0.0
 try:
     with backend.lease() as lease:
         backend.consume(lease, ids)
         for _ in range(args.tokens // 16):
+            started = time.monotonic()
             with backend.generate_request(lease, 16) as stream:
                 output.extend(stream)
+            generation_s += time.monotonic() - started
             scores = backend.logits(lease)
             first, second = heapq.nlargest(
                 2, range(len(scores)), key=scores.__getitem__
@@ -54,6 +60,16 @@ try:
                 ),
                 flush=True,
             )
+        Path(case + "-timing.json").write_text(
+            json.dumps(
+                dict(
+                    tokens=len(output),
+                    generation_s=generation_s,
+                    tokens_per_second=len(output) / generation_s,
+                )
+            )
+            + "\n"
+        )
         Path(case + ".txt").write_text(tok.decode(output))
 finally:
     backend.close()
