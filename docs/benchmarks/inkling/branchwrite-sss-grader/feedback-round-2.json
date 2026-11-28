@@ -1,0 +1,62 @@
+{
+  "artifacts": [],
+  "frame": "program",
+  "result_artifact": "a26c4f8c731bc9707db088cfde0618668f38fd5c336ab03ee601134f4115e2e8",
+  "status": "complete",
+  "verified": true,
+  "prior_cases": 10,
+  "prior_passes_retained": 9,
+  "prior_failures_fixed": 1,
+  "new_cases": {
+    "embedded-greeting": {
+      "expected": [
+        "pass",
+        "pass"
+      ],
+      "actual": [
+        "pass",
+        "pass"
+      ],
+      "passed": true
+    },
+    "two-incompatible-greetings": {
+      "expected": [
+        "pass",
+        "fail"
+      ],
+      "actual": [
+        "pass",
+        "pass"
+      ],
+      "passed": false
+    },
+    "greeting-with-extra-digit": {
+      "expected": [
+        "pass",
+        "fail"
+      ],
+      "actual": [
+        "pass",
+        "pass"
+      ],
+      "passed": false
+    },
+    "uppercase-invalid-journal": {
+      "expected": [
+        "ungraded",
+        "ungraded"
+      ],
+      "actual": [
+        "ungraded",
+        "ungraded"
+      ],
+      "passed": true
+    }
+  },
+  "counts": {
+    "correct": 12,
+    "incorrect": 2,
+    "ungraded": 0
+  },
+  "archive_sha256": "4a5821c748c23334795b0f9ff84fe5259d48d7e414b1385d40335c907a41bf3d"
+}
