@@ -586,9 +586,17 @@ Both optimizers updated the real model's output-head adapter and matched
 the uninterrupted third step bit for bit after reading the two-step
 checkpoint into a new optimizer. Training loss across three updates went
 from 8.749 to 6.415 for AdamW and from 8.749 to 0.325 for Muon on the two
-synthetic examples. These numbers measure the training fixture. Broader
-QLoRA targets, fixed-rank consolidation between rounds, and skill evaluation
-are separate qualification work.
+synthetic examples. These numbers measure the training fixture.
+In the station test, adding a fresh rank-4 residual to a frozen rank-4 parent
+gave 15/54 correct. Compressing the sum back to rank 4 gave 14/54 and changed
+11 answer texts. [Rank transitions](docs/benchmarks/inkling/adapter-transitions.csv)
+
+In the separate failure-only training run, optimizer step 11 first reached
+53/54. At the final measured step (16), 41 of the 42 examples used for
+training were correct. All 12 examples still outside training were correct.
+Those 12 stayed outside training because they kept passing, so their result
+measures retention on this register. Generalization needs a fresh register.
+[Per-round exposure and correctness](docs/benchmarks/inkling/failure-only-exposure.csv)
 Both adapters passed the authenticated PCC HTTP launch, root creation and
 greedy generation test on llm-60. The endpoint receipts carried the expected
 adapter-specific model identity. The native regression also verified exact
