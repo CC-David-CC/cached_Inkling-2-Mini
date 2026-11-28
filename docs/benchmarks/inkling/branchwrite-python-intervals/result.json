@@ -1,0 +1,19 @@
+{
+  "host": "llm-60",
+  "model": "Inkling-2-Mini-SQ-20",
+  "adapter": null,
+  "source_modes": {
+    "intervals.py": "0o664",
+    "check.py": "0o664"
+  },
+  "baseline": {
+    "correct": 118,
+    "incorrect": 993
+  },
+  "replay": {
+    "correct": 1111,
+    "incorrect": 0
+  },
+  "archive_sha256": "8081a2393c3c28ab5f955ca59698b28f89d84421beba518e703690175965bd50",
+  "result_artifact": "cd3115a30e51984711cbc7ca6c7d2cdabfa6b4fa8fe81417a5b3d95c9b8292e5"
+}
