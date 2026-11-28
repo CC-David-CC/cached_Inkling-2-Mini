@@ -1,0 +1,28 @@
+run,tool,target,output_tokens,requests
+outcome-incident,read_file,service.json,29,1
+outcome-incident,read_file,worker.py,29,1
+outcome-incident,run_shell,"python3 worker.py --check; echo ""exit=$?""",42,1
+outcome-incident,replace,service.json,63,1
+outcome-incident,run_shell,"python3 worker.py --check; echo ""exit=$?""",42,1
+outcome-incident,finish,,84,1
+outcome-incident,run_shell,python3 worker.py --check,33,1
+outcome-incident,finish,,83,1
+journal-card,read_file,service.json,29,1
+journal-card,read_file,worker.py,29,1
+journal-card,run_shell,ls -la /run/branchwrite/unit-journal 2>&1 | head -50,47,1
+journal-card,run_shell,cat /run/branchwrite/unit-journal,36,1
+journal-card,replace,service.json,63,1
+journal-card,run_shell,python3 worker.py --check && cat service.json,38,1
+journal-card,finish,,86,1
+journal-card,run_shell,python3 worker.py --check,33,1
+journal-card,finish,,88,1
+command-card,read_file,service.json,29,1
+command-card,read_file,worker.py,29,1
+command-card,run_shell,"python3 worker.py --check; echo ""exit=$?""",42,1
+command-card,run_shell,ls -la /run/branchwrite/unit-journal 2>&1 | head -50,47,1
+command-card,run_shell,cat /run/branchwrite/unit-journal,36,1
+command-card,replace,service.json,63,1
+command-card,run_shell,"python3 worker.py --check; echo ""exit=$?""",42,1
+command-card,run_shell,cat service.json,30,1
+command-card,run_shell,python3 worker.py --check,33,1
+command-card,finish,,125,1
