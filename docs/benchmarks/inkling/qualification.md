@@ -305,3 +305,9 @@ For longer answers from the same 130,000-token SQ-20 register, two questions eac
 On a repeat of the 32-line transcription, a timestamp in BranchWrite's text callback measured first visible output from ask start. The two serial asks began displaying text after 0.523 and 0.525 s. The overlapping asks began after 0.954 and 5.972 s on the single worker. Each emitted 351 nonempty text events and generated 353 token IDs. The concatenated events matched the committed answer, all expected lines were present in order, and the reasoning field was empty. [First and last visible output and completion](branchwrite-sq20-130k-first-visible.csv)
 
 ![First visible text, output delivery and completion for four shared-document requests](branchwrite-130k-first-visible.png)
+
+### Qwen3.8-27B Dense on llm-60
+
+The Q4 checkpoint ran through CoW with a 65,536-token context and thinking disabled. BranchWrite resumed the Python run from saved state. The exported Python and JavaScript patches passed 171/171 and 200/200 independent cases on fresh copies of the fixtures. The JavaScript harness explicitly bound Node and used `/runtime/node check.js` as its verification command.
+
+A separate S³ Linux-control run through llama.cpp scored 14/18 across two fixtures. Both runs unnecessarily restarted the worker in the configure-only task and returned `ok` instead of the observed port in the inspect-worker task. A short native CoW test also matched all 248,320 logits after fresh-process restore and one continuation token, with zero prefix replay. [Qualification record](qwen38-27b-qualification.json)

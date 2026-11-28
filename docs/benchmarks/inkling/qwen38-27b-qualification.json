@@ -1,0 +1,48 @@
+{
+  "model": "Qwen3.8-27B-UD-Q4_K_M",
+  "host": "llm-60",
+  "coding": {
+    "context_tokens": 65536,
+    "thinking": false,
+    "execution_profile_id": "3952f21607adb33157a394e816c89a1869200883dd14e06f3d729f0550b2a9f3",
+    "results": [
+      {
+        "task": "python",
+        "independent_score": "171/171",
+        "archive_sha256": "1dfc8b1996179b9b0a57507581379b97fd1e0e0ba437bd21d31e79dcdb72622f",
+        "result_artifact": "f57f0dd272ea3d17c01aabd710fd80492fd82c99ff084e3eedd277cc77aaa0d8",
+        "log": "python-resume-v4.log"
+      },
+      {
+        "task": "javascript",
+        "independent_score": "200/200",
+        "archive_sha256": "c5b3cad074f0100fa34d422e29da20978c7ad9ec77c8468d9c0da908139fd12c",
+        "result_artifact": "f0f88070b5d692590b5c35be267f1e0751df4ad3dd37469f1470c8b5b630620c",
+        "log": "js-run-v5.log"
+      }
+    ]
+  },
+  "linux": {
+    "passed": 14,
+    "total": 18,
+    "backend": "llama.cpp",
+    "failures": [
+      {
+        "fixture": "alternate",
+        "case": "configure"
+      },
+      {
+        "fixture": "alternate",
+        "case": "inspect_worker"
+      },
+      {
+        "fixture": "original",
+        "case": "configure"
+      },
+      {
+        "fixture": "original",
+        "case": "inspect_worker"
+      }
+    ]
+  }
+}
