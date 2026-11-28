@@ -1,0 +1,14 @@
+{
+  "artifacts": [],
+  "frame": "program",
+  "result_artifact": "87273137e9b9a530f710ec08f5e10033eb1ca900dca86a1cabf12e08ca29d5f1",
+  "status": "complete",
+  "verified": true,
+  "inference_host": "llm-49",
+  "service_host": "surface16-2",
+  "model": "Inkling-2-Mini-SQ-20",
+  "archive_sha256": "130f0fdc188bc05f49de42d10a161e7fa97eb515135ce752f6a8846c95e1d998",
+  "tcp_health_checks_passed": 3,
+  "duplicate_apply_preserved_invocation": true,
+  "publication_and_health_checks": "operator-configured test harness"
+}
