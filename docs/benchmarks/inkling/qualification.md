@@ -186,3 +186,7 @@ A read-only check of the live hybrid SQ-20 BranchWrite store on llm-60 verified 
 For each of these three children, only 268,517,376 bytes (6.0%) matched the parent in complete 16 KiB blocks at the same file offsets. Taking matching blocks from the parent and the remaining 4,200,986,088 bytes from each child reproduced all three payload digests. This measures one fixed-offset storage strategy. It neither counts data that moved nor estimates the size of a native suffix. [Per-child reconstruction checks](sq20-128k-same-offset-blocks.json)
 
 Aligning the global KV prefixes and retained sliding-window rows separately for each of the 48 visits recovered 4,461,330,432 parent bytes per child. The remaining 8,173,032 bytes comprise the child ShortConv state, 18 appended K/V rows per visit and the final logit row. Using those child bytes and the aligned parent rows reproduced each complete payload SHA-256. This was an offline reconstruction from saved files. [Three verified reconstructions](sq20-128k-aligned-kv.json)
+
+![Payload size of a shared SQ-20 document and three branches under full, fixed-offset and layer-aligned storage](sq20-shared-storage.png)
+
+The full checkpoint bar uses saved payload sizes. The other two bars sum the verified bytes needed for reconstruction, including one shared parent and excluding filesystem and index overhead.
