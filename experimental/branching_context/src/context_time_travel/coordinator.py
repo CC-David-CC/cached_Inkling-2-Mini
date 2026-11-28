@@ -84,6 +84,8 @@ class _Job:
     input_artifacts: object = None
     prefill_key: str | None = None
     prefill_claim: str | None = None
+    enqueued_at: float = 0.0
+    scheduler_wait_seconds: float = 0.0
 
 
 @dataclass
@@ -1242,6 +1244,7 @@ class ContextCoordinator:
                 except BaseException as exc:
                     self._fail(job,exc);raise
             self._set_prefill_key(job)
+            job.enqueued_at = time.monotonic()
             self._pending.append(job)
             self._condition.notify_all()
             return handle
@@ -1337,6 +1340,7 @@ class ContextCoordinator:
                     input_admission=admission)
                 self._input_preparations[id(handle)]=job
                 self._set_prefill_key(job)
+                job.enqueued_at = time.monotonic()
                 self._pending.append(job);self._condition.notify_all()
             while True:
                 try:
@@ -1947,6 +1951,7 @@ class ContextCoordinator:
                             self._prefills[job.prefill_key]=job.request.operation
                             job.prefill_claim=job.prefill_key
                     self._branches.add(job.branch)
+                    job.scheduler_wait_seconds = time.monotonic() - job.enqueued_at
                     job.request.state = 'loading'
                     w['queue'].put(job)
                 # One load ahead, only for real queued/eligible work. It never
@@ -2598,6 +2603,7 @@ class ContextCoordinator:
                     # by another independent slot while this branch publishes.
                     self._release_prefill(job)
                     answer['capture_seconds']=time.monotonic()-capture_started
+                    answer['scheduler_wait_seconds'] = job.scheduler_wait_seconds
                     answer['ram_reservation_bytes']=estimate
                     # Protect canonical records across publication and GC. No
                     # exclusive native lease crosses into the writer thread.

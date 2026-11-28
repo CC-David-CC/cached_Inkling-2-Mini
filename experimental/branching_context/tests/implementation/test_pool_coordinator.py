@@ -91,6 +91,24 @@ class CoordinatorTests(unittest.TestCase):
         self.assertEqual(set(models),{1,5,6})
         self.assertEqual(c.metrics()['max_active_per_gpu'],{1:1,5:1,6:1})
 
+    def test_scheduler_wait_includes_time_queued_behind_busy_worker(self):
+        coordinator, _, _, gate = self.start()
+        root = coordinator.create('base', (1,), 'base-op').durable.result(5)['snapshot']
+        coordinator.fork('second', root)
+        gate.clear()
+        first = coordinator.submit('base', (2,), 1, 'first-op')
+        second = coordinator.submit('second', (3,), 1, 'second-op')
+        start = time.monotonic()
+        try:
+            with self.assertRaises(TimeoutError):
+                second.snapshot.result(0.05)
+        finally:
+            held = time.monotonic() - start
+            gate.set()
+        self.assertGreaterEqual(second.snapshot.result(5)['scheduler_wait_seconds'], held)
+        first.durable.result(5)
+        second.durable.result(5)
+
     def test_snapshot_precedes_durable_and_writer_does_not_take_gpu_slot(self):
         c,models,trace,gate = self.start()
         root = c.create('base',(1,2),'create').durable.result(5)['snapshot']
