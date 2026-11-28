@@ -41,17 +41,19 @@ def main():
     parser.add_argument('--chat', action='store_true')
     parser.add_argument('--adapter', type=Path)
     parser.add_argument('--pack', choices=('SQ-10', 'SQ-15', 'SQ-20'), help='verify the served model contract for this pack')
+    parser.add_argument('--long-copy', action='store_true', help='test the same 1024-token copy workload with any text engine')
     parser.add_argument('--dspark-long', action='store_true', help='test 1024-token greedy chat with the draft engine')
     parser.add_argument('--verify-export', action='store_true',
                         help='Stream and verify the generated full checkpoint from a --cache-transfer server')
     args = parser.parse_args()
-    if args.dspark_long:
+    long_copy = args.long_copy or args.dspark_long
+    if long_copy:
         args.chat = True
     if args.prompt_tokens is not None and (args.chat or not 1 <= args.prompt_tokens <= 262139):
         parser.error('--prompt-tokens requires token mode and space for five output tokens')
     token_ids = ([100 + i % 1000 for i in range(args.prompt_tokens)]
                  if args.prompt_tokens is not None else [100, 101, 102])
-    limit = 1024 if args.dspark_long else 5
+    limit = 1024 if long_copy else 5
     expected_contract = None
     if args.pack or args.adapter:
         sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'experimental/branching_context/src'))
@@ -91,7 +93,7 @@ def main():
         return result
 
     messages = [{'role': 'user', 'content': 'What is 2 + 2? Reply with just the number.'}]
-    if args.dspark_long:
+    if long_copy:
         messages[0]['content'] = ('Copy every line verbatim. Start with the first line.\n' +
                                   '\n'.join(f'Item {i}: the sample value is {i}.' for i in range(1, 501)))
     namespace = 'text/'  if args.chat else ''
@@ -123,11 +125,12 @@ def main():
             right_revision = right_root['receipt']['branch']['revision']
         answer = generate(left, left_root['receipt']['branch']['revision'])
         assert 1 <= len(answer['answer']['tokens']) <= limit, answer
-        if args.dspark_long:
+        if long_copy:
             assert len(answer['answer']['tokens']) == limit
+        if args.dspark_long:
             counters = answer['answer']['counter_deltas']
             assert 0 < counters['drafts_accepted'] <= counters['draft_nodes']
-        elif args.chat:
+        elif args.chat and not long_copy:
             assert answer['answer']['text'].strip() == '4', answer
         fixture = dict(branch=right, revision=right_revision, answer=answer)
         if args.prompt_tokens is None:
@@ -146,11 +149,12 @@ def main():
         assert forward == generated + (2 if args.chat else 0), answer
         if args.prompt_tokens is not None:
             assert answer['answer']['counter_deltas']['checkpoint_import_bytes'] > 0, answer
-        if args.dspark_long:
+        if long_copy:
             assert len(answer['answer']['tokens']) == limit
+        if args.dspark_long:
             counters = answer['answer']['counter_deltas']
             assert 0 < counters['drafts_accepted'] <= counters['draft_nodes']
-        elif args.chat:
+        elif args.chat and not long_copy:
             assert answer['answer']['text'].strip() == '4', answer
         print(json.dumps(dict(result='restart matched', generated=generated, forward=forward,
                               counters=answer['answer']['counter_deltas'], payload=answer['receipt']['payload_sha256'])))
