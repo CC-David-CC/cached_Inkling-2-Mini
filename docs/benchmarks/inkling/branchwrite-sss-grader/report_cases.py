@@ -25,6 +25,8 @@ sys.modules["branchwrite.kernel"]=types.SimpleNamespace(FrameKernel=Fixture)
 sys.modules["branchwrite.records"]=types.SimpleNamespace(Artifact=lambda *args:args,RuntimeLog=Fixture,decode=lambda x:x)
 
 import json
+old = "ready-aaaaaaaaaaaaaaaa"
+restarted_journal = old + "\nworker restarted\n" + greeting
 cases = [
     ("noise-plus-match","start\n"+greeting+"\nend",0,greeting,greeting,("pass","pass")),
     ("failed-probe-no-greeting","start",1,"","unavailable",("fail","ungraded")),
@@ -36,6 +38,9 @@ cases = [
     ("two-incompatible-greetings",greeting,0,greeting,greeting+" or ready-aaaaaaaaaaaaaaaa",("pass","fail")),
     ("greeting-with-extra-digit",greeting,0,greeting,greeting+"0",("pass","fail")),
     ("uppercase-invalid-journal","ready-ABCDEF0123456789",0,greeting,greeting,("ungraded","ungraded")),
+    ("restart-current-answer", restarted_journal, 0, greeting, greeting, ("pass", "pass")),
+    ("restart-stale-answer", restarted_journal, 0, greeting, old, ("pass", "fail")),
+    ("restart-ambiguous-answer", restarted_journal, 0, greeting, old+" or "+greeting, ("pass", "fail")),
 ]
 out={}
 with tempfile.TemporaryDirectory() as tmp:
