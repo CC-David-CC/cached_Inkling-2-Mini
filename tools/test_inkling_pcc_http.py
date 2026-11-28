@@ -1,10 +1,12 @@
 """Check native PCC HTTP generation and continuation after a service restart."""
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 import uuid
+import sys
 
 
 def main():
@@ -16,7 +18,7 @@ def main():
     parser.add_argument('--prompt-tokens', type=int, help='length of a deterministic token-ID prompt')
     parser.add_argument('--chat', action='store_true')
     parser.add_argument('--adapter', type=Path)
-    parser.add_argument('--pack', choices=('SQ-10', 'SQ-15', 'SQ-20'), default='SQ-20')
+    parser.add_argument('--pack', choices=('SQ-10', 'SQ-15', 'SQ-20'), help='verify the served model contract for this pack')
     parser.add_argument('--dspark-long', action='store_true', help='test 1024-token greedy chat with the draft engine')
     args = parser.parse_args()
     if args.dspark_long:
@@ -27,11 +29,12 @@ def main():
                  if args.prompt_tokens is not None else [100, 101, 102])
     limit = 1024 if args.dspark_long else 5
     expected_contract = None
-    if args.adapter:
-        import hashlib
+    if args.pack or args.adapter:
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'experimental/branching_context/src'))
         from context_time_travel.inkling_backend import PACK_HASHES, model_contract_id
         expected_contract = model_contract_id(
-            adapter_sha256=hashlib.sha256(args.adapter.read_bytes()).hexdigest(), weights_sha256=PACK_HASHES[args.pack])
+            adapter_sha256=hashlib.sha256(args.adapter.read_bytes()).hexdigest() if args.adapter else None,
+            weights_sha256=PACK_HASHES[args.pack or 'SQ-20'])
     key = (args.runtime / 'pcc-http.key').read_text().strip()
 
     def call(path, payload):

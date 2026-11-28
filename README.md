@@ -542,7 +542,7 @@ visible answer `4` before and after restart with the same numerical payload
 SHA-256. The counter recorded three generated tokens and two appended
 assistant framing tokens.
 
-The published 128k restart result below uses SQ-10. To qualify SQ-20 on llm-60, select `--pack SQ-20`, keep `--require-gpu-experts`, and use a separate empty store and fixture. Check the native load log for 3,072 GPU experts and zero host experts on both launches. A passing SQ-10 run qualifies only that pack.
+The published 128k restart result below uses SQ-10. To qualify SQ-20 on llm-60, select `--pack SQ-20` on the server and both test-client commands, keep `--require-gpu-experts`, and use a separate empty store and fixture. Check the native load log for 3,072 GPU experts and zero host experts on both launches. A passing SQ-10 run qualifies only that pack.
 
 For the filled 128k token-ID test, start a worker with a persistent store on a filesystem with room for checkpoints. Use the same runtime, store, port and environment for both launches:
 
@@ -554,9 +554,9 @@ STRATA_INK_EXACT=1 python tools/inkling_pcc_serve.py "$runtime" --pack SQ-10 \
 From a second shell, run the write phase, stop and restart that worker, then run the read phase. The fixture holds the expected reply and branch revision.
 
 ```bash
-python tools/test_inkling_pcc_http.py "$runtime" "$fixture" write --port 18071 --prompt-tokens 131072
+python tools/test_inkling_pcc_http.py "$runtime" "$fixture" write --port 18071 --pack SQ-10 --prompt-tokens 131072
 # Restart the same worker before running the next command.
-python tools/test_inkling_pcc_http.py "$runtime" "$fixture" read --port 18071 --prompt-tokens 131072
+python tools/test_inkling_pcc_http.py "$runtime" "$fixture" read --port 18071 --pack SQ-10 --prompt-tokens 131072
 ```
 
 ### PCC HTTP vision service
