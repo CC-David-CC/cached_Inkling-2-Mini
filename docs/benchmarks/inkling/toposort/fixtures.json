@@ -1,0 +1,115 @@
+[
+  {
+    "id": "empty",
+    "input": {},
+    "expected": []
+  },
+  {
+    "id": "chain",
+    "input": {
+      "last": [
+        "middle"
+      ],
+      "middle": [
+        "first"
+      ],
+      "first": []
+    },
+    "expected": [
+      "first",
+      "middle",
+      "last"
+    ]
+  },
+  {
+    "id": "independent",
+    "input": {
+      "z": [],
+      "b": [],
+      "q": [],
+      "a": []
+    },
+    "expected": [
+      "z",
+      "b",
+      "q",
+      "a"
+    ]
+  },
+  {
+    "id": "ready-priority",
+    "input": {
+      "child": [
+        "parent"
+      ],
+      "parent": [],
+      "other": []
+    },
+    "expected": [
+      "parent",
+      "child",
+      "other"
+    ]
+  },
+  {
+    "id": "diamond",
+    "input": {
+      "finish": [
+        "left",
+        "right"
+      ],
+      "right": [
+        "root"
+      ],
+      "left": [
+        "root"
+      ],
+      "root": []
+    },
+    "expected": [
+      "root",
+      "right",
+      "left",
+      "finish"
+    ]
+  },
+  {
+    "id": "cycle",
+    "input": {
+      "a": [
+        "b"
+      ],
+      "b": [
+        "a"
+      ]
+    },
+    "error": "ValueError"
+  },
+  {
+    "id": "self-cycle",
+    "input": {
+      "a": [
+        "a"
+      ]
+    },
+    "error": "ValueError"
+  },
+  {
+    "id": "dependency-only-order",
+    "input": {
+      "end": [
+        "z",
+        "b",
+        "q",
+        "a"
+      ]
+    },
+    "expected": [
+      "z",
+      "b",
+      "q",
+      "a",
+      "end"
+    ]
+  }
+]
