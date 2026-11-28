@@ -1,0 +1,50 @@
+{
+  "serial": [
+    {
+      "phase": "write",
+      "text": "BLUE",
+      "tokens": [
+        146143,
+        145967,
+        200010,
+        200006
+      ],
+      "payload_sha256": "b5ae302403db5589e9acb81a2f996b6c7699d4c706b800f6a5d79613d93d376d"
+    },
+    {
+      "phase": "read",
+      "text": "BLUE",
+      "tokens": [
+        146143,
+        145967,
+        200010,
+        200006
+      ],
+      "payload_sha256": "b5ae302403db5589e9acb81a2f996b6c7699d4c706b800f6a5d79613d93d376d"
+    }
+  ],
+  "batched": [
+    {
+      "phase": "write",
+      "text": "BLUE",
+      "tokens": [
+        146143,
+        145967,
+        200010,
+        200006
+      ],
+      "payload_sha256": "b32aa4c217d46dd45e5cb5ab1d6e409144880c71e237d92c954e08b51047394b"
+    },
+    {
+      "phase": "read",
+      "text": "BLUE",
+      "tokens": [
+        146143,
+        145967,
+        200010,
+        200006
+      ],
+      "payload_sha256": "751f1bbc81ee2e0f63373937d5066045f9cfb3475128b822b276837c8a051b7e"
+    }
+  ]
+}

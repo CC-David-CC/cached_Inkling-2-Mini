@@ -30,6 +30,14 @@ class InklingPromptEncoder(CowPromptEncoder):
     def followup_frame(self, canonical, controller, content):
         if controller.get('status') != 'stopped' or not isinstance(content, str):
             raise ValueError('Inkling follow-up requires a stopped answer')
+        if canonical and controller.get('text_stop', {}).get('stopped'):
+            # A text delimiter ends generation inside the assistant frame.
+            # Close that frame on the child before opening the next user turn.
+            close = self.tok.special_tokens['<|end_message|>']
+            end = self.tok.special_tokens['<|content_model_end_sampling|>']
+            if canonical[-1] not in controller.get('policy', {}).get('eos_tokens', []):
+                suffix = (end,) if canonical[-1] == close else (close, end)
+                return suffix + self._question_tokens(content)
         if not canonical or canonical[-1] not in controller.get('policy', {}).get('eos_tokens', []):
             raise ValueError('Inkling follow-up requires a consumed stop token')
         return self._question_tokens(content)
