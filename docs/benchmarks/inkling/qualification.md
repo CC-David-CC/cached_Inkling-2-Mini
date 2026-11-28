@@ -156,3 +156,7 @@ On the same host the resident SQ-20 text endpoint loaded all 3,072 experts onto 
 ### All-GPU SQ-10 over HTTP at 128k
 
 Two fresh llm-60 workers each loaded all 3,072 experts on GPU and served a 19-token control. For the same 131,072-token synthetic input, the 8 GiB host checkpoint pool rejected parent creation with HTTP 409. With an 18 GiB pool, creation took 32.00 seconds and the subsequent five-token generation request took 6.59 seconds including checkpoint publication. Each pool size had one trial, using a temporary RAM-backed store. The short controls matched on output IDs but their payload hashes differed across launches. Long-context restart equality and SQ-20 residency require separate tests. [Requests, timings and checkpoint hashes](resident-128k-http-pool.json)
+
+### All-GPU SQ-10 continuation after HTTP restart
+
+A second llm-60 process reopened the saved 131,072-token parent from a temporary NVMe store. Its five-token continuation matched the uninterrupted process on token IDs, the hash of all 200,058 FP32 frontier scores and the complete child payload digest. Both requests performed five forward steps. The warm worker imported zero bytes and completed in 6.63 seconds. The restarted worker imported 4,466,573,312 bytes and completed in 10.56 seconds after server readiness. Both workers used full GPU expert residency, FP16 KV, drafting off, and an 18 GiB host checkpoint pool. One earlier RAM-backed cold trial fell below the 8 GiB available host memory minimum. [Timing, work counters and frontier hashes](resident-128k-http-restart.json)

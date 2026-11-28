@@ -1,0 +1,81 @@
+{
+  "pack": "SQ-10",
+  "host": "llm-60",
+  "expert_placement": "3072 GPU / 0 host",
+  "capacity": 133120,
+  "host_pool_gib": 18,
+  "store": "NVMe",
+  "requests": [
+    {
+      "phase": "warm",
+      "counters": {
+        "consumed_tokens": 5,
+        "forward_tokens": 5,
+        "resident_parent_restores": 1,
+        "resident_child_restores": 0,
+        "checkpoint_import_bytes": 0
+      },
+      "prompt": 131072,
+      "seconds": 6.634765750030056,
+      "tokens": [
+        172,
+        173,
+        174,
+        175,
+        176
+      ],
+      "payload": "04961ea539396f6056f41be9cc2c3836f51fe9ad2e5b2ad42f2eee52bc0152a4"
+    },
+    {
+      "phase": "cold",
+      "counters": {
+        "consumed_tokens": 5,
+        "forward_tokens": 5,
+        "resident_parent_restores": 0,
+        "resident_child_restores": 0,
+        "checkpoint_import_bytes": 4466573312
+      },
+      "prompt": 131072,
+      "seconds": 10.555151206906885,
+      "tokens": [
+        172,
+        173,
+        174,
+        175,
+        176
+      ],
+      "payload": "04961ea539396f6056f41be9cc2c3836f51fe9ad2e5b2ad42f2eee52bc0152a4"
+    }
+  ],
+  "frontiers": [
+    {
+      "phase": "warm",
+      "consumed": 131072,
+      "logits": 200058,
+      "frontier_sha256": "3d3979b681012c079832a46aca46ea4cbb070ac6501d59d35518e82d9ab40a89",
+      "payload": "dfeedc5cc3ddae9affc883e7648eacdef6d225fc25834033d3e3d89e05ffd59f"
+    },
+    {
+      "phase": "cold",
+      "consumed": 131072,
+      "logits": 200058,
+      "frontier_sha256": "3d3979b681012c079832a46aca46ea4cbb070ac6501d59d35518e82d9ab40a89",
+      "payload": "dfeedc5cc3ddae9affc883e7648eacdef6d225fc25834033d3e3d89e05ffd59f"
+    },
+    {
+      "phase": "warm",
+      "consumed": 131077,
+      "logits": 200058,
+      "frontier_sha256": "d387067d89baf11c25401818b7b4903db4d6a5b5393320e2ba96ceefb74463c7",
+      "payload": "04961ea539396f6056f41be9cc2c3836f51fe9ad2e5b2ad42f2eee52bc0152a4"
+    },
+    {
+      "phase": "cold",
+      "consumed": 131077,
+      "logits": 200058,
+      "frontier_sha256": "d387067d89baf11c25401818b7b4903db4d6a5b5393320e2ba96ceefb74463c7",
+      "payload": "04961ea539396f6056f41be9cc2c3836f51fe9ad2e5b2ad42f2eee52bc0152a4"
+    }
+  ],
+  "tmpfs_cold_error": "Host memory headroom is below the configured minimum (available_bytes=8158978048, required_bytes=8589934592)"
+}
