@@ -81,6 +81,9 @@ def main():
         parser.error('--port must be between 0 and 65535')
     if args.ram_cache_gib is not None and args.ram_cache_gib <= 0:
         parser.error('--ram-cache-gib must be positive')
+    if args.grammar_store and (args.dspark or args.dflash2):
+        parser.error('BranchWrite grammar-constrained generation requires undrafted decoding. '
+                     'Remove --dspark or --dflash2 to use --grammar-store.')
     if args.suffix_checkpoints and (args.dspark or args.dflash2 or args.vision or args.capacity <= 8192 or args.gpus != 1):
         parser.error('Suffix checkpoints require undrafted single-GPU text with capacity above 8192')
     if (args.pack == 'SQ-20' and args.gpus == 1 and not args.dspark and not args.dflash2
