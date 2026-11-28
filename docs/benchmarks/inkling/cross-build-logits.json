@@ -1,0 +1,14 @@
+{
+  "frontier": {
+    "bit_different": 0,
+    "max_abs": 0.0,
+    "clean_sha256": "bbb4b7eff200a02e35a1de8f397dfc96604a9844be80f12628e74f279073b970",
+    "earlier_sha256": "bbb4b7eff200a02e35a1de8f397dfc96604a9844be80f12628e74f279073b970"
+  },
+  "continuation": {
+    "bit_different": 0,
+    "max_abs": 0.0,
+    "clean_sha256": "755ec2d679874fa4f7603bb5488423f1ddec99af16bc02cf8f6c51f42a1d22c1",
+    "earlier_sha256": "755ec2d679874fa4f7603bb5488423f1ddec99af16bc02cf8f6c51f42a1d22c1"
+  }
+}

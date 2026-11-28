@@ -19,3 +19,7 @@ cp "$template" "$runtime/tokenizer/chat_template.jinja"
 ```
 
 This run exercised inference through the native checkpoint test. The HTTP checks covered startup and status. The host already had a working GPU driver and CUDA compiler.
+
+### Cross-build logit comparison
+
+Using the clean checkout's Python backend, load each native bridge in turn with SQ-20, one GPU, default capacity 8,192, and drafting off. Consume 4,097 token IDs given by `100 + i % 1000` starting at zero, capture the complete next-token logit row, then consume token 197 and capture the next row. Each row contains 200,058 float32 values. Comparing their little-endian bytes found zero differences at either position. [Measured row digests](cross-build-logits.json)
