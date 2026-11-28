@@ -51,6 +51,7 @@ result = json.loads(Path(sys.argv[1]).read_text().splitlines()[-1])
 if result.get("status") != "complete" or result.get("verified") is not True:
     raise SystemExit("Model repair incomplete")
 PYRESULT
+    python3 "$here/verify_diagnosis.py" "$work" "$unit"
     archive="$work/fix.bw"
     branchwrite export "$work/state" "$archive" > "$work/export.json"
     digest=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["sha256"])' "$work/export.json")
