@@ -14,12 +14,14 @@ static void check(bool ok, const std::string& message) {
 
 int main(int argc, char** argv) try {
     using namespace ink2;
-    check(argc >= 4, "usage: check_parent_suffix MODEL write|read FIXTURE [--wrapped] [--gpu-experts]");
+    check(argc >= 4, "usage: check_parent_suffix MODEL write|read FIXTURE [--wrapped] [--gpu-experts] [--multi-step]");
     bool wrapped = false, gpu_experts = false;
+    int steps = 1;
     for (int i = 4; i < argc; ++i) {
         const std::string flag(argv[i]);
         if (flag == "--wrapped") wrapped = true;
         else if (flag == "--gpu-experts") gpu_experts = true;
+        else if (flag == "--multi-step") steps = 32;
         else throw std::runtime_error("unknown argument: " + flag);
     }
     std::string mode = argv[2];
@@ -64,7 +66,16 @@ int main(int argc, char** argv) try {
     const int child = parent + (wrapped ? 1027 : 18);
     std::vector<char> base(backend->portable_state_size(0, parent));
     std::vector<char> suffix(backend->portable_suffix_size(0, parent, child));
-    std::vector<float> reference(logits.size());
+    std::vector<float> reference(steps * logits.size());
+    auto continuation = [&](bool capture) {
+        for (int step = 0; step < steps; ++step) {
+            forward(child + step, child + step + 1);
+            float* row = reference.data() + step * logits.size();
+            if (capture) std::copy(logits.begin(), logits.end(), row);
+            else if (std::memcmp(row, logits.data(), logits.size() * sizeof(float)) != 0)
+                throw std::runtime_error("continuation mismatch at step " + std::to_string(step + 1));
+        }
+    };
     std::vector<char> expected;
     check(!base.empty() && !suffix.empty() && suffix.size() < backend->portable_state_size(0, child), "invalid fixture sizes");
     auto transfer = [&](std::fstream& file, auto& values) {
@@ -81,8 +92,7 @@ int main(int argc, char** argv) try {
         expected = full(child);
         check(!backend->export_portable_suffix(0, parent, child, suffix.data(), suffix.size()-1), "accepted truncated buffer");
         check(backend->export_portable_suffix(0, parent, child, suffix.data(), suffix.size()), "suffix export failed");
-        forward(child, child+1);
-        reference = logits;
+        continuation(true);
     }
     {
         std::fstream file(argv[3], std::ios::binary | (mode == "write" ? std::ios::out | std::ios::trunc : std::ios::in));
@@ -117,13 +127,11 @@ int main(int argc, char** argv) try {
     check(std::all_of(reference.begin(), reference.end(), [](float v){ return std::isfinite(v); }), "nonfinite logits");
     check(backend->import_portable_state(0, parent, base.data(), base.size()), "parent import failed");
     check(backend->import_portable_suffix(0, parent, child, suffix.data(), suffix.size()), "direct suffix import failed");
-    forward(child, child+1);
-    check(!std::memcmp(reference.data(), logits.data(), logits.size()*sizeof(float)), "direct suffix continuation differs");
+    continuation(false);
     check(backend->import_portable_state(0, child, assembled.data(), assembled.size()), "import failed");
-    forward(child, child+1);
-    check(!std::memcmp(reference.data(), logits.data(), logits.size()*sizeof(float)), "continuation differs");
+    continuation(false);
     std::cout << "Parent " << parent << ", child " << child << ", suffix " << suffix.size()
-              << " bytes, full " << assembled.size() << " bytes, exact continuation " << logits.size() << " logits\n";
+              << " bytes, full " << assembled.size() << " bytes, exact continuation " << reference.size() << " logits\n";
     return 0;
 } catch (const std::exception& e) {
     std::cerr << e.what() << '\n';
