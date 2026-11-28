@@ -16,6 +16,7 @@ def verify_export(port, key, receipt):
     url = f"http://127.0.0.1:{port}/cow/cache/checkpoint/{receipt['snapshot']}?{query}"
     request = Request(url, headers={'Authorization': 'Bearer ' + key})
     digest = hashlib.sha256()
+    frontier_digest = hashlib.sha256()
     size = 0
     with urlopen(request, timeout=60) as response:
         assert response.headers.get_content_type() == 'application/x-cow-checkpoint'
@@ -24,11 +25,16 @@ def verify_export(port, key, receipt):
         manifest = envelope['manifest']
         while chunk := response.read(1024 * 1024):
             digest.update(chunk)
+            frontier_offset = max(0, manifest['state_bytes'] - size)
+            if frontier_offset < len(chunk):
+                frontier_digest.update(memoryview(chunk)[frontier_offset:])
             size += len(chunk)
     assert manifest['logits_count'] == 200058
     assert size == manifest['state_bytes'] + 4 * manifest['logits_count']
     assert digest.hexdigest() == manifest['payload_sha256'] == receipt['payload_sha256']
-    print(f"Verified {size} exported checkpoint bytes against the generation receipt")
+    print(json.dumps(dict(exported_bytes=size, logits_count=manifest['logits_count'],
+                          frontier_sha256=frontier_digest.hexdigest(), payload_sha256=digest.hexdigest())))
+    return frontier_digest.hexdigest()
 
 
 def main():
@@ -45,6 +51,8 @@ def main():
     parser.add_argument('--dspark-long', action='store_true', help='test 1024-token greedy chat with the draft engine')
     parser.add_argument('--verify-export', action='store_true',
                         help='Stream and verify the generated full checkpoint from a --cache-transfer server')
+    parser.add_argument('--expect-frontier-sha256',
+                        help='Verify the exported float32 logit row against a reference SHA-256')
     args = parser.parse_args()
     long_copy = args.long_copy or args.dspark_long
     if long_copy:
@@ -159,8 +167,10 @@ def main():
         print(json.dumps(dict(result='restart matched', generated=generated, forward=forward,
                               counters=answer['answer']['counter_deltas'], payload=answer['receipt']['payload_sha256'])))
 
-    if args.verify_export:
-        verify_export(args.port, key, answer['receipt'])
+    if args.verify_export or args.expect_frontier_sha256:
+        frontier = verify_export(args.port, key, answer['receipt'])
+        if args.expect_frontier_sha256 and frontier != args.expect_frontier_sha256.lower():
+            raise AssertionError(f'Exported frontier differs from reference: {frontier}')
 
 
 if __name__ == '__main__':
