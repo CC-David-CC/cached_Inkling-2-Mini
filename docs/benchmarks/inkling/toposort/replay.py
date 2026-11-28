@@ -31,6 +31,14 @@ if __name__ == "__main__":
     else:
         writer = csv.writer(sys.stdout, lineterminator="\n")
         writer.writerow(["seed", "arm", "fixture", "answer", "passed"])
+        incomplete = DIRECTORY / "dspark2-incomplete.txt"
+        source = "def stable_toposort(dependencies):\n" + incomplete.read_text()
+        try:
+            compile(source, incomplete.name, "exec")
+        except SyntaxError as exc:
+            writer.writerow(["", "dspark2", "compile", json.dumps(type(exc).__name__), False])
+        else:
+            writer.writerow(["", "dspark2", "compile", json.dumps("compiled"), True])
         for seed in range(32):
             output = subprocess.check_output(
                 [sys.executable, __file__, "--worker"],
