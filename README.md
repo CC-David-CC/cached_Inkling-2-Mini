@@ -523,7 +523,7 @@ For a single P4 with a 65,536-token capacity, the following configuration gives 
 CUDA_VISIBLE_DEVICES=1 STRATA_INK_EXACT=1 INKLING_EXPERT_VRAM_MIB=768 python tools/inkling_pcc_serve.py RUNTIME --pack SQ-10 --capacity 65536
 ```
 
-The temporary store holds checkpoint files and branch metadata in tmpfs and is removed on normal shutdown. This still uses RAM for serialized checkpoints in addition to resident cache entries. For restart and disk durability testing, pass `--persistent` to reuse the profile’s runtime directory or `--store PATH` to select a directory. Use the same option on both launches.
+The temporary store holds checkpoint files and branch metadata in tmpfs and is removed on normal shutdown. This still uses RAM for serialized checkpoints in addition to resident cache entries. For restart and disk durability testing, pass `--persistent` to reuse the profile’s runtime directory or `--store PATH` to select a directory. Use the same option on both launches. The automatic persistent path is `RUNTIME/pcc-stores/MODEL_CONTRACT_ID/EXECUTION_PROFILE_ID`. The ready event prints the selected directory. For branches saved under the earlier naming scheme, use `--store OLD_DIRECTORY` with the original execution settings.
 
 The launcher creates a private `pcc-http.key` in the runtime directory.
 The service listens on port 18061 by default. It offers `/cow/create` and

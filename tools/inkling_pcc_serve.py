@@ -98,22 +98,8 @@ def serve(args, temporary):
     normalizer = CowImageNormalizer() if args.vision else None
     profile = runtime_profile(runtime, vision=args.vision, capacity=args.capacity, serial_followup=args.serial_followup, greedy_text_stops=args.greedy_text_stops, draft=args.dspark, gpus=args.gpus, kv_offload=args.kv_offload, pack=args.pack, dflash2=args.dflash2, dflash2_resident=args.dflash2_resident, grammar=bool(args.grammar_store),
                               normalizer_id=normalizer.identity if normalizer else None, adapter=args.adapter)
-    store_name = 'pcc-vision-http-store' if args.vision else 'pcc-http-store'
-    if args.pack != 'SQ-20':
-        store_name += '-' + args.pack.lower()
-    if args.dflash2:
-        store_name += '-dflash2'
-    if args.dspark:
-        store_name += '-dspark'
-    if args.serial_followup:
-        store_name += '-serial-followup'
-    if args.adapter is not None:
-        store_name += '-' + profile['adapter_sha256']
-    if args.kv_offload != 'off':
-        store_name += '-kv-' + args.kv_offload
-    if args.capacity != 8192:
-        store_name += f'-ctx-{args.capacity}'
-    directory = temporary or args.store or runtime / store_name
+    directory = temporary or args.store or (
+        runtime / 'pcc-stores' / profile['model_contract_id'] / profile['execution_profile_id'])
     ram_bytes = (args.ram_cache_gib * 1024**3 if args.ram_cache_gib is not None
                  else max(8 * 1024**3, args.capacity * 262144))
     profile['require_gpu_experts'] = args.require_gpu_experts
