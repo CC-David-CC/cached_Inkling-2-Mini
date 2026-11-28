@@ -1,0 +1,14 @@
+{
+  "artifacts": [],
+  "frame": "program",
+  "result_artifact": "442109dd81e127506f42d9965ef9cdb3d5c3c05f4f36dac3a601cc56d76e85bf",
+  "status": "complete",
+  "verified": true,
+  "model": "Inkling-2-Mini-SQ-20",
+  "inference_host": "llm-60",
+  "journal_artifact": "1118e4540e1007e3b0166ab20d2feaab37a8fd57695189a3873113b6ca420842",
+  "archive_sha256": "130f0fdc188bc05f49de42d10a161e7fa97eb515135ce752f6a8846c95e1d998",
+  "tcp_health_checks_passed": 3,
+  "duplicate_apply_preserved_invocation": true,
+  "publication_and_health_checks": "operator-configured test harness"
+}
