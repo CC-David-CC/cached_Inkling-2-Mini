@@ -46,3 +46,7 @@ In the temporary checkout above, apply `timeout/transfer-1375.patch` after the t
 ```
 
 This selects the original 1,375 ms input and its separately recorded BranchWrite archive. The archive digest is pinned in the patched harness.
+
+### Source matching
+
+Both repair archives were tested against both fixture inputs with their correct archive digests. The 250 ms and 1,375 ms archives each applied to their original input and produced the expected integer duration. Both crossed pairs were rejected because the input differed from the archive's immutable project baseline. Neither rejected attempt created its destination. This checks stale-source rejection independently of archive digest rejection.
