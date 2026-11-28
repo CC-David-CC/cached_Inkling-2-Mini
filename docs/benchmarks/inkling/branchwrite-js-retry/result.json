@@ -1,0 +1,12 @@
+{
+  "artifacts": [],
+  "frame": "program",
+  "result_artifact": "91c0159b168ddf89f5c4394daba3bab9d62da82029006d56c7aa3f016a03f745",
+  "status": "complete",
+  "verified": true,
+  "host": "llm-60",
+  "model": "Inkling-2-Mini-SQ-20",
+  "initial_steps": 96,
+  "resume_budget": 64,
+  "registered_test": "node check.js"
+}
