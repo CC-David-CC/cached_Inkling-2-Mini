@@ -21,7 +21,7 @@ def read_run(root, run):
     return manifest, json.loads((directory / "context.json").read_bytes()), cases
 
 
-def compare(root, before, after):
+def compare(root, before, after, *, details=False):
     old, old_context, left = read_run(root, before)
     new, new_context, right = read_run(root, after)
     if old_context != new_context or old["metadata"]["scoring"] != new["metadata"]["scoring"]:
@@ -30,15 +30,23 @@ def compare(root, before, after):
         raise ValueError("Case IDs differ between runs")
     transitions = Counter()
     changed = 0
+    changes = []
     for key, a in left.items():
         b = right[key]
         if a["question"] != b["question"] or a.get("expected") != b.get("expected"):
             raise ValueError(f"Question or expected answer differs for {key}")
         transitions[f"{a['outcome']}_to_{b['outcome']}"] += 1
         changed += a["answer"] != b["answer"]
-    return dict(before=before, after=after, cases=len(left), before_counts=old["counts"],
+        if details and (a["answer"] != b["answer"] or a["outcome"] != b["outcome"]):
+            changes.append(dict(id=key, question=a["question"], expected=a.get("expected"),
+                                before_answer=a["answer"], after_answer=b["answer"],
+                                before_outcome=a["outcome"], after_outcome=b["outcome"]))
+    result = dict(before=before, after=after, cases=len(left), before_counts=old["counts"],
                 after_counts=new["counts"], transitions=dict(sorted(transitions.items())),
-                changed_answers=changed)
+                  changed_answers=changed)
+    if details:
+        result["changes"] = sorted(changes, key=lambda case: case["id"])
+    return result
 
 
 if __name__ == "__main__":
@@ -46,5 +54,7 @@ if __name__ == "__main__":
     parser.add_argument("before")
     parser.add_argument("after")
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--details", action="store_true",
+                        help="Include the answers and outcomes for each changed case")
     args = parser.parse_args()
-    print(json.dumps(compare(args.root, args.before, args.after), indent=2))
+    print(json.dumps(compare(args.root, args.before, args.after, details=args.details), indent=2))
