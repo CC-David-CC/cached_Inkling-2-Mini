@@ -2,7 +2,7 @@
 from contextlib import contextmanager
 from io import BytesIO
 import struct
-
+import sys
 
 from .inkling_backend import InklingBackend
 from .store import IntegrityError
@@ -13,6 +13,8 @@ class DFlashBackend(InklingBackend):
     magic = b'IKDFROW1'
 
     def __init__(self, profile):
+        if "torch" in sys.modules:
+            raise IntegrityError("DFlash2 target-first execution requires a fresh worker before PyTorch import")
         super().__init__(profile)
         try:
             # Load the native target first: PyTorch import order affects its CUDA logits.
