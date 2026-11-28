@@ -576,13 +576,19 @@ class BranchingModel:
             schedule = self.cache[snapshot].execution_schedule if needs_schedule else ()
             yield lease, frontier, schedule
 
-    def _consume_request_text(self, lease, ids, check_cancelled):
+    def _consume_request_text(self, lease, ids, check_cancelled, schedule, history):
         if self.profile['execution'].get('followup_prefill') == 'single-token':
+            record = self._schedule_contract() is not None
+            receipts = []
             for token in ids:
                 check_cancelled()
                 self.backend.consume(lease, (token,))
+                if record:
+                    receipts.append(copy.deepcopy(self.backend.last_execution_receipt))
+            return self._validate_completed_schedule(tuple(schedule) + tuple(receipts), history)
         else:
             self.backend.consume(lease, ids)
+            return self._completed_schedule(schedule, history)
 
     def run_greedy_request(self, snapshot, ids, max_steps, *, stream, on_token=None, cancelled=None,
                            artifacts=None,reencode=None,capture_suffix=False):
@@ -656,9 +662,11 @@ class BranchingModel:
                 check_cancelled()
                 input_started = time.monotonic()
                 if ids:
-                    if mixed_delta:self.backend.consume_inputs(lease,ids.spans,embeddings=payloads)
-                    else:self._consume_request_text(lease, ids, check_cancelled)
-                    schedule = self._completed_schedule(schedule,prompt_history)
+                    if mixed_delta:
+                        self.backend.consume_inputs(lease,ids.spans,embeddings=payloads)
+                        schedule = self._completed_schedule(schedule, prompt_history)
+                    else:
+                        schedule = self._consume_request_text(lease, ids, check_cancelled, schedule, prompt_history)
                 input_seconds = time.monotonic() - input_started
                 generation_started = time.monotonic()
                 check_cancelled()
@@ -873,9 +881,11 @@ class BranchingModel:
             restored_base = {} if capture_suffix else None
             with self._generation_source(snapshot, restored_base) as (lease, frontier, schedule):
                 if ids:
-                    if mixed_delta:self.backend.consume_inputs(lease,ids.spans,embeddings=payloads)
-                    else:self._consume_request_text(lease, ids, check_cancelled)
-                    schedule = self._completed_schedule(schedule, prompt_history)
+                    if mixed_delta:
+                        self.backend.consume_inputs(lease,ids.spans,embeddings=payloads)
+                        schedule = self._completed_schedule(schedule, prompt_history)
+                    else:
+                        schedule = self._consume_request_text(lease, ids, check_cancelled, schedule, prompt_history)
                     if not native_selection:
                         frontier = self.backend.logits(lease)
                 schedule_cursor = None
@@ -1040,12 +1050,16 @@ class BranchingModel:
         return None
 
     def _completed_schedule(self, prior, history):
+        if self._schedule_contract() is None:
+            return ()
+        receipt = getattr(self.backend, 'last_execution_receipt', None)
+        return self._validate_completed_schedule(tuple(prior) + (copy.deepcopy(receipt),), history)
+
+    def _validate_completed_schedule(self, schedule, history):
         contract = self._schedule_contract()
         if contract is None:
             return ()
         _, validate = contract
-        receipt = getattr(self.backend,'last_execution_receipt',None)
-        schedule = tuple(prior)+(copy.deepcopy(receipt),)
         try:
             validate(schedule,history,self.profile['execution']['prefill_chunk'])
         except (ValueError,TypeError) as error:

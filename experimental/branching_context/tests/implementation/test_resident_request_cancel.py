@@ -95,6 +95,26 @@ class ResidentRequestCancellationTests(unittest.TestCase):
         self.assertEqual(set(self.model.store.objects.iterdir()), objects)
         self.assertEqual(self.model.snapshot_bytes(self.sid), source)
 
+    def test_completed_followup_consumes_all_inputs_in_profile_order(self):
+        inputs = [1, 0, 1]
+        consume = self.backend.consume
+        calls = []
+
+        def observe(lease, tokens):
+            calls.append(tuple(tokens))
+            return consume(lease, tokens)
+
+        self.backend.consume = observe
+        for mode, expected in [('batched', [(1, 0, 1)]), ('single-token', [(1,), (0,), (1,)])]:
+            with self.subTest(mode=mode):
+                if mode == 'single-token':
+                    self.model.profile['execution']['followup_prefill'] = mode
+                calls.clear()
+                result = self.model.run_greedy_request(self.sid, inputs, 1, stream=mode)
+                self.assertEqual(calls, expected)
+                self.assertEqual(self.model.history(result['snapshot']),
+                                 (*self.model.history(self.sid), *inputs, *result['tokens']))
+
     def test_cancel_during_serial_prefill_leaves_no_child(self):
         self.model.profile['execution']['followup_prefill'] = 'single-token'
         objects = set(self.model.store.objects.iterdir())
