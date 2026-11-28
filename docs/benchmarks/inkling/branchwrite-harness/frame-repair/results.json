@@ -1,0 +1,38 @@
+{
+  "minimal": {
+    "status": "step_budget_exhausted",
+    "verified": false,
+    "result_artifact": null,
+    "cases": 60,
+    "baseline": 58,
+    "candidate": 58,
+    "gains": 0,
+    "losses": 0,
+    "generations": 8,
+    "generated_tokens": 466
+  },
+  "compact": {
+    "status": "complete",
+    "verified": true,
+    "result_artifact": "afcdc2c590e1f1b85562f5954de323be15de3bcabb28a3b044610f8cff27854c",
+    "cases": 60,
+    "baseline": 58,
+    "candidate": 59,
+    "gains": 2,
+    "losses": 1,
+    "generations": 7,
+    "generated_tokens": 948
+  },
+  "minimal_with_scope_hint": {
+    "status": "step_budget_exhausted",
+    "verified": false,
+    "result_artifact": null,
+    "cases": 60,
+    "baseline": 58,
+    "candidate": 56,
+    "gains": 0,
+    "losses": 2,
+    "generations": 8,
+    "generated_tokens": 1437
+  }
+}

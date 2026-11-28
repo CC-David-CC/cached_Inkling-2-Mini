@@ -1,0 +1,24 @@
+--- a/serve/cow_inkling_prompt.py
++++ b/serve/cow_inkling_prompt.py
+@@ -30,7 +30,20 @@
+     def followup_frame(self, canonical, controller, content):
+         if controller.get('status') != 'stopped' or not isinstance(content, str):
+             raise ValueError('Inkling follow-up requires a stopped answer')
+-        if not canonical or canonical[-1] not in controller.get('policy', {}).get('eos_tokens', []):
++        eos_tokens = controller.get('policy', {}).get('eos_tokens', [])
++        end_message = self.tok.special_tokens['<|end_message|>']
++        end_sampling = self.tok.special_tokens['<|content_model_end_sampling|>']
++        text_stop = controller.get('text_stop')
++        if text_stop and text_stop.get('stopped'):
++            # text-delimiter stop: close the assistant frame and end sampling
++            if canonical and canonical[-1] == end_sampling:
++                return self._question_tokens(content)
++            if canonical and canonical[-1] == end_message:
++                return (end_sampling,) + self._question_tokens(content)
++            if canonical and canonical[-1] in eos_tokens:
++                return self._question_tokens(content)
++            return (end_message, end_sampling) + self._question_tokens(content)
++        if not canonical or canonical[-1] not in eos_tokens:
+             raise ValueError('Inkling follow-up requires a consumed stop token')
+         return self._question_tokens(content)
+ 
