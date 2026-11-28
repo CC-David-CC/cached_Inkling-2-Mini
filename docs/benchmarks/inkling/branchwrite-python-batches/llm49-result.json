@@ -1,0 +1,16 @@
+{
+  "artifacts": [],
+  "frame": "program",
+  "result_artifact": "fabfda0447b9843384927450e7d0c80658d681979bc7a67db75c7779b6bebc2a",
+  "status": "complete",
+  "verified": true,
+  "inference_host": "llm-49",
+  "model": "Inkling-2-Mini-SQ-20",
+  "gpu": "RTX 4090",
+  "capacity_tokens": 8192,
+  "device_experts": 3072,
+  "host_experts": 0,
+  "independent_cases_passed": 171,
+  "independent_cases": 171,
+  "archive_sha256": "1dfc8b1996179b9b0a57507581379b97fd1e0e0ba437bd21d31e79dcdb72622f"
+}
