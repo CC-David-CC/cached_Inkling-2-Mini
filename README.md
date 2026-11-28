@@ -32,6 +32,10 @@ At 128k, the RTX 4090 took 86.6–86.9 seconds for prefill and generated 63.6 to
 
 ### Reading a 250,000-token document on llm-60
 
+![Decode speed and prefill time at three context lengths](docs/benchmarks/inkling/dspark-context.png)
+
+With a 4 GiB expert pool, the undrafted 250,000-token run read the register in 138.44 seconds and generated 512 tokens at 51.5 tokens/s. With the same pool and workload, DSpark failed during prefill while growing the global KV cache to 248,832 tokens. This measures available memory under the llm-60 configuration at test time. [Undrafted measurements](docs/benchmarks/inkling/dspark-250k-generation.jsonl)
+
 ![Prefill speed across a 250,000-token document](docs/benchmarks/inkling/llm60-250k-prefill.png)
 
 One SQ-10 worker processed 250,000 station-register tokens in **138.53 seconds** (1,805 input tokens/s). The native counter confirmed the full input length, and the backend returned 200,058 logits at the frontier. Timing starts after model load and tokenization. The run used a 262,144-token window, FP16 device KV, a 4 GiB GPU expert pool, forced GPU expert computation and drafting off. This prefill run measured input processing only. [Prefill timings](docs/benchmarks/inkling/llm60-250k-prefill.csv)
