@@ -1,0 +1,32 @@
+{
+  "status": "complete",
+  "verified": true,
+  "result_artifact": "35fe9de5f154156a2275a712eaddd9c59464039c42e12d83eaff1a3da258eea3",
+  "model": "Inkling-2-Mini-SQ-20",
+  "host": "llm-60",
+  "thinking": "off",
+  "source_commit": "c8a24209ccc2681c838ad97b5eb354b2216c60f5",
+  "archive_sha256": "599dc2d8805079972c6342a9729340357c78d8b98e999428e37cad9611ff8b24",
+  "before": "#!/bin/sh\nset -eu\nchmod 0666 -- \"$1\"\n",
+  "after": "#!/bin/sh\nset -eu\nchmod 0640 -- \"$1\"\n",
+  "external_checks": [
+    {
+      "path": "space here",
+      "initial_mode": "0600",
+      "final_mode": "0640",
+      "bytes_preserved": 256
+    },
+    {
+      "path": "-report",
+      "initial_mode": "0777",
+      "final_mode": "0640",
+      "bytes_preserved": 256
+    },
+    {
+      "path": "nested/report",
+      "initial_mode": "0444",
+      "final_mode": "0640",
+      "bytes_preserved": 256
+    }
+  ]
+}
