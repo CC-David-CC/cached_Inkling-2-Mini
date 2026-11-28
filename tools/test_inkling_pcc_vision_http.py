@@ -8,6 +8,7 @@ from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 import uuid
+import sys
 
 from test_inkling_http import solid_png
 
@@ -28,13 +29,32 @@ def image_cases():
 
 
 def main():
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'experimental/branching_context/src'))
+    from context_time_travel.inkling_backend import SERVING_PACK_HASHES, model_contract_id
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('runtime', type=Path)
     parser.add_argument('fixture', type=Path)
     parser.add_argument('mode', choices=('write', 'read'))
     parser.add_argument('--port', type=int, default=18062)
+    parser.add_argument('--adapter', type=Path, help='verify the vision contract for this adapter file')
+    parser.add_argument('--pack', choices=tuple(SERVING_PACK_HASHES), help='verify the served weight pack')
     args = parser.parse_args()
+    expected_contract = None
+    if args.adapter or args.pack:
+        expected_contract = model_contract_id(
+            vision=True,
+            adapter_sha256=hashlib.sha256(args.adapter.read_bytes()).hexdigest() if args.adapter else None,
+            weights_sha256=SERVING_PACK_HASHES[args.pack or 'SQ-20'],
+        )
     key = (args.runtime / 'pcc-http.key').read_text().strip()
+
+    if expected_contract:
+        request = Request(f'http://127.0.0.1:{args.port}/cow/info',
+                          headers={'Authorization': 'Bearer ' + key})
+        with urlopen(request, timeout=10) as response:
+            if json.load(response)['model_contract_id'] != expected_contract:
+                raise ValueError('Serving endpoint differs from the requested vision model contract')
 
     def operation():
         return 'op-' + uuid.uuid4().hex
@@ -57,6 +77,8 @@ def main():
         result = post('text/answer', dict(branch=branch, revision=revision,
                                          operation_id=operation(), max_tokens=32,
                                          settings={'temperature': 0}, stream=False))
+        if expected_contract:
+            assert result['receipt']['model_contract_id'] == expected_contract, result['receipt']
         assert result['answer']['text'].strip().lower().rstrip('.') == color, result
         assert result['answer']['counter_deltas']['forward_tokens'] == len(result['answer']['tokens']), result
         return result
@@ -82,8 +104,13 @@ def main():
         assert len({record['root'] for record in results.values()}) == len(results)
         args.fixture.write_text(json.dumps(results))
     else:
-        for case_id, fixture in json.loads(args.fixture.read_text()).items():
+        fixtures = json.loads(args.fixture.read_text())
+        if set(fixtures) != {case_id for case_id, *_ in image_cases()}:
+            raise ValueError('Restart fixture must contain all four vision cases')
+        for case_id, fixture in fixtures.items():
             fork, expected = fixture['fork'], fixture['response']
+            if expected_contract and expected['receipt']['model_contract_id'] != expected_contract:
+                raise ValueError(f'{case_id} was recorded under a different vision model contract')
             response = answer(fork['name'], fork['revision'], fixture.get('color', case_id))
             assert response['answer']['tokens'] == expected['answer']['tokens'], case_id
             actual_hash = response['receipt']['payload_sha256']
