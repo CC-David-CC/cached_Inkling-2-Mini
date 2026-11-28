@@ -137,11 +137,25 @@ def export_adapter(output, parameters, parent=None, collapse=False, base_sha256=
         b = ((left @ u[:, :RANK]) * singular[:RANK]).float()
         a = (vh[:RANK] @ right.T).float()
     final = output / 'adapter.iklora'
-    with final.open('xb') as stream:
-        stream.write(HEAD_ADAPTER_HEADER.pack(HEAD_ADAPTER_MAGIC, a.shape[0], bytes.fromhex(base_sha256)))
-        for factor in (a, b):
-            stream.write(factor.detach().cpu().contiguous().numpy().tobytes())
-    return hashlib.sha256(final.read_bytes()).hexdigest()
+    header = HEAD_ADAPTER_HEADER.pack(HEAD_ADAPTER_MAGIC, a.shape[0], bytes.fromhex(base_sha256))
+    digest = hashlib.sha256()
+    with tempfile.NamedTemporaryFile(dir=output, delete=False) as stream:
+        staged = Path(stream.name)
+        try:
+            stream.write(header)
+            digest.update(header)
+            for factor in (a, b):
+                if factor.dtype != torch.float32 or not torch.isfinite(factor).all():
+                    raise ValueError("Export requires finite float32 LoRA factors")
+                data = factor.detach().cpu().contiguous().numpy().tobytes()
+                stream.write(data)
+                digest.update(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+            os.link(staged, final)
+        finally:
+            staged.unlink(missing_ok=True)
+    return digest.hexdigest()
 
 
 def main():
