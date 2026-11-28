@@ -95,5 +95,27 @@
       }
     ],
     "adapter_sha256": "dc515fc187511939715983661ee04c6e31b1da1aaccc1ca6702a5f3025a590a8"
+  },
+  "http_probe": {
+    "pack": "SQ-20-Backbone-Muon-Q0",
+    "prompt_ids": [
+      100,
+      101,
+      102
+    ],
+    "generated_tokens": 5,
+    "after_restart": {
+      "generated_tokens": 5,
+      "forward_tokens": 5,
+      "checkpoint_import_bytes": 4423680,
+      "payload_sha256": "bb04b6d101ec6abfcab71adf59969ac3e8dd6cd006b8e62f6b6c1f0e47570fc8"
+    },
+    "exported_logits": 200058,
+    "base_frontier_sha256": "17f0f0b3ce4d93049ade98aad6c0f214b4e7fe95a8fe2a2988da286ba3c1750b",
+    "trained_frontier_sha256": "3ac40b952222165a03ac5e9ee26dfac2393db234242787700b5923bae578a236",
+    "foreign_checkpoint_export_http_status": {
+      "base_reading_trained": 409,
+      "trained_reading_base": 409
+    }
   }
 }

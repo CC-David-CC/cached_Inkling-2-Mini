@@ -27,7 +27,10 @@ PACK_HASHES = {
     'SQ-20': MODEL_SHA256,
 }
 QUERY_MUON_PACK = 'SQ-20-Muon-Q0'
-SERVING_PACK_HASHES = {**PACK_HASHES, QUERY_MUON_PACK: '83232b9e80ec0627f51ffe79a33f6fb510de20b36c151e0409bdf08e2c40f432'}
+BACKBONE_MUON_PACK = 'SQ-20-Backbone-Muon-Q0'
+MERGED_PACK_HASHES = {BACKBONE_MUON_PACK: '057e21ca59e0460842e4bb9ae4c6f320a093648b1d9cb2a9070fc67d96dcd82e',
+                     QUERY_MUON_PACK: '83232b9e80ec0627f51ffe79a33f6fb510de20b36c151e0409bdf08e2c40f432'}
+SERVING_PACK_HASHES = {**PACK_HASHES, **MERGED_PACK_HASHES}
 MAX_CONTEXT_TOKENS = 262144
 HEAD_WIDTH = 2304
 HEAD_ADAPTER_HEADER = struct.Struct('<8sI32s')
@@ -53,7 +56,7 @@ def model_contract_id(vision=False, adapter_sha256=None, weights_sha256=MODEL_SH
 def runtime_profile(runtime, *, vision=False, normalizer_id=None, adapter=None, capacity=8192, grammar=False, draft=False, gpus=1, pack="SQ-20", dflash2=None, dflash2_resident=False, kv_offload="off", serial_followup=False, greedy_text_stops=False):
     if pack not in SERVING_PACK_HASHES:
         raise ValueError('Unknown Inkling pack')
-    if pack == QUERY_MUON_PACK and (adapter or draft or dflash2 or vision or gpus != 1):
+    if pack in MERGED_PACK_HASHES and (adapter or draft or dflash2 or vision or gpus != 1):
         raise ValueError('The merged query adapter requires single-GPU undrafted text')
     weights = SERVING_PACK_HASHES[pack]
     bridge = str(runtime / 'native-build/libinkling_pcc_bridge.so')

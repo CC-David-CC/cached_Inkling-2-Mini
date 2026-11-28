@@ -651,6 +651,13 @@ python tools/test_inkling_backbone_restart.py /path/to/official-checkpoint --opt
 python tools/test_inkling_backbone_restart.py /path/to/official-checkpoint --optimizer muon --export ./muon-query.safetensors
 ```
 
+To serve the pinned backbone Muon export on the single-GPU text profile, build its SQ-20 pack and select it at launch.
+
+```bash
+python tools/inkling_merge_query.py "$runtime" ./muon-query.safetensors --pack SQ-20-Backbone-Muon-Q0
+python tools/inkling_pcc_serve.py "$runtime" --pack SQ-20-Backbone-Muon-Q0
+```
+
 The optional `--export` keeps the verified adapter at a new filename in an existing directory. Both optimizers support it.
 
 ### Output-head LoRA

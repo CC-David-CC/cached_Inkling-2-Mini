@@ -12,17 +12,23 @@ import tempfile
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'experimental/branching_context/src'))
-from context_time_travel.inkling_backend import MODEL_SHA256, QUERY_MUON_PACK, SERVING_PACK_HASHES
+from context_time_travel.inkling_backend import BACKBONE_MUON_PACK, MODEL_SHA256, QUERY_MUON_PACK, SERVING_PACK_HASHES
 from context_time_travel.real import digest_file
 
 
-def build(base, adapter, destination):
+ADAPTER_HASHES = {
+    QUERY_MUON_PACK: '124e3ec997fedf1fd3ec37b218ffcffca602ead7a25cb6d0c064dfec79a247b1',
+    BACKBONE_MUON_PACK: 'dc515fc187511939715983661ee04c6e31b1da1aaccc1ca6702a5f3025a590a8',
+}
+
+
+def build(base, adapter, destination, pack=QUERY_MUON_PACK):
     if os.path.lexists(destination):
         raise FileExistsError(destination)
     if digest_file(base) != MODEL_SHA256:
         raise ValueError('Expected the pinned SQ-20 base')
     raw = adapter.read_bytes()
-    if hashlib.sha256(raw).hexdigest() != '124e3ec997fedf1fd3ec37b218ffcffca602ead7a25cb6d0c064dfec79a247b1':
+    if hashlib.sha256(raw).hexdigest() != ADAPTER_HASHES[pack]:
         raise ValueError('Expected the qualified rank-4 Muon layer-zero safetensors export')
     header_size, = struct.unpack_from('<Q', raw)
     tensors = json.loads(raw[8:8 + header_size])
@@ -59,7 +65,7 @@ def build(base, adapter, destination):
         out.seek(96)
         out.write(digest.digest())
         out.flush()
-        if digest_file(out.name) != SERVING_PACK_HASHES[QUERY_MUON_PACK]:
+        if digest_file(out.name) != SERVING_PACK_HASHES[pack]:
             raise ValueError('Merged pack fingerprint differs from the qualified build')
         os.link(out.name, destination)
 
@@ -68,6 +74,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('runtime', type=Path)
     parser.add_argument('adapter', type=Path)
+    parser.add_argument('--pack', choices=tuple(ADAPTER_HASHES), default=QUERY_MUON_PACK)
     args = parser.parse_args()
     build(args.runtime / 'Inkling-2-Mini-SQ-20.strata', args.adapter,
-          args.runtime / f'Inkling-2-Mini-{QUERY_MUON_PACK}.strata')
+          args.runtime / f'Inkling-2-Mini-{args.pack}.strata', args.pack)

@@ -45,6 +45,9 @@ def verify_copy(source, answer, limit):
 
 
 def main():
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'experimental/branching_context/src'))
+    from context_time_travel.inkling_backend import SERVING_PACK_HASHES, model_contract_id
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('runtime', type=Path)
     parser.add_argument('fixture', type=Path)
@@ -53,7 +56,7 @@ def main():
     parser.add_argument('--prompt-tokens', type=int, help='length of a deterministic token-ID prompt')
     parser.add_argument('--chat', action='store_true')
     parser.add_argument('--adapter', type=Path)
-    parser.add_argument('--pack', choices=('SQ-10', 'SQ-15', 'SQ-20', 'SQ-20-Muon-Q0'), help='verify the served model contract for this pack')
+    parser.add_argument('--pack', choices=tuple(SERVING_PACK_HASHES), help='verify the served model contract for this pack')
     parser.add_argument('--long-copy', action='store_true', help='test the same 1024-token copy workload with any text engine')
     parser.add_argument('--dspark-long', action='store_true', help='test 1024-token greedy chat with the draft engine')
     parser.add_argument('--verify-export', action='store_true',
@@ -71,8 +74,6 @@ def main():
     limit = 1024 if long_copy else 5
     expected_contract = None
     if args.pack or args.adapter:
-        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'experimental/branching_context/src'))
-        from context_time_travel.inkling_backend import SERVING_PACK_HASHES, model_contract_id
         expected_contract = model_contract_id(
             adapter_sha256=hashlib.sha256(args.adapter.read_bytes()).hexdigest() if args.adapter else None,
             weights_sha256=SERVING_PACK_HASHES[args.pack or 'SQ-20'])
