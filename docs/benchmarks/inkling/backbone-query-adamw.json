@@ -1,0 +1,40 @@
+{
+  "host": "llm-60",
+  "reference": "official-c9d0283",
+  "weight_representation": "BF16 after Transformers dequantization",
+  "rank": 4,
+  "optimizer": "AdamW",
+  "learning_rate": 0.0001,
+  "loss": "next-token cross entropy over the 200058 unpadded logits",
+  "training_text": "A Python tuple is immutable.",
+  "direct": [
+    {
+      "step": 1,
+      "loss": 4.807858467102051,
+      "b_grad_norm": 0.007779038045555353,
+      "changed_b": 12288,
+      "max_allocated": 53102998016
+    },
+    {
+      "step": 2,
+      "loss": 4.819146156311035,
+      "b_grad_norm": 0.007850133813917637,
+      "changed_b": 12288,
+      "max_allocated": 53112169984
+    }
+  ],
+  "resume": [
+    {
+      "step": 2,
+      "loss": 4.819146156311035,
+      "b_grad_norm": 0.007850133813917637,
+      "changed_b": 12288,
+      "max_allocated": 54287614976
+    }
+  ],
+  "compared_exact": [
+    "both adapter factors",
+    "AdamW state",
+    "second-step loss"
+  ]
+}
