@@ -86,6 +86,13 @@ def main():
     if (args.pack == 'SQ-20' and args.gpus == 1 and not args.dspark and not args.dflash2
             and not args.native_expert_selection):
         os.environ.setdefault('STRATA_INK_EXACT', '1')
+    if args.grammar_store:
+        from context_time_travel.grammar_first import load_llguidance
+        from context_time_travel.store import InvalidOperation
+        try:
+            load_llguidance()
+        except InvalidOperation as exc:
+            parser.error(f'{exc}. Install with {sys.executable} -m pip install -r {ROOT / "serve/requirements-grammar.txt"}')
     if args.store is not None or args.persistent:
         serve(args, None)
     else:

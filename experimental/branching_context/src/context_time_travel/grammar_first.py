@@ -263,19 +263,24 @@ class _StrataTokenizerAdapter:
         return self.source.encode(data, parse_special=False)
 
 
+def load_llguidance():
+    try:
+        import llguidance
+        from llguidance import LLMatcher, LLTokenizer, TokenizerWrapper
+    except Exception as exc:
+        raise InvalidOperation("The pinned llguidance dependency is unavailable") from exc
+    if getattr(llguidance, "__version__", None) != LLGUIDANCE_VERSION:
+        raise InvalidOperation("Unexpected llguidance version")
+    return llguidance, LLMatcher, LLTokenizer, TokenizerWrapper
+
+
 class GrammarEngine:
     """Compile immutable named grammars and create independent greedy sessions."""
 
     MAX_GRAMMAR_SOURCE_BYTES = MAX_GRAMMAR_SOURCE_BYTES
 
     def __init__(self, tokenizer, states, eos_tokens):
-        try:
-            import llguidance
-            from llguidance import LLMatcher, LLTokenizer, TokenizerWrapper
-        except Exception as exc:
-            raise InvalidOperation("The pinned llguidance dependency is unavailable") from exc
-        if getattr(llguidance, "__version__", None) != LLGUIDANCE_VERSION:
-            raise InvalidOperation("Unexpected llguidance version")
+        llguidance, LLMatcher, LLTokenizer, TokenizerWrapper = load_llguidance()
         if not isinstance(states, Mapping) or not states:
             raise InvalidOperation("At least one named grammar state is required")
         if (not isinstance(eos_tokens, (list, tuple)) or not eos_tokens

@@ -316,7 +316,7 @@ The baseline uses FP16 conversation state and disables speculative decoding.
 
 For a single-request HTTP endpoint, also place the pinned Strata checkout at
 `strata-source` and the companion tokenizer files from the checkpoint revision
-under `tokenizer`. Install `tokenizers`, `jinja2` and `regex` into the runtime environment.
+under `tokenizer`. Install `tokenizers`, `jinja2` and `regex` into the runtime environment. For BranchWrite, run `python -m pip install -r serve/requirements-grammar.txt` with the server interpreter and launch with `--grammar-store DIRECTORY`.
 
 ```bash
 python tools/inkling_serve.py /mnt/fast_cache/inkling
