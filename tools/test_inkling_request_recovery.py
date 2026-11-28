@@ -49,7 +49,17 @@ def main():
         assert (after['tip'], after['revision']) == (head['tip'], head['revision'])
     answer = generation(head)
     assert answer['answer']['tokens'] == control['answer']['tokens']
-    assert answer['receipt']['payload_sha256'] == control['receipt']['payload_sha256']
+    if answer['receipt']['payload_sha256'] != control['receipt']['payload_sha256']:
+        repeat = generation(create())
+        raise AssertionError(json.dumps(dict(
+            error='Recovered checkpoint differs from independent control',
+            rejected=rejected, preserved_tip=head['tip'],
+            recovered_payload=answer['receipt']['payload_sha256'],
+            control_payload=control['receipt']['payload_sha256'],
+            repeated_control_payload=repeat['receipt']['payload_sha256'],
+            repeated_control_tokens_match=repeat['answer']['tokens'] == control['answer']['tokens'],
+            profile=answer['receipt'].get('execution_profile_id'),
+        )))
     print(json.dumps(dict(rejected_status=rejected, preserved_tip=head['tip'],
                           surviving_tokens=answer['answer']['tokens'],
                           surviving_payload=answer['receipt']['payload_sha256'])))

@@ -146,3 +146,7 @@ BranchWrite loaded a deterministic 131,072-token station register on llm-60 usin
 ![Durable response latency for sequential and concurrent lookups](branchwrite-128k-pair.png)
 
 Two clients' requests were issued together from sibling branches of the 131,119-token rendered register on llm-60. Both matched their sequential controls on visible label, generated token IDs and checkpoint payload hash. All four warm requests reused the resident parent with zero checkpoint bytes imported. This run used a single GPU worker, a cold warm-up followed by sequential controls, and one simultaneously submitted pair. The RAM pool held the compact child after capture, allowing the worker to release its full host image. [Per-request counters and timings](branchwrite-128k-pair.jsonl)
+
+### BranchWrite serving profile after invalid token requests
+
+On llm-60, both an invalid generation length and a stale revision returned HTTP 409. Each rejection preserved the branch tip and revision. A subsequent valid five-token greedy request matched the tokens from three independently created controls with the same input. All three control checkpoint digests differed from one another and from the recovered digest. The full-payload equality gate therefore fails on this profile even across uninterrupted independent controls. This check leaves full-logit equality unmeasured. [Fixed-prompt recovery results](branchwrite-profile-recovery.json)
