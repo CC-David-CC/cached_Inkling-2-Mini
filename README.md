@@ -328,17 +328,23 @@ that disconnecting a stream cancels generation and releases the slot.
 ## Building the native engine
 
 Build the pinned Strata source with CMake and a CUDA toolkit that supports
-SM120. On llm-60 the build uses CUDA 13.5 and writes to the fast-cache
-runtime directory beside the released executable.
+SM120. The commands below create an isolated build directory. Run them from the Cached checkout on a host with Git, CMake, a C++ compiler and the CUDA toolkit installed.
 
 ```bash
-git -C /mnt/fast_cache/inkling/strata-source sparse-checkout add engine
-tools/inkling_build_native.sh /mnt/fast_cache/inkling
-/mnt/fast_cache/inkling/native-build/strata-inkling --version
+runtime=$(mktemp -d)
+git init -q "$runtime/strata-source"
+git -C "$runtime/strata-source" remote add origin https://github.com/Niko1221/Strata.git
+git -C "$runtime/strata-source" sparse-checkout set engine terminal
+git -C "$runtime/strata-source" fetch --depth 1 --filter=blob:none origin b28ca95e3e6847f2d5e317994f253b66716deeaa
+git -C "$runtime/strata-source" checkout --detach FETCH_HEAD
+bash tools/inkling_build_native.sh "$runtime"
+"$runtime/native-build/strata-inkling" --version
 ```
 
 `INKLING_NVCC`, `INKLING_CUDA_ARCHS` and `INKLING_BUILD_JOBS` can override the
 compiler path, GPU architecture and build parallelism.
+
+A build from fresh public source checkouts on llm-60 produced native engine 0.1.69 with CUDA 13.5.37, GNU 15.2 and CMake 4.2.3. The single-GPU SQ-20 smoke run used FP16 KV, drafting off, an 8,192-token capacity and a 2 GiB GPU expert pool. Loading experts took 422.26 seconds. After loading, 512 prompt tokens took 2.19 seconds and 128 generated tokens took 2.37 seconds. The run reused the host toolkit and existing model assets. A fresh Python 3.14.4 environment passed all six follow-up framing checks with the pinned tokenizer and template.
 
 ## PCC integration
 
