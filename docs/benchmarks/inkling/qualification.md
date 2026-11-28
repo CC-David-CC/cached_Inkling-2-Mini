@@ -190,3 +190,5 @@ Aligning the global KV prefixes and retained sliding-window rows separately for 
 ![Payload size of a shared SQ-20 document and three branches under full, fixed-offset and layer-aligned storage](sq20-shared-storage.png)
 
 The full checkpoint bar uses saved payload sizes. The other two bars sum the verified bytes needed for reconstruction, including one shared parent and excluding filesystem and index overhead.
+
+On llm-60, a native SQ-20 worker restored two sibling suffixes in B/A/B order. Each child extended a 1,017-token parent by 18 tokens across the sliding-window boundary. All three one-token continuations matched their uninterrupted controls on all 200,058 logits. Selecting the resident parent took 22.5–22.7 ms per switch. Importing each 7,372,800-byte native suffix took 11.7–12.0 ms. The worker forwarded three tokens total during the three checks. It held 1,531 experts in VRAM and computed the remaining 1,541 on GPU from host storage. The native tier reported zero swaps during this run. [Timings and transfer counts](sq20-sliding-window-siblings.json)
