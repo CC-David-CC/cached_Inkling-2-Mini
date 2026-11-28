@@ -456,7 +456,7 @@ done
 unlink "$fixture"
 ```
 
-On llm-60 the writer extended a 1,017-token parent by 18 tokens across the sliding-window boundary. The 7,372,800-byte suffix and parent reproduced the full 205,520,896-byte native child image. The reader loaded the fixture in a fresh process and matched all 200,058 uninterrupted continuation logits. To exercise complete replacement of the sliding window, append `--wrapped` to both the write and read invocations. This fixture extends a 1,537-token parent by 1,027 tokens. The HTTP server still uses full checkpoints.
+On llm-60 the writer extended a 1,017-token parent by 18 tokens across the sliding-window boundary. The 7,372,800-byte suffix and parent reproduced the full 205,520,896-byte native child image. The reader loaded the fixture in a fresh process and matched all 200,058 uninterrupted continuation logits. To exercise complete replacement of the sliding window, append `--wrapped` to both the write and read invocations. This fixture extends a 1,537-token parent by 1,027 tokens. The HTTP server defaults to full checkpoints. Pass `--suffix-checkpoints` for eligible undrafted single-GPU text branches.
 
 To reproduce the 128K Python backend measurement on llm-60, use the suffix-enabled build from above. Set `weights` to an absolute SQ-10 pack path. The temporary runtime links to the existing assets. Its parent checkpoint stays in RAM.
 
@@ -471,7 +471,7 @@ PYTHONPATH="$PWD/experimental/branching_context/src" INKLING_EXPERT_VRAM_MIB=409
 
 The regression reports parent selection, suffix export and suffix import times separately. It checks the full continuation logits for three sibling switches and counts transferred bytes and forwarded tokens. [Measured timings](docs/benchmarks/inkling/suffix-128k-phases.csv)
 
-The clean-checkout run at `0e77805` reused the host CUDA installation and model assets. Its fresh process restored the checkpoint in 0.518 seconds. The temporary test store is RAM-backed and can be removed after checking the results.
+The llm-60 build environment used Ubuntu 26.04 LTS, Python 3.14.4, CMake 4.2.3 and `/usr/local/cuda/bin/nvcc` 13.5.37. The generated CUDA target flags selected `sm_120` for the main CUDA and expert-parallel libraries and `sm_120a` for the specialized Blackwell library. The clean-checkout run at `0e77805` reused the host CUDA installation and model assets. Its fresh process restored the checkpoint in 0.518 seconds. The temporary test store is RAM-backed and can be removed after checking the results.
 
 The two-process regression passed on llm-60 with the pinned Strata source
 `b28ca95e3e6847f2d5e317994f253b66716deeaa` and CUDA 13.5. RAM and disk
