@@ -72,6 +72,8 @@ Enable `--suffix-checkpoints` for compact saves on the undrafted single-GPU text
 
 With a native 250,000-token parent pinned on llm-60, three distinct register lookups took 1.61–1.75 seconds with DSpark and 1.57–1.87 seconds undrafted (2 GiB expert pool, 32 generated tokens each). Both modes restored the resident parent in 11–13 ms. All three output sequences matched across modes. Each began with the correct district and continued beyond the requested number. Timings include parent restore, question processing and generation; they exclude HTTP and child checkpoint publication. [Per-question timings and scores](docs/benchmarks/inkling/warm-250k-native-draft.csv)
 
+![Native request time and generation rate for three paired 250k-context lookups](docs/benchmarks/inkling/warm-250k-native-draft.png)
+
 Launch undrafted text with `--greedy-text-stops` for checkpointed stop strings at effort zero. This opt-in uses a distinct execution profile. In a live SQ-10 HTTP test on llm-60, a prepared two-line request with a newline stop returned only the first line. Cached consumed four tokens including the delimiter and published the resulting checkpoint. [Live stop receipt](docs/benchmarks/inkling/http-greedy-stop.json) [Original failure and recovery](docs/benchmarks/inkling/http-text-stop-recovery.json)
 
 For a reproducible next turn after a text stop, also enable `--serial-followup`. On llm-60 at 8,192-token capacity, a fresh server reopened a copy of the stopped branch and answered the follow-up with the same tokens and child payload SHA-256 as the uninterrupted server. Batched follow-up produced the same text with differing child payload hashes. [Restart comparison](docs/benchmarks/inkling/http-stop-followup-restart.json)
