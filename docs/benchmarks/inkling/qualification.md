@@ -2,6 +2,8 @@
 
 Results cover the RTX PRO 6000 Blackwell on llm-60 unless a row identifies another host. A pass applies to the profile and workload described in its row. The [benchmark charts](../../../README.md#measured-performance) include sample counts and timings.
 
+S³ hosts the [coding and Linux qualification suite](https://github.com/CC-David-CC/sss/tree/0550f59/examples/coding-linux). Run `bash examples/coding-linux/replay.sh` from S³ to replay three saved coding fixes and three user-service recovery scenarios. For a fresh model score, use the task cards and independent graders. Each coding grader can export per-input outcomes for retention comparisons.
+
 ![Short coding and Linux answers by pack and grading rule](quant-short-answers.png)
 
 ![SQL and chmod fixtures passed by weight pack and runtime](executable-quant-pilot.png)
@@ -10,6 +12,8 @@ Results cover the RTX PRO 6000 Blackwell on llm-60 unless a row identifies anoth
 
 | Goal | Status | Verified result and remaining work |
 |---|---|---|
+| Fresh Python interval repair | Pass on llm-60 | Inkling repaired unordered closed-interval merging after seeing one project check. The exported fix passed all 1,111 independent inputs, including input preservation. The original passed 118. [Run receipt](branchwrite-python-intervals/result.json) |
+| Outcome-only timeout repair | Pass on llm-60 with the journal path disclosed | Inkling read the failed service journal and preserved a previously untested 1,375 ms duration. The harness deployed the fix and verified three TCP probes and duplicate application. Without journal-path disclosure, the earlier 250 ms run repaired the config but missed the journal check. [Transfer run](branchwrite-systemd-repair/timeout/transfer-1375.json) · [Earlier miss](branchwrite-systemd-repair/timeout/outcome-only.json) |
 | BranchWrite Python batch repair | Pass on llm-49 and llm-60 | Exported repairs passed 171/171 independent cases on each host's inference run. The original passed 63. [llm-49](branchwrite-python-batches/llm49-result.json) · [llm-60](branchwrite-python-batches/result.json) |
 | BranchWrite JavaScript retry repair | Pass on llm-49 and llm-60 | Exported repairs passed 200/200 independent cases. The llm-60 session resumed before submitting the patch. [llm-49](branchwrite-js-retry/llm49-result.json) · [llm-60](branchwrite-js-retry/result.json) |
 | Restart during Linux recovery | One client and server restart passed on llm-60 | With the repaired configuration saved and deployment pending, both processes were replaced. The same-host tmpfs checkpoint store survived. All five prior actions were preserved, followed by one deployment request, a successful health check and the final answer. [Restart receipt](branchwrite-systemd-repair/batch-limit/server-restart-result.json) |
