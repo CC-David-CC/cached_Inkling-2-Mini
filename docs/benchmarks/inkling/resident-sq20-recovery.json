@@ -1,0 +1,76 @@
+{
+  "host": "llm-60",
+  "prompt": [
+    100,
+    101,
+    102,
+    200,
+    201,
+    202,
+    203,
+    204,
+    205,
+    206,
+    207,
+    208,
+    209,
+    210,
+    211,
+    212,
+    213,
+    214,
+    215
+  ],
+  "uninterrupted": {
+    "control_hashes": [
+      "3d44a210eb4191837661a3bedb13e992a20625deb990f80df31534783542a162",
+      "3d44a210eb4191837661a3bedb13e992a20625deb990f80df31534783542a162",
+      "3d44a210eb4191837661a3bedb13e992a20625deb990f80df31534783542a162"
+    ],
+    "control_tokens": [
+      [
+        214,
+        214,
+        214,
+        214,
+        214
+      ],
+      [
+        214,
+        214,
+        214,
+        214,
+        214
+      ],
+      [
+        214,
+        214,
+        214,
+        214,
+        214
+      ]
+    ],
+    "profile": "006b613ec3d646af834075a51e8c5c9b85428f9dbd470e5d3aee231c63e409fd"
+  },
+  "recovery": {
+    "rejected_status": [
+      {
+        "status": 409,
+        "error": "COW max_tokens must be a positive integer"
+      },
+      {
+        "status": 409,
+        "error": "Requested branch revision changed"
+      }
+    ],
+    "preserved_tip": "eb3cc16e742534e075dfd932561ecb883baa83e2d451553027c5c9dfb266472e",
+    "surviving_tokens": [
+      214,
+      214,
+      214,
+      214,
+      214
+    ],
+    "surviving_payload": "3d44a210eb4191837661a3bedb13e992a20625deb990f80df31534783542a162"
+  }
+}

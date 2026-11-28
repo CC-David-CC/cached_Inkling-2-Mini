@@ -1,0 +1,38 @@
+[
+  {
+    "payload": "3d44a210eb4191837661a3bedb13e992a20625deb990f80df31534783542a162",
+    "state_sha256": "20ce7a40a0b6c53b1420d124717cdffa1ffbb5bfb710696cd6a4834f058d4fdd",
+    "frontier_sha256": "a1b5a81e0aa964556d0114bb846f1becc78d44ea41d49fa041b2b35320aafadb",
+    "logits": 200058,
+    "argmax": 214,
+    "bitwise_different_logits": 0,
+    "max_absolute_delta": 0.0
+  },
+  {
+    "payload": "3d44a210eb4191837661a3bedb13e992a20625deb990f80df31534783542a162",
+    "state_sha256": "20ce7a40a0b6c53b1420d124717cdffa1ffbb5bfb710696cd6a4834f058d4fdd",
+    "frontier_sha256": "a1b5a81e0aa964556d0114bb846f1becc78d44ea41d49fa041b2b35320aafadb",
+    "logits": 200058,
+    "argmax": 214,
+    "bitwise_different_logits": 0,
+    "max_absolute_delta": 0.0
+  },
+  {
+    "payload": "3d44a210eb4191837661a3bedb13e992a20625deb990f80df31534783542a162",
+    "state_sha256": "20ce7a40a0b6c53b1420d124717cdffa1ffbb5bfb710696cd6a4834f058d4fdd",
+    "frontier_sha256": "a1b5a81e0aa964556d0114bb846f1becc78d44ea41d49fa041b2b35320aafadb",
+    "logits": 200058,
+    "argmax": 214,
+    "bitwise_different_logits": 0,
+    "max_absolute_delta": 0.0
+  },
+  {
+    "payload": "3d44a210eb4191837661a3bedb13e992a20625deb990f80df31534783542a162",
+    "state_sha256": "20ce7a40a0b6c53b1420d124717cdffa1ffbb5bfb710696cd6a4834f058d4fdd",
+    "frontier_sha256": "a1b5a81e0aa964556d0114bb846f1becc78d44ea41d49fa041b2b35320aafadb",
+    "logits": 200058,
+    "argmax": 214,
+    "bitwise_different_logits": 0,
+    "max_absolute_delta": 0.0
+  }
+]
