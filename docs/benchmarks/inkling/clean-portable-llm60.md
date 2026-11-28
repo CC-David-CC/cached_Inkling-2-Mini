@@ -27,3 +27,5 @@ Using the clean checkout's Python backend, load each native bridge in turn with 
 With DSpark enabled on both builds, the same 4,097-token prefix yielded identical initial logit digests, 64 identical generated token IDs, and identical final logit digests. Each build counted 68 draft nodes and 28 accepted drafts. These are cross-build measurements with drafting enabled on both sides. [Token sequences, counters and digests](cross-build-dspark.json)
 
 On the clean build, an independent undrafted greedy run produced the same 64 token IDs as DSpark. The hash of the complete 200,058-logit row also matched before and after generation. Intermediate logit rows were not captured. [Undrafted control](dspark-vs-greedy-4097.json)
+
+A separate run captured the full logit row after each of the 18 native DSpark blocks. Undrafted greedy generation matched every committed token and every block-end row hash. The 64-token sequence matched the original run. Positions inside a multi-token block were not sampled. [Per-block comparison](dspark-block-frontiers.json)
