@@ -595,7 +595,10 @@ In the separate failure-only training run, optimizer step 11 first reached
 53/54. At the final measured step (16), 41 of the 42 examples used for
 training were correct. All 12 examples still outside training were correct.
 Those 12 stayed outside training because they kept passing, so their result
-measures retention on this register. Generalization needs a fresh register.
+measures retention on this register. On a separately generated 131,072-token
+register, the step-11 adapter scored 21/24 against the base model's 22/24.
+It fixed neither base miss and lost one previously correct answer.
+[Fresh-register paired outcomes](docs/benchmarks/inkling/fresh-register-paired.csv)
 [Per-round exposure and correctness](docs/benchmarks/inkling/failure-only-exposure.csv)
 Both adapters passed the authenticated PCC HTTP launch, root creation and
 greedy generation test on llm-60. The endpoint receipts carried the expected
