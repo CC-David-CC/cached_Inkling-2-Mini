@@ -62,7 +62,8 @@ def main():
         if not backend.lib.ctt_reuse_shared(lease,len(prefix),frontier,len(frontier)):
             raise RuntimeError("Could not restore the shared station prompt")
     while True:
-        assert used+eval_cost <= cap
+        if used + eval_cost > cap:
+            raise ValueError("Station evaluation would exceed the 100M-token budget")
         used += eval_cost
         backend=open_model(adapter)
         good=set()
@@ -93,8 +94,8 @@ def main():
                    never_trained=54-len(exposed),charged_tokens=used)
         history.append(entry)
         print(json.dumps(entry),flush=True)
-        if round_no==0:
-            assert {ids[i] for i in good} == baseline_correct
+        if round_no == 0 and {ids[i] for i in good} != baseline_correct:
+            raise ValueError('Starting adapter did not reproduce the recorded first-round baseline')
         # Charge each full sequence once for feature capture, then again for each fit step.
         feature_cost=sum(costs) if not features else 0
         step_cost=sum(costs[i] for i in failed)
@@ -131,8 +132,8 @@ def main():
                 params[1].copy_(weights[split:].reshape_as(params[1]))
         x,raw,t=zip(*(row for i in failed for row in features[i]))
         entry['trained_next']=[ids[i] for i in failed]
+        used += step_cost
         entry['loss_before_step']=train_step(params,torch.stack(x).cuda(),torch.stack(raw).cuda(),torch.tensor(t,device='cuda'),softcap)
-        used+=step_cost
         exposed.update(failed)
         round_no+=1
         prior=good
