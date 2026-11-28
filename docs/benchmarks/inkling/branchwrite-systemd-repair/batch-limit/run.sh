@@ -2,7 +2,7 @@
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 connection=$(realpath "${1:?Pass a BranchWrite connection profile}")
-d=$(mktemp -d "${TMPDIR:-/tmp}/bw-batch-limit.XXXXXXXX")
+d=$(mktemp -d "${TMPDIR:-/tmp}/bw-batch-limit-XXXXXXXX")
 echo "Evidence directory: $d"
 cp -r "$here/source" "$d/project"
 cd "$d"
@@ -31,7 +31,9 @@ for _ in range(2400):
 else: raise SystemExit('No accepted deployment request')
 PY
 watcher=$!
-branchwrite code project --state state --connection "$connection" --thinking off --instructions compact-finish-request --read OPERATIONS.md --read worker.py --edit service.json --create deploy.request --test-command 'cat /run/branchwrite/health' --task 'Restore the report worker using its operations guide. Return the exact greeting from the recovered instance.' --max-steps 320 > model.log 2>&1
+model_status=0
+branchwrite code project --state state --connection "$connection" --thinking off --instructions compact-finish-request --read OPERATIONS.md --read worker.py --edit service.json --create deploy.request --test-command 'cat /run/branchwrite/health' --task 'Restore the report worker using its operations guide. Return the exact greeting from the recovered instance.' --max-steps "${BW_FIXTURE_MAX_STEPS:-320}" > model.log 2>&1 || model_status=$?
 journalctl --user -u "$unit" -o cat --no-pager > service.log
-python3 "$here/verify.py" "$d"
 python3 "$here/record_run.py" "$d" "${d##*/}"
+if (( model_status )); then exit "$model_status"; fi
+python3 "$here/verify.py" "$d"

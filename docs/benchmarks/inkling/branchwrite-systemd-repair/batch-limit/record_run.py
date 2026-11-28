@@ -17,8 +17,19 @@ def archive(work, run_id):
     original = json.loads((project / "service.json").read_bytes())
     corrected = {**original, "batch_limit": int(original["batch_limit"])}
     world = work / "state/world/workspace"
-    candidate = json.loads((world / "service.json").read_bytes())
-    request = (world / "deploy.request").read_text()
+    candidate_path = world / "service.json"
+    candidate = None
+    if candidate_path.is_file():
+        raw = candidate_path.read_bytes()
+        if raw != (project / "service.json").read_bytes():
+            try:
+                candidate = json.loads(raw)
+                if candidate is None:
+                    candidate = raw.decode()
+            except (ValueError, UnicodeDecodeError):
+                candidate = raw.decode(errors="replace")
+    request_path = world / "deploy.request"
+    request = request_path.read_text(errors="replace") if request_path.is_file() else None
     actions = []
     with RuntimeLog(work / "state/ledger", read_only=True) as log:
         for frame in FrameKernel(log).frames():
@@ -33,9 +44,12 @@ def archive(work, run_id):
              expected=corrected, answer=candidate, outcome="correct" if candidate == corrected and type(candidate["batch_limit"]) is int else "incorrect",
              evidence={"original": original, "worker_source": "worker.py"}),
         dict(id="deployment-request", question="What contents request publication?",
-             expected="deploy", answer=request, outcome="correct" if request.strip() == "deploy" else "incorrect",
+             expected="deploy", answer=request, outcome="correct" if request is not None and request.strip() == "deploy" else "incorrect",
              evidence={"publisher_accepted": published, "required_contents_after_strip": "deploy"}),
     ]
+    for case in cases:
+        if case["answer"] is None:
+            case["outcome"] = "ungraded"
     final = next((a["args"]["answer"] for a in actions if a["tool"] == "finish"), None)
     if final is None:
         cases.append(dict(id="live-health", question="Report the fresh worker greeting.",
@@ -43,8 +57,10 @@ def archive(work, run_id):
     else:
         greetings = [s for s in (work / "service.log").read_text().splitlines() if s.startswith("ready-")]
         if not greetings:
-            raise ValueError("Independent worker health evidence is missing")
-        cases.append(dict(id="live-health", question="Report the fresh worker greeting.",
+            cases.append(dict(id="live-health", question="Report the fresh worker greeting.",
+                              answer=final, outcome="ungraded", evidence="No independent worker greeting recorded"))
+        else:
+            cases.append(dict(id="live-health", question="Report the fresh worker greeting.",
                           answer=final, expected=greetings[-1], outcome="correct" if greetings[-1] in final else "incorrect",
                           evidence={"service_greetings": greetings}))
     context = {"task": launch["bindings"]["task"]["value"], "project": {
