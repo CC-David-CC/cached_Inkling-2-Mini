@@ -1,0 +1,44 @@
+{
+  "host": "llm-60",
+  "checkpoint": "official-c9d0283",
+  "weight_representation": "BF16 after Transformers dequantization",
+  "target": "layer-0 query projection",
+  "rank": 4,
+  "optimizer": "factorwise torch.optim.Muon",
+  "adjust_lr_fn": "match_rms_adamw",
+  "learning_rate": 0.0001,
+  "weight_decay": 0,
+  "training_text": "A Python tuple is immutable.",
+  "direct": [
+    {
+      "step": 1,
+      "loss": 4.807858467102051,
+      "b_grad_norm": 0.007779038045555353,
+      "changed_b": 12288,
+      "max_allocated": 54083394560
+    },
+    {
+      "step": 2,
+      "loss": 4.807858467102051,
+      "b_grad_norm": 0.007779038045555353,
+      "changed_b": 12288,
+      "max_allocated": 54083394560
+    }
+  ],
+  "resume": [
+    {
+      "step": 2,
+      "loss": 4.807858467102051,
+      "b_grad_norm": 0.007779038045555353,
+      "changed_b": 12288,
+      "max_allocated": 54124418048
+    }
+  ],
+  "byte_exact_restart": [
+    "A",
+    "B",
+    "optimizer buffers"
+  ],
+  "optimizer_metadata_and_loss_equal": true,
+  "safetensors_export_byte_exact": true
+}

@@ -642,6 +642,15 @@ python tools/inkling_pcc_serve.py "$runtime" --pack SQ-20-Muon-Q0 --require-gpu-
 
 Use `--pack SQ-20` to select the original model. Each pack has a distinct model contract and checkpoint namespace. The qualified merged profile uses single-GPU text with drafting off. The HTTP smoke test covers a five-token continuation after a server restart.
 
+### Full-backbone query LoRA restart test
+
+The training fixture loads the official mixed checkpoint at revision `c9d0283`. Transformers dequantizes the experts into BF16. Next-token loss on one sentence backpropagates through the frozen backbone into a rank-4 adapter on the first query projection. The test compares uninterrupted and resumed training and reloads the exported factors. The temporary checkpoints are removed after comparison. On llm-60 the test environment used PyTorch 2.14.0+cu132, Transformers 5.24.1 and Accelerate 1.16.0.
+
+```bash
+python tools/test_inkling_backbone_restart.py /path/to/official-checkpoint --optimizer adamw
+python tools/test_inkling_backbone_restart.py /path/to/official-checkpoint --optimizer muon
+```
+
 ### Output-head LoRA
 
 The Inkling CUDA bridge can capture the frozen model's final normalized
