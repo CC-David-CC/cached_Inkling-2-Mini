@@ -641,6 +641,10 @@ gave 15/54 correct. Compressing the sum back to rank 4 gave 14/54 and changed
 
 ![Correct answers, gains and regressions by optimizer step](docs/benchmarks/inkling/failure-only-rounds.png)
 
+![Station counts grouped by correctness at each measured checkpoint](docs/benchmarks/inkling/station-retention-history.png)
+
+Of the 51 base successes, 12 stayed correct at every measured checkpoint and 39 temporarily regressed before recovering by step 16. Each chart row groups stations with the same correctness history. [Per-station answers](docs/benchmarks/inkling/failure-only-paired-answers.csv)
+
 In the separate failure-only training run, optimizer step 11 first reached
 53/54. At the final measured step (16), 41 of the 42 examples used for
 training were correct. All 12 examples still outside training were correct.
