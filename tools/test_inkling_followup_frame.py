@@ -28,6 +28,13 @@ def verify(runtime):
                           text_stop=dict(stopped=matched))
         suffix = encoder.followup_frame(parent, controller, messages[-1]['content'])
         assert parent + suffix == expected, f'Frame mismatch at token {consumed}'
+    try:
+        encoder.followup_frame((), dict(status='stopped', policy=dict(eos_tokens=[end]),
+                                        text_stop=dict(stopped=True)), messages[-1]['content'])
+    except ValueError:
+        pass
+    else:
+        raise AssertionError('Accepted a text stop with empty token history')
     for status in ('active', 'stopped'):
         controller = dict(status=status, policy=dict(eos_tokens=[end]))
         try:
@@ -41,4 +48,4 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('runtime', type=Path)
     verify(parser.parse_args().runtime)
-    print('All five follow-up frame cases passed')
+    print('All six follow-up frame cases passed')
