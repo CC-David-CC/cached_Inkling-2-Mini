@@ -11,6 +11,13 @@ class Qwen35PromptEncoder(CowPromptEncoder):
                 user={'role':'user','content':text}
                 complete=Service.render_prompt(self,list(messages)+[user],tools,kwargs)
                 tail=Service.render_prompt(self,[user],tools,kwargs)
+                if tail and not complete.endswith(tail):
+                    # Some Qwen templates inject a default system preamble
+                    # even when the only supplied message is from the user.
+                    user_frame = '<|im_start|>user\n' + text
+                    boundary = tail.rfind(user_frame)
+                    if boundary >= 0:
+                        tail = tail[boundary:]
                 if not tail or not complete.endswith(tail):
                     raise ValueError('Qwen system prefix is not independent of its user suffix')
                 prefixes.append(complete[:-len(tail)])

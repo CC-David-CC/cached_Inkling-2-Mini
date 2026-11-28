@@ -65,14 +65,25 @@ _GEOMETRY={'block_count':32,'embedding_length':4096,'full_attention_interval':4,
  'attention.value_length':256,'ssm.conv_kernel':4,'ssm.state_size':128,
  'ssm.group_count':16,'ssm.time_step_rank':32,'ssm.inner_size':4096}
 
+_GEOMETRY_27B = _GEOMETRY | {
+    "block_count": 65, "embedding_length": 5120, "attention.head_count": 24,
+    "ssm.time_step_rank": 48, "ssm.inner_size": 6144,
+}
+
 def validate_geometry(metadata):
     architecture=metadata.get('general.architecture')
     if architecture not in ('qwen35','wen1') or metadata.get('tokenizer.ggml.model')!='gpt2':
         raise InvalidOperation('Dense adapter requires qwen35 or wen1 GPT-2 tokenizer geometry')
-    for key,value in _GEOMETRY.items():
+    dense_27b = architecture == "qwen35" and metadata.get("qwen35.block_count") == 65
+    expected = _GEOMETRY_27B if dense_27b else _GEOMETRY
+    for key,value in expected.items():
         actual=metadata.get(architecture+'.'+key)
         if type(actual) is not int or actual!=value:
-            raise InvalidOperation('Unsupported Qwen3.5-9B geometry: '+key)
+            raise InvalidOperation('Unsupported Qwen geometry: '+key)
+    if dense_27b:
+        if type(metadata.get("qwen35.nextn_predict_layers")) is not int or metadata["qwen35.nextn_predict_layers"] != 1:
+            raise InvalidOperation("Qwen 27B requires one MTP layer")
+        return dict(attention_layers=16, recurrent_layers=48)
     return dict(attention_layers=8,recurrent_layers=24)
 
 @dataclass(frozen=True)
@@ -129,6 +140,12 @@ class Qwen35Backend(NativeBackend):
             value=self.metadata(architecture+'.'+key)
             try:md[architecture+'.'+key]=type(self.GEOMETRY[key])(value)
             except (ValueError,TypeError):md[architecture+'.'+key]=None
+        if architecture == "qwen35" and md.get("qwen35.block_count") == 65:
+            value = self.metadata("qwen35.nextn_predict_layers")
+            try:
+                md["qwen35.nextn_predict_layers"] = int(value)
+            except (ValueError, TypeError):
+                pass
         try:self.GEOMETRY_VALIDATOR(md)
         except BaseException:self.close();raise
         fn=self.lib.ctt_new_config;fn.argtypes=[C.c_void_p,C.c_int,C.c_int,C.c_int];fn.restype=C.c_void_p

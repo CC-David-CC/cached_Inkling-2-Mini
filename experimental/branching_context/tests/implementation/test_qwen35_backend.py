@@ -13,6 +13,22 @@ class Qwen35AdmissionTests(unittest.TestCase):
                 'qwen35.ssm.time_step_rank':32,'qwen35.ssm.inner_size':4096}
     def test_actual_9b_geometry(self):
         self.assertEqual(validate_geometry(self.metadata())['recurrent_layers'],24)
+    def test_27b_geometry_excludes_mtp_from_backbone(self):
+        metadata = self.metadata()
+        metadata.update({
+            "qwen35.block_count": 65,
+            "qwen35.embedding_length": 5120,
+            "qwen35.attention.head_count": 24,
+            "qwen35.ssm.time_step_rank": 48,
+            "qwen35.ssm.inner_size": 6144,
+            "qwen35.nextn_predict_layers": 1,
+        })
+        self.assertEqual(validate_geometry(metadata),
+                         {"attention_layers": 16, "recurrent_layers": 48})
+        del metadata["qwen35.nextn_predict_layers"]
+        with self.assertRaisesRegex(InvalidOperation, "one MTP layer"):
+            validate_geometry(metadata)
+
     def test_wen_geometry_uses_its_own_metadata_prefix(self):
         m={key.replace('qwen35.','wen1.'):value for key,value in self.metadata().items()}
         m['general.architecture']='wen1'
